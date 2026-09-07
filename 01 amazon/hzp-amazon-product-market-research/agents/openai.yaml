@@ -1,0 +1,19 @@
+interface:
+  display_name: hzp amazon product market research
+  short_description: Analyze one Amazon US product ASIN from matching Keepa, Helium
+    10 Cerebro, Amazon Reviews exports, and a public Amazon product-page snapshot,
+    then produce an evidence-grounded Chinese HTML decision report for product selection
+    and product development. The report must use H10 bid data directly, quote short
+    real reviews with Chinese translations, reconcile current page facts with historical
+    and file evidence, emphasize Product Definition V1, distinguish facts/inference/
+    supply-chain validation, and use QMT terminology only. Never invent missing metrics
+    or merge reviews.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
