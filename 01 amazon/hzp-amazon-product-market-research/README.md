@@ -72,4 +72,16 @@
 
 在对话中调用此技能，并提供五份同一 ASIN 的产品文件。技能会先识别五类文件、校验 ASIN，再尝试补充对应 Amazon 商品页。若只提供部分数据，需要明确要求进行“部分证据”分析；否则技能会等待缺失的必需文件。
 
+## 员工安装（可直接复制）
+
+首次安装时，让员工把下面这句话完整发给 Codex：
+
+> 请使用 `skill-installer`，从 `https://github.com/jason82983/jasonskill/tree/main/01%20amazon/hzp-amazon-product-market-research` 安装 `hzp-amazon-product-market-research` Skill，并启用它。
+
+如果员工已经安装过，需要更新时发送：
+
+> 请从 `https://github.com/jason82983/jasonskill/tree/main/01%20amazon/hzp-amazon-product-market-research` 将 `hzp-amazon-product-market-research` Skill 更新到 `main` 分支最新版本，并保留原 Skill 名称。
+
+这是一个 GitHub 仓库中的子目录，路径里的空格已经编码为 `%20`。安装或更新后，让 Codex 重新开始一个对话，再发送 `$hzp-amazon-product-market-research` 调用技能。
+
 详细执行规则见 [`SKILL.md`](SKILL.md)，Amazon 页面采集与冲突规则见 [`references/amazon-page-data.md`](references/amazon-page-data.md)，销量/投资输入规则见 [`references/secondary-inputs.md`](references/secondary-inputs.md)，字段映射见 [`references/data-field-mapping.md`](references/data-field-mapping.md)，HTML 样式要求见 [`templates/html-style-guide.md`](templates/html-style-guide.md)。
