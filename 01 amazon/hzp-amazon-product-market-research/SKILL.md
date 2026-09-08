@@ -21,6 +21,17 @@ This Skill is not a generic listing audit. Its main job is to answer:
 
 The center of gravity is **product-development direction**, not a descriptive competitor report.
 
+## Shared product directory
+
+All Amazon Skills use the runtime directory parameters defined in [`references/product-directory-contract.md`](references/product-directory-contract.md):
+
+```text
+产品根目录：<绝对路径>
+产品相对目录：<相对于根目录的产品目录>
+```
+
+Resolve `product_dir = 产品根目录 / 产品相对目录` with code before reading any files. Verify that the resolved directory is unique, remains inside the supplied root, and matches the product code when one is provided. Read source files recursively from `product_dir\01 产品分析所需数据`; write the report, handoff JSON, and other AI outputs only to `product_dir\02 所有AI分析结果`, creating that output folder when needed. Do not hardcode a drive or reuse a previous product directory. Record both parameters and the verified relative paths in the report.
+
 ---
 
 ## Standard required inputs
@@ -51,6 +62,10 @@ Use `references/secondary-inputs.md` for the sales-record and investment-return-
 Before analysis, **auto-identify all five file types and the ASIN represented by each file**.
 
 Do not rely on upload order.
+
+Before scanning files, resolve the supplied product root and relative directory using the shared product-directory contract. If the relative directory is missing, use the product code to search for one unique matching product folder; if there are multiple matches or no match, stop and report the candidates. Do not scan unrelated drives or silently use a previous product path.
+
+The normal full workflow reads recursively from `01 产品分析所需数据` and writes the self-contained HTML report and `product-handoff` file to `02 所有AI分析结果`. Preserve source files and store source references relative to the verified product directory.
 
 Use, in descending priority:
 1. ASIN contained in the file data/metadata when reliably available;
@@ -128,15 +143,16 @@ Use `references/secondary-inputs.md` for field mapping, format sniffing, image p
 ## Workflow
 
 ### Step 0 — Validate files and ASIN before any analysis
-1. Detect each file as Keepa / Cerebro / Reviews / sales record-estimate / investment-return image using filename + headers + sheet/content structure + image title/visible labels.
-2. Extract the ASIN from each source when possible.
-3. Compare all detected ASINs with any ASIN explicitly supplied by the user.
-4. Confirm there is exactly one target ASIN.
-5. If mismatch exists, use the hard-stop mismatch rule above.
-6. Confirm the sales file format by content, not extension; record its date range and any quarantined foreign-ASIN rows.
-7. Record the investment image status, visible ASIN/title, image read time, and field locators.
-8. Record source filenames and source dates for the final footer.
-9. Build `https://www.amazon.com/dp/{validated ASIN}` and attempt the public page snapshot; record status, final URL, fetch time, displayed ASIN, and field locators.
+1. Resolve and verify `产品根目录` + `产品相对目录`; confirm the product folder and its `01 产品分析所需数据` / `02 所有AI分析结果` children.
+2. Detect each file as Keepa / Cerebro / Reviews / sales record-estimate / investment-return image using filename + headers + sheet/content structure + image title/visible labels.
+3. Extract the ASIN from each source when possible.
+4. Compare all detected ASINs with any ASIN explicitly supplied by the user.
+5. Confirm there is exactly one target ASIN.
+6. If mismatch exists, use the hard-stop mismatch rule above.
+7. Confirm the sales file format by content, not extension; record its date range and any quarantined foreign-ASIN rows.
+8. Record the investment image status, visible ASIN/title, image read time, and field locators.
+9. Record source filenames and source dates for the final footer, using paths relative to the verified product folder.
+10. Build `https://www.amazon.com/dp/{validated ASIN}` and attempt the public page snapshot; record status, final URL, fetch time, displayed ASIN, and field locators.
 
 Recommended internal status object:
 `Keepa ✓ | Cerebro ✓ | Reviews ✓ | 销量记录 ✓ | 投资试算图 ✓ | ASIN match ✓ | Amazon 页面 已获取/部分获取/未获取`
@@ -507,7 +523,7 @@ Good pattern:
 ---
 
 ### Step 9 — Final HTML output
-Default output is a **self-contained Chinese HTML meeting report**.
+Default output is a **self-contained Chinese HTML meeting report** saved under the verified `product_dir\02 所有AI分析结果` folder. Use the version-before-date filename convention `<内容名称>-vN-YYYYMMDD.html`; preserve older versions. Do not write AI reports into `01 产品分析所需数据`.
 Use `templates/report-outline.md` for section order and `templates/html-style-guide.md` for visual hierarchy.
 
 #### Required information hierarchy
@@ -572,6 +588,7 @@ This Skill stops at market decision, development direction, and Product Definiti
 
 The development handoff should include:
 
+- supplied product root and product-relative directory, verified product directory, and the `01 产品分析所需数据` / `02 所有AI分析结果` locations;
 - source report path, product code/ASIN, variation, marketplace, decision status, and source dates;
 - customer job, target scene, non-goals, and the difference between `数据支持`, `分析推断`, and `待供应链验证`;
 - P0/P1/P2 requirements with evidence, cost/complexity risk, and a validation method;

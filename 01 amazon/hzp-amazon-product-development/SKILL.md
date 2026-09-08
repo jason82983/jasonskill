@@ -41,14 +41,23 @@ For a direct handoff, read the report and create `product-handoff-v1-YYYYMMDD.js
 
 ## Workspace and source priority
 
-When a product code or product directory is supplied, resolve the exact product materials root before reading files. Keep source materials read-only unless the user asks for annotation or cleanup.
+Use the shared product directory contract in [references/product-directory-contract.md](references/product-directory-contract.md). Every task should receive:
+
+```text
+产品根目录：<绝对路径>
+产品相对目录：<相对于产品根目录的产品目录>
+```
+
+Resolve and verify `product_dir = 产品根目录 / 产品相对目录` with code before reading files. If the relative directory is missing, search by product code only when the result is unique; multiple or zero matches are a stop condition. Do not hardcode a drive or reuse a previous product directory.
+
+Keep source materials read-only unless the user asks for annotation or cleanup.
 
 - Source evidence: the supplied product materials root, including research reports, reviews, images, drawings, supplier files, cost notes, and test records.
-- Development output: `<product materials root>\05 开发方向分析` unless the user provides a valid `build product path.txt` with another directory.
-- Manual boundary: prefer `手动判断开发方向.txt`; it defines the user's intended direction, target scene, prohibited directions, must-have features, and decision priorities.
+- Development output: `product_dir\02 所有AI分析结果`. Do not write development results into `01 产品分析所需数据`.
+- Manual boundary: prefer `手动判断开发方向.txt` inside `product_dir\01 产品分析所需数据` or `product_dir\02 所有AI分析结果`; it defines the user's intended direction, target scene, prohibited directions, must-have features, and decision priorities.
 - Previous drafts: preserve them and create a new version when the change is material.
 
-Before writing, report the resolved product root, development directory, manual direction file, and source files selected. Never put a product conclusion in a directory belonging to another product code.
+Before writing, report the supplied root, product-relative directory, verified product directory, input/output folders, manual direction file, and source files selected. Never put a product conclusion in a directory belonging to another product code.
 
 ## Core workflow
 
@@ -66,7 +75,7 @@ Before writing, report the resolved product root, development directory, manual 
 
 ## Required development outputs
 
-For a substantial development task, write into the resolved development directory:
+For a substantial development task, write into `product_dir\02 所有AI分析结果`:
 
 1. `01-开发结论与方向-vN-YYYYMMDD.html`
 2. `02-产品需求规格书-vN-YYYYMMDD.md` (use `.xlsx` only when the user needs a spreadsheet)
