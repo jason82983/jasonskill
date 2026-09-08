@@ -566,6 +566,22 @@ Also provide a concise 5–10 sentence executive summary in chat after generatin
 
 ---
 
+## Product-development handoff
+
+This Skill stops at market decision, development direction, and Product Definition V1. When the user wants to begin product development, do not restart the market analysis. Pass the validated report, source list, Product Definition V1, development matrix, cost/price assumptions, and QMT unknowns to `hzp-amazon-product-development`.
+
+The development handoff should include:
+
+- source report path, product code/ASIN, variation, marketplace, decision status, and source dates;
+- customer job, target scene, non-goals, and the difference between `数据支持`, `分析推断`, and `待供应链验证`;
+- P0/P1/P2 requirements with evidence, cost/complexity risk, and a validation method;
+- price/cost/return or investment-model values as assumptions with currency and provenance;
+- open QMT and supplier questions that block sampling, testing, or production handoff.
+
+When practical, write a `product-handoff-v1-YYYYMMDD.json` next to the report using the development Skill's handoff schema. This file is an interface for the next Skill; it does not authorize ordering, contacting suppliers, mass production, listing publication, or advertising.
+
+---
+
 ## Comparison mode
 When 2+ ASINs have already been individually validated, optionally create a comparison report.
 

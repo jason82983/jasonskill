@@ -7,6 +7,7 @@
 | Skill | 目录 | 用途 |
 |---|---|---|
 | `hzp-amazon-product-market-research` | [`01 amazon/hzp-amazon-product-market-research`](01%20amazon/hzp-amazon-product-market-research/) | 分析 Amazon US 单个 ASIN 的 Keepa、Helium 10 Cerebro、Amazon Reviews、销量记录/预估表、投资回报试算图和公开商品页数据，输出证据可追溯的中文 HTML 选品与产品开发决策报告。 |
+| `hzp-amazon-product-development` | [`01 amazon/hzp-amazon-product-development`](01%20amazon/hzp-amazon-product-development/) | 把产品市场研究报告转成 Product Definition V1、产品需求规格书、打样与测试计划、质量验收标准和工厂交接资料。 |
 
 后续新增 Skill 时，在本 README 的清单中补充名称、目录和用途，并在对应目录中提供完整的 `SKILL.md` 与说明文件。
 
@@ -78,7 +79,18 @@
 
 ```text
 01 amazon/
-└── hzp-amazon-product-market-research/
+├── hzp-amazon-product-market-research/
+└── hzp-amazon-product-development/
+    ├── SKILL.md
+    ├── README.md
+    ├── agents/openai.yaml
+    └── references/handoff-schema.md
+```
+
+研究 Skill 的目录结构：
+
+```text
+hzp-amazon-product-market-research/
     ├── SKILL.md
     ├── README.md
     ├── agents/openai.yaml
@@ -120,3 +132,11 @@ python C:\Users\qmhzp\.codex\skills\.system\skill-creator\scripts\quick_validate
 - 销量与投资回报协议：[`references/secondary-inputs.md`](01%20amazon/hzp-amazon-product-market-research/references/secondary-inputs.md)
 - HTML 报告大纲：[`templates/report-outline.md`](01%20amazon/hzp-amazon-product-market-research/templates/report-outline.md)
 - HTML 样式指南：[`templates/html-style-guide.md`](01%20amazon/hzp-amazon-product-market-research/templates/html-style-guide.md)
+
+### hzp-amazon-product-development
+
+这个 Skill 接收产品市场研究报告、Product Definition V1、评论痛点、样品和供应链资料，输出产品开发方向、需求规格书、样品与测试计划、质量验收标准、开发变更记录和产品开发交接 JSON。
+
+- Skill 详细规则：[`01 amazon/hzp-amazon-product-development/SKILL.md`](01%20amazon/hzp-amazon-product-development/SKILL.md)
+- 中文使用说明：[`01 amazon/hzp-amazon-product-development/README.md`](01%20amazon/hzp-amazon-product-development/README.md)
+- 交接字段结构：[`references/handoff-schema.md`](01%20amazon/hzp-amazon-product-development/references/handoff-schema.md)
