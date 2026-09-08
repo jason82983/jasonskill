@@ -6,7 +6,7 @@
 
 | Skill | 目录 | 用途 |
 |---|---|---|
-| `hzp-amazon-product-market-research` | [`01 amazon/hzp-amazon-product-market-research`](01%20amazon/hzp-amazon-product-market-research/) | 分析 Amazon US 单个 ASIN 的 Keepa、Helium 10 Cerebro、Amazon Reviews 和公开商品页数据，输出证据可追溯的中文 HTML 选品与产品开发决策报告。 |
+| `hzp-amazon-product-market-research` | [`01 amazon/hzp-amazon-product-market-research`](01%20amazon/hzp-amazon-product-market-research/) | 分析 Amazon US 单个 ASIN 的 Keepa、Helium 10 Cerebro、Amazon Reviews、销量记录/预估表、投资回报试算图和公开商品页数据，输出证据可追溯的中文 HTML 选品与产品开发决策报告。 |
 
 后续新增 Skill 时，在本 README 的清单中补充名称、目录和用途，并在对应目录中提供完整的 `SKILL.md` 与说明文件。
 
@@ -25,11 +25,19 @@
 
 ### 输入
 
-完整分析需要同一 ASIN 的三份核心文件：
+完整分析需要同一 ASIN 的五份产品文件：
 
 1. Keepa 导出：`.xlsx`；
 2. Helium 10 Cerebro 导出：`.csv` 或 `.xlsx`；
 3. Amazon Reviews 导出：`.xlsx` 或 `.csv`。
+4. 销量记录/销量预估表：`.xls`、`.xlsx`、`.csv`，或内容等价的制表数据；
+5. 投资回报试算图：`.png`、`.jpg`、`.jpeg` 或 `.webp`。
+
+五份文件校验通过后，Skill 会尝试读取对应的公开商品页：
+
+`https://www.amazon.com/dp/{ASIN}`
+
+销量表可以是按日期记录的销量或来源方估算；投资试算图是场景模型。二者会分别标记 `文件范围内计算` 和 `试算模型`，不等于实际利润或已实现回报。
 
 核心文件 ASIN 校验通过后，Skill 会尝试读取公开商品页：
 
@@ -46,6 +54,8 @@
 - Cerebro 需求簇与代表关键词；
 - H10 原始建议竞价、最低竞价和最高竞价；
 - Amazon 当前商品页快照与 page/file 冲突；
+- 销量记录日期范围、7/14/30 天文件范围内汇总、零/非零销量天数和同期价格/BSR/评分；
+- 投资试算图的手动输入、场景假设和自动计算结果，并保留币种、单位和图片定位；
 - 真实评价英文短摘录、中文翻译和开发启示；
 - 消费者问题到产品改进的开发矩阵；
 - Product Definition V1；
@@ -61,7 +71,8 @@
 - 评价必须来自单条真实评论，不合并、编造或伪造引文；
 - 页面和文件冲突并列展示来源与时间，不静默覆盖或平均；
 - 页面只做公开、只读访问，不登录、不绕过验证码、不读取私有数据；
-- ASIN 不一致、核心文件缺失或页面重定向到其他 ASIN 时，按 Skill 规则停止或降级处理。
+- 销量记录、试算模型和历史/页面数据不互相覆盖，冲突时显示来源、日期和口径；
+- ASIN 不一致、必需产品文件缺失或页面重定向到其他 ASIN 时，按 Skill 规则停止或降级处理。
 
 ### 目录结构
 
@@ -74,6 +85,7 @@
     ├── assets/icon.svg
     ├── references/
     │   ├── amazon-page-data.md
+    │   ├── secondary-inputs.md
     │   ├── data-field-mapping.md
     │   └── product-terms-guidance.md
     └── templates/
@@ -105,5 +117,6 @@ python C:\Users\qmhzp\.codex\skills\.system\skill-creator\scripts\quick_validate
 - Skill 详细规则：[`01 amazon/hzp-amazon-product-market-research/SKILL.md`](01%20amazon/hzp-amazon-product-market-research/SKILL.md)
 - 中文使用说明：[`01 amazon/hzp-amazon-product-market-research/README.md`](01%20amazon/hzp-amazon-product-market-research/README.md)
 - Amazon 页面协议：[`references/amazon-page-data.md`](01%20amazon/hzp-amazon-product-market-research/references/amazon-page-data.md)
+- 销量与投资回报协议：[`references/secondary-inputs.md`](01%20amazon/hzp-amazon-product-market-research/references/secondary-inputs.md)
 - HTML 报告大纲：[`templates/report-outline.md`](01%20amazon/hzp-amazon-product-market-research/templates/report-outline.md)
 - HTML 样式指南：[`templates/html-style-guide.md`](01%20amazon/hzp-amazon-product-market-research/templates/html-style-guide.md)

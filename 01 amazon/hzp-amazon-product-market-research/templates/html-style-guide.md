@@ -82,6 +82,15 @@ Use a slightly stronger accent border and a compact priority column. Keep the ta
 - Use a neutral `数据缺失` treatment for blocked pages or fields that are not visible. Do not make a blocked page look like a product risk.
 - Keep selected-child variation facts in a clearly labeled block so they cannot be mistaken for parent-ASIN totals.
 
+## Sales and investment scenario panels
+
+- Add two separate evidence panels after the page snapshot: `销量记录 / 销量预估` and `投资回报试算`.
+- In the sales panel, show source format, date range, target-ASIN row count, quarantined foreign-ASIN row count, and 7/14/30-day file-range summaries. Put `文件范围内计算` beside derived totals and daily averages.
+- In the investment panel, use a two-column layout or stacked cards for `手动输入/场景假设` and `自动计算/模型结果`. Keep currencies, percentages and units visible in each row.
+- Give `试算模型` a neutral purple/amber provenance chip with a text label. Do not use the same green treatment as a realized business KPI.
+- Use a small source caption for the image filename, read time, image section/field locator and any unreadable fields. A missing image field uses `数据缺失` and leaves the layout stable.
+- Keep scenario numbers out of the decision hero unless they are explicitly labeled as assumptions or modeled ranges. The hero may summarize them as a validation dependency, not as confirmed profit or ROI.
+
 ## Product Definition V1
 Use a single high-clarity product-brief panel, optionally with two-column layout on desktop.
 Avoid burying it after long risk text.

@@ -5,8 +5,10 @@ The report is designed for QMT meeting decisions. The top of the page must answe
 ## 0. Header / source validation strip
 - Report title + ASIN + benchmark product
 - data date
-- file check: Keepa / Cerebro / Reviews / ASIN match / Amazon 页面状态
+- file check: Keepa / Cerebro / Reviews / 销量记录 / 投资试算图 / ASIN match / Amazon 页面状态
 - Amazon request URL, final URL, fetch time, displayed ASIN, and page limitation when attempted
+- sales-file format, date range, target-ASIN row count, quarantined foreign-ASIN row count
+- investment-image status, visible ASIN/title, read time, and field-locator note
 - if mismatch: STOP and show mismatch notice; do not render the following sections
 
 ## 1. Executive decision hero — first screen
@@ -27,6 +29,20 @@ The report is designed for QMT meeting decisions. The top of the page must answe
 - 可见卖点与规格：短事实、原单位、页面定位
 - page/file 对照表：字段、页面值、文件值、来源时间、冲突解释、后续验证
 - 页面无法访问或身份无法确认时显示 `Amazon 页面补充缺失`，并列出限制
+
+## 1B. 销量记录 / 销量预估
+- 文件格式：按内容识别，不被 `.xls` 扩展名误导
+- 目标 ASIN 行、隔离异 ASIN 行、日期范围和数据缺口
+- 最近 7/14/30 天记录/预估销量合计与日均，标注 `文件范围内计算`
+- 非零/零销量天数
+- 同期价格、BSR、评分、评论数、卖家数和子体销量
+- 与 Keepa 数据的差异及口径解释
+
+## 1C. 投资回报试算
+- `手动输入/场景假设`：汇率、成本、售价、广告、转化、退货、备货和计划周期
+- `自动计算/模型结果`：利润、毛利率、投产比、回报率、周转资金等可见字段
+- 每个字段的币种、单位、图片区域/字段定位和读取时间
+- 所有图片模型结果标注 `试算模型`，并列出需要 QMT/财务验证的假设
 
 ## 2. Market / Keepa trend
 - launch/growth/decline interpretation
@@ -139,3 +155,5 @@ Keep the main GO/Conditional GO/NO-GO decision consistent with the top hero.
 - note that real-review quotes were selected from the provided Reviews export
 - note that Amazon page values are a time-stamped public snapshot; include request/final URL, status, fetch time, and displayed ASIN when attempted
 - note that page/file conflicts are shown rather than silently averaged, and blocked pages fall back to valid core-file evidence
+- note that sales summaries are bounded to the supplied file range and labeled `文件范围内计算`
+- note that investment-image assumptions and calculated outputs are separate `试算模型` evidence, not realized business results
