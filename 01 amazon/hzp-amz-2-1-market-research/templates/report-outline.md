@@ -4,22 +4,28 @@ The report is designed for QMT meeting decisions. The top of the page must answe
 
 ## Output artifacts
 
-Generate these two sibling files in `02 所有AI分析结果` after a valid full analysis:
+Generate these two sibling files in the product project's `2-1-market-research/` directory after a valid full analysis. Use the current Product Code read from `PRODUCT.md`:
 
-- `2-1-[ASIN]_产品市场分析报告.html` — Human Report for HZP/QMT/team reading;
-- `2-1-[ASIN]_HANDOFF.md` — compact AI Handoff for the next Skill, using [`handoff-template.md`](handoff-template.md).
+- `2-1-[ProductCode]_产品市场分析报告.html` — Human Report for HZP/QMT/team reading;
+- `2-1-[ProductCode]_HANDOFF.md` — compact AI Handoff for the next Skill, using [`handoff-template.md`](handoff-template.md).
+
+ASIN belongs in report metadata and evidence fields; it does not replace the current Product Code in the filename. All source and output references in the report use paths relative to the product project root.
 
 The HANDOFF is not a copy of this HTML. It must preserve evidence state with `[FACT]`, `[INFERENCE]`, `[TO-VERIFY]`, and `[DECISION]`, and must identify `3-1 Product Development` as the recommended next Skill.
 
 ## 0. Header / source validation strip
-- Formal output filename must begin with `2-1-` and follow `2-1-[产品识别信息]_[报告类型]-vN-YYYYMMDD.[扩展名]` when version/date is used; use the validated ASIN first, and preserve older historical files.
+- Formal output filename must begin with `2-1-` and follow `2-1-[ProductCode]_[报告类型]-vN-YYYYMMDD.[扩展名]` when version/date is used; use the current Product Code from `PRODUCT.md` and preserve older historical files.
 - Report title + ASIN + benchmark product
 - Subdued source marker near the title or in report metadata: `HZP Amazon 2-1｜产品市场分析`
 - data date
+- Product Code, Current Stage, lifecycle Status, and current `Latest Handoff` pointer from `PRODUCT.md`
+- Entry Gate result: `READY TO ANALYZE` or `BLOCKED`
 - file check: Keepa / Cerebro / Reviews / 销量记录 / 投资试算图 / ASIN match / Amazon 页面状态
 - Amazon request URL, final URL, fetch time, displayed ASIN, and page limitation when attempted
 - sales-file format, date range, target-ASIN row count, quarantined foreign-ASIN row count
 - investment-image status, visible ASIN/title, read time, and field-locator note
+- applicable `MANUAL_REQUIREMENTS.md` items, including author/date/scope/status and any conflict treatment
+- relevant confirmed `DECISIONS.md` records, including decision ID, date, stage, decision maker, basis, and impact
 - if mismatch: STOP and show mismatch notice; do not render the following sections
 
 ## 1. Executive decision hero — first screen
@@ -143,6 +149,10 @@ Separate cards:
 - 分析推断风险
 - 待验证未知项
 
+## 8A. Manual Requirements
+- current-stage `ACTIVE` and `TO-VERIFY` requirements with `[MANUAL-REQ]`, ID, author, date, scope, and status
+- conflicts shown as manual requirement → evidence/fact → conflict → recommendation → confirmer
+
 ## 9. QMT meeting questions
 6–10 questions tied to development matrix and feasibility.
 
@@ -168,3 +178,8 @@ Keep the main GO/Conditional GO/NO-GO decision consistent with the top hero.
 - note that page/file conflicts are shown rather than silently averaged, and blocked pages fall back to valid core-file evidence
 - note that sales summaries are bounded to the supplied file range and labeled `文件范围内计算`
 - note that investment-image assumptions and calculated outputs are separate `试算模型` evidence, not realized business results
+- show HANDOFF `Version`, `Status: CURRENT`, `Supersedes`, and Exit Gate result: `READY FOR NEXT STAGE` or `NOT READY`
+
+## 12. Exit Gate
+- `READY FOR NEXT STAGE` only when the decision, Product Definition V1, P0/P1/P2, risks, unknowns, HANDOFF, and active cross-stage manual requirements are complete;
+- otherwise `NOT READY`, with the missing evidence or unresolved decision named explicitly.

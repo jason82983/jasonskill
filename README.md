@@ -13,14 +13,22 @@
 
 ## Amazon 产品目录共用规则
 
-当前活动的 Amazon Skill 共用同一套运行时目录参数：每次任务传入 `产品根目录` 和 `产品相对目录`，由代码确认 `产品根目录 / 产品相对目录` 是否唯一且产品编码匹配。默认工作区示例为 `E:\【所有产品目录专用】`，但根目录不是写死配置，未来更换位置时只替换任务参数。
+当前活动的 Amazon Skill 共用便携式产品项目协议：产品项目根目录由 `PRODUCT.md` 标识，Skill 从当前工作目录向上搜索该文件，不依赖员工电脑的盘符、固定根目录或上一次任务路径。找不到 `PRODUCT.md` 时必须停止并请用户选择或创建项目目录。
 
-每个产品目录使用以下两个子目录：
+每个产品项目使用以下结构：
 
-- `01 产品分析所需数据`：原始导出、图片、供应链资料、样品记录等输入；
-- `02 所有AI分析结果`：所有 Skill 生成的 HTML、Markdown、JSON、表格和交接资料。
+```text
+<ProductRoot>/
+├── PRODUCT.md
+├── MANUAL_REQUIREMENTS.md       # 可选；跨阶段人工要求
+├── DECISIONS.md                 # 可选；重要正式决策
+├── 0-source/                    # 原始导出、图片、供应商资料、样品记录
+├── 2-1-market-research/         # 2-1 正式报告与 HANDOFF
+└── 3-1-product-development/     # 3-1 开发资料与 HANDOFF
+```
 
-所有活动 Amazon Skill 都从第一个目录递归读取，从第二个目录生成结果。目录校验、路径安全和相对链接规则见两个活动 Skill 内的 `references/product-directory-contract.md`。
+未来 `4-production/`、`5-listing/`、`6-growth/`、`7-inventory/` 目录只在对应阶段实际使用时创建，不提前创建空目录。`PRODUCT.md` 中的 `Current Product Code` 是跨员工、跨电脑、跨阶段的规范产品身份和正式文件名标识，优先级高于 Product Name、别名和 ASIN；`Previous Product Code` 与 `Product Code History` 用于编码迁移追溯。已知 `N24` 表示新品项目阶段、`A7` 表示已确认的 A 店正式产品，未来编码格式保持开放。产品从 N24 转为 A7 时，旧 N24 文件保留，新输出统一使用 A7，并在 PRODUCT.md 和 HANDOFF 中保留历史。`Current Stage` 与生命周期 `Status` 分开；Status 只使用 `ACTIVE`、`WAITING`、`HOLD`、`COMPLETED`、`CANCELLED`，其中 `ACTIVE` 才是默认可推进状态，`WAITING` / `HOLD` 需要用户明确要求恢复。阶段决策 `GO / CONDITIONAL GO / NO-GO` 不替代生命周期 Status，Skill 不能擅自决定 `COMPLETED` 或 `CANCELLED`。可选的 `MANUAL_REQUIREMENTS.md` 只读取适用范围内的 `ACTIVE`、`TO-VERIFY` 要求，并使用 `[MANUAL-REQ]` 标记，不得当作 `[FACT]`。可选的 `DECISIONS.md` 只记录已确认的重要正式决策，不是日志或普通建议。2-1 从 `0-source/` 读取并写入 `2-1-market-research/`，3-1 优先读取 `2-1-market-research/2-1-[ProductCode]_HANDOFF.md`，再从 `0-source/` 核实，并写入 `3-1-product-development/`。报告、HANDOFF、JSON 和来源清单只能使用相对于产品项目根目录的路径或裸文件名。完整目录发现、路径安全和跨员工规则见两个活动 Skill 内的 `references/product-directory-contract.md`。
+两个活动 Skill 都必须执行 Entry Gate 和 Exit Gate：2-1 的 Entry Gate 为 `READY TO ANALYZE` / `BLOCKED`，3-1 的 Entry Gate 为 `READY TO DEVELOP` / `BLOCKED`；阶段完成时统一写 `READY FOR NEXT STAGE` 或 `NOT READY`。HANDOFF 通过 `Version`、`Status: CURRENT`、`Supersedes` 和 `PRODUCT.md` 的 `Latest Handoff` 确认当前版本，不依赖 `final`、`最新` 等文件名。
 
 ## hzp-amz-2-1-market-research
 
@@ -119,19 +127,13 @@ hzp-amz-2-1-market-research/
 
 ### 调用与维护
 
-调用某个 Skill 时，使用其目录中的 `SKILL.md` 作为入口。更新 `hzp-amz-2-1-market-research` 时，以本仓库目录为主版本：
+调用某个 Skill 时，使用其目录中的 `SKILL.md` 作为入口。更新 `hzp-amz-2-1-market-research` 或 `hzp-amz-3-1-product-development` 时，以当前 Git 仓库的 `<repo-root>/01 amazon/<skill-name>` 为主版本，按需同步到本机 Codex 安装目录 `<CODEX_HOME>/skills/<skill-name>`（未设置 `CODEX_HOME` 时使用用户的 `.codex/skills`）。产品项目目录不参与这条安装路径规则。
 
-`E:\codex\JasonSkill\01 amazon\hzp-amz-2-1-market-research`
-
-更新完成后同步到 Codex 安装目录：
-
-`C:\Users\qmhzp\.codex\skills\hzp-amz-2-1-market-research`
-
-同步后运行：
+同步后，在当前环境中运行：
 
 ```powershell
-python C:\Users\qmhzp\.codex\skills\.system\skill-creator\scripts\quick_validate.py `
-  E:\codex\JasonSkill\01 amazon\hzp-amz-2-1-market-research
+$skillCreator = if ($env:CODEX_HOME) { Join-Path $env:CODEX_HOME 'skills\.system\skill-creator\scripts\quick_validate.py' } else { Join-Path $HOME '.codex\skills\.system\skill-creator\scripts\quick_validate.py' }
+python $skillCreator '<repo-root>\01 amazon\hzp-amz-2-1-market-research'
 ```
 
 确认校验通过后，再执行 Git 提交和 push。提交前不要把临时文件、分析报告或其他无关文件加入仓库。
@@ -147,7 +149,7 @@ python C:\Users\qmhzp\.codex\skills\.system\skill-creator\scripts\quick_validate
 
 ### hzp-amz-3-1-product-development
 
-这个 Skill 优先接收 `2-1-[ProductID]_HANDOFF.md`，再结合产品市场研究报告、Product Definition V1、评论痛点、样品和供应链资料，输出 Product Definition V2、需求规格书、样品与测试计划、质量验收标准、开发变更记录和 3-1 HANDOFF。
+这个 Skill 优先接收同一产品项目 `2-1-market-research/2-1-[ProductCode]_HANDOFF.md`，再结合产品市场研究报告、Product Definition V1、评论痛点、样品和供应链资料，输出到 `3-1-product-development/`：Product Definition V2、需求规格书、样品与测试计划、质量验收标准、开发变更记录和 3-1 HANDOFF。
 
 - Skill 详细规则：[`01 amazon/hzp-amz-3-1-product-development/SKILL.md`](01%20amazon/hzp-amz-3-1-product-development/SKILL.md)
 - 中文使用说明：[`01 amazon/hzp-amz-3-1-product-development/README.md`](01%20amazon/hzp-amz-3-1-product-development/README.md)

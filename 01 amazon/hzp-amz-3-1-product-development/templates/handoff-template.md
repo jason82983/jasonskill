@@ -4,13 +4,20 @@
 
 ## Metadata
 
-- Product ID: `[FACT] <ASIN 或稳定 Product ID>`
+- Current Product Code: `[FACT] <产品项目根目录 PRODUCT.md 中的当前 Product Code>`
+- Previous Product Code: `[FACT] <如有代码迁移则填写；没有时写 未确认/不适用>`
+- Product Code History: `[FACT] <相对于 PRODUCT.md 的代码历史摘要；没有时写 无>`
+- Current Stage: `[FACT] 3-1`
+- Product Status: `[FACT] ACTIVE / WAITING / HOLD / COMPLETED / CANCELLED`
 - ASIN: `[FACT] <ASIN；没有则写 未确认>`
 - Product Name: `[FACT] <产品名称>`
 - Marketplace: `[FACT] Amazon US`
 - Source Skill: `[FACT] 3-1`
 - Source Skill Name: `[FACT] HZP Amazon 3-1｜产品开发`
 - Generated Date: `[FACT] <YYYY-MM-DD>`
+- Version: `[FACT] <整数版本，例如 1>`
+- Status: `[FACT] CURRENT`
+- Supersedes: `[FACT] <Version N 或 无>`
 - Next Recommended Skill: `[INFERENCE] 4-1 Sourcing & Production`
 
 ## Decision
@@ -46,6 +53,10 @@
 ## P2 Enhancements
 
 - `[INFERENCE] / [TO-VERIFY] <加分项、证据和验证方式；最终内容只保留一个标签>`
+
+## Active Cross-Stage Requirements
+
+- `[MANUAL-REQ] <只写状态为 ACTIVE 或 TO-VERIFY、且会影响后续阶段的人工要求；保留内容、提出人、日期、适用阶段和状态>`
 
 ## Materials / Structure / Specifications
 
@@ -87,7 +98,9 @@
 
 ## Source Files
 
-- `[FACT] <上游 2-1 HANDOFF、HTML 报告、本阶段资料的相对产品目录路径、日期和用途>`
+- `[FACT] <上游 2-1 HANDOFF、HTML 报告、本阶段资料的相对产品项目路径、日期和用途，例如 2-1-market-research/...、0-source/...>`
+- Manual Requirements: `[FACT] MANUAL_REQUIREMENTS.md（如不存在则写 不存在）`
+- Decisions: `[FACT] DECISIONS.md（如不存在则写 不存在）`
 
 ## Next Stage Instructions
 
@@ -97,3 +110,8 @@
 - 哪些需要报价: `[TO-VERIFY] <报价项和币种>`
 - 哪些需要生产测试: `[TO-VERIFY] <测试项目和通过标准>`
 - 哪些风险必须重点控制: `[FACT] / [INFERENCE] / [TO-VERIFY] <风险与控制点；最终内容只保留一个标签>`
+
+## Exit Gate
+
+- Result: `READY FOR NEXT STAGE` / `NOT READY`
+- Reason: `[FACT] / [INFERENCE] / [TO-VERIFY] <说明规格、测试、决策和证据是否足以进入下一阶段>`

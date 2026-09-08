@@ -39,37 +39,41 @@
 - 销量记录的日期范围、记录/预估销量、最近 7/14/30 天文件范围内汇总、非零/零销量天数和同期价格/BSR/评分对照。
 - 投资试算图中的手动输入、场景假设、自动计算结果、利润/毛利/回报/周转字段，均保留币种、单位和图片定位。
 
-默认输出文件：
+默认输出文件（写入产品项目的 `2-1-market-research/`）：
 
 ```text
-02 所有AI分析结果/
-├── 2-1-[ASIN]_产品市场分析报告.html   # Human Report，给 HZP/QMT/团队阅读
-└── 2-1-[ASIN]_HANDOFF.md              # AI Handoff，给下游 Skill 读取
+2-1-market-research/
+├── 2-1-[ProductCode]_产品市场分析报告.html   # Human Report，给 HZP/QMT/团队阅读
+└── 2-1-[ProductCode]_HANDOFF.md              # AI Handoff，给下游 Skill 读取
 ```
 
-`2-1-[ASIN]_HANDOFF.md` 是下游 Skill 的标准接口。它只保存会影响下一阶段判断的浓缩信息，不复制完整 HTML，也不记录聊天过程。模板见 [`templates/handoff-template.md`](templates/handoff-template.md)。
+`[ProductCode]` 必须来自产品项目根目录 `PRODUCT.md` 的 `Current Product Code`，ASIN 仍写入元数据和报告内容。`2-1-[ProductCode]_HANDOFF.md` 是下游 Skill 的标准接口。它只保存会影响下一阶段判断的浓缩信息，不复制完整 HTML，也不记录聊天过程。模板见 [`templates/handoff-template.md`](templates/handoff-template.md)。
 
 ## 正式报告命名（强制）
 
 这个 Skill 的编号是 `2-1`。所有正式分析报告、会议报告和 HTML 报告，文件名必须以 `2-1-` 开头，并按下面格式命名：
 
 ```text
-2-1-[产品识别信息]_[报告类型].[扩展名]
+2-1-[ProductCode]_[报告类型].[扩展名]
 ```
 
 如果需要保留版本和日期，在扩展名前加入 `-vN-YYYYMMDD`：
 
 ```text
-2-1-[产品识别信息]_[报告类型]-vN-YYYYMMDD.[扩展名]
+2-1-[ProductCode]_[报告类型]-vN-YYYYMMDD.[扩展名]
 ```
 
-有 ASIN 时优先使用 ASIN；没有 ASIN 时使用简短、稳定、可识别的产品名称。HTML、Markdown、PDF、Excel 等正式报告都遵守这条规则，例如：
+使用 `PRODUCT.md` 中当前的 Product Code；ASIN 和产品名称是辅助字段，不替代 Product Code。HTML、Markdown、PDF、Excel 等正式报告都遵守这条规则，例如：
 
-- `2-1-B0FJRYJH1J_产品市场分析报告.html`
-- `2-1-B0XXXXXXX_市场研究报告.pdf`
-- `2-1-B0XXXXXXX_市场研究数据.xlsx`
+- `2-1-N24_产品市场分析报告.html`
+- `2-1-N24_市场研究报告.pdf`
+- `2-1-A7_市场研究数据.xlsx`
 
 以前已经生成的历史文件不重命名。正式 HTML 报告标题附近或报告信息区域还必须显示来源标识：`HZP Amazon 2-1｜产品市场分析`，作为识别信息，不要喧宾夺主。
+
+`PRODUCT.md` 的 `Current Stage` 与生命周期 `Status` 分开。Status 只使用 `ACTIVE`、`WAITING`、`HOLD`、`COMPLETED`、`CANCELLED`；本 Skill 的 `GO / CONDITIONAL GO / NO-GO` 是阶段决策，不替代生命周期状态。`ACTIVE` 才是默认可推进状态，`WAITING` / `HOLD` 需要用户明确要求恢复；Skill 可以建议状态变化，但不能擅自将项目标记为 `COMPLETED` 或 `CANCELLED`。
+
+正式 HANDOFF 的当前版本由 `PRODUCT.md` 的 `Latest Handoff` 指向，不根据“最终版”“最新修改版”等文件名猜测。HANDOFF 必须记录 `Version`、`Status: CURRENT` 和 `Supersedes`，旧版本保留。2-1 的完整 HANDOFF 还要记录 `Exit Gate: READY FOR NEXT STAGE` 或 `NOT READY`。
 
 ## Amazon 页面数据补充
 
@@ -90,6 +94,7 @@
 - 评价引文必须来自单条真实评价，不合并、改写或编造；
 - 变体字段、评价样本和异常值会单独标注，避免误读为父 ASIN 的总数据。
 - 销量表与试算图不互相覆盖；价格、销量、利润和回报冲突时并列显示来源、日期、单位和口径。
+- `0-source/` 中的 Keepa、Cerebro、Reviews、截图、报价、测试和其他原始证据只读；新版资料必须新增文件，不能覆盖旧文件。
 
 ## HTML 视觉规范
 
@@ -103,17 +108,68 @@
 
 ## 使用方式
 
-在对话中调用此技能时，提供 `产品根目录` 和 `产品相对目录`。当前示例为 `E:\【所有产品目录专用】` + `N24 置物架`。技能会先用代码确认产品目录，再递归读取 `01 产品分析所需数据` 中五份同一 ASIN 的产品文件，并把报告写入 `02 所有AI分析结果`。根目录变化时只替换任务参数，不修改 Skill。
+在对话中调用此技能时，把当前工作目录切换到产品项目内任意位置，或明确提供产品项目目录。技能会从当前目录向上搜索 `PRODUCT.md`，读取其中的 `Current Product Code`、Current Stage 和生命周期 Status，再检查可选的 `MANUAL_REQUIREMENTS.md` 与 `DECISIONS.md`，然后递归读取 `0-source/` 中五份同一 ASIN 的产品文件，并把报告写入 `2-1-market-research/`。找不到 `PRODUCT.md`、`Current Product Code` 或 `0-source/` 时停止并请用户选择/补齐；不会猜测根目录，也不会依赖员工电脑的盘符。报告、HANDOFF 和来源清单使用相对产品根目录的路径。
 
-目录参数与代码校验规则见 [`references/product-directory-contract.md`](references/product-directory-contract.md)。
+便携项目结构、目录发现和代码校验规则见 [`references/product-directory-contract.md`](references/product-directory-contract.md)。
 
 ## 衔接产品开发
 
-这个 Skill 输出市场决策、开发方向、Product Definition V1 和 `2-1-[ASIN]_HANDOFF.md`。当用户要开始打样或做产品规格时，下游 `3-1 Product Development` Skill（`hzp-amz-3-1-product-development`）必须先读取 HANDOFF，再按需核对 HTML 报告和原始文件；不要重新做市场分析，也不能把 HANDOFF 中的推断当成技术参数。现有 `product-handoff-v1-YYYYMMDD.json` 可以作为兼容性补充，但不替代 HANDOFF。
+这个 Skill 输出市场决策、开发方向、Product Definition V1 和 `2-1-[ProductCode]_HANDOFF.md`。当用户要开始打样或做产品规格时，下游 `3-1 Product Development` Skill（`hzp-amz-3-1-product-development`）必须先读取同一产品项目 `2-1-market-research/` 下的 HANDOFF，再读取适用的人工要求，按需核对 HTML 报告和 `0-source/` 原始文件；不要重新做市场分析，也不能把 HANDOFF 或人工要求中的推断当成技术参数。产品代码变更时，按 `PRODUCT.md` 中的 Previous Product Code/Product Code History 追溯历史文件。现有 `2-1-[ProductCode]_product-handoff-v1-YYYYMMDD.json` 可以作为兼容性补充，但不替代 HANDOFF。
 
 可以直接把下面这句话发给 Codex：
 
-> 请基于这份产品市场研究报告继续做产品开发，不要重新做市场分析：`[报告路径]`。请生成 Product Definition V1、产品需求规格书、样品与测试计划、质量验收标准、开发变更记录和产品开发交接 JSON；所有内容区分资料事实、用户决定、开发假设和待验证项，先停在打样验证，不下单、不量产、不联系供应商。
+> 请在同一产品项目中读取 `PRODUCT.md`，确认 Current Product Code，优先读取 `2-1-market-research/2-1-[ProductCode]_HANDOFF.md`，再按需核对这份产品市场研究报告和 `0-source/` 原始资料；不要重新做市场分析。请生成 Product Definition V2、产品需求规格书、样品与测试计划、质量验收标准、开发变更记录和 `3-1-[ProductCode]_HANDOFF.md`；所有内容区分 `[FACT]`、`[INFERENCE]`、`[TO-VERIFY]`、`[DECISION]`、`[MANUAL-REQ]`，先停在打样验证，不下单、不量产、不联系供应商。
+
+## 人工补充要求
+
+产品项目根目录可以有一个 `MANUAL_REQUIREMENTS.md`。它是可选输入，不存在时继续执行；存在时，2-1 读取适用于 `2-1` 或 `GLOBAL` 且状态为 `ACTIVE` / `TO-VERIFY` 的要求，并保留提出人、日期、适用阶段和状态。人工要求使用 `[MANUAL-REQ]`，不是自动事实；`REJECTED`、`SUPERSEDED` 不作为当前要求。
+
+推荐格式：
+
+```markdown
+# MANUAL REQUIREMENTS
+
+## Requirement
+
+ID：MR-001
+内容：外观不要做得太医疗化。
+提出人：HZP
+提出日期：2026-09-08
+适用阶段：2-1 Market Research
+状态：ACTIVE
+备注：
+```
+
+若人工要求与市场数据、页面事实或上游 HANDOFF 冲突，报告必须写出人工要求、证据/事实、冲突、建议和需要确认的人，不能静默忽略或盲目覆盖。只把仍会影响后续阶段的有效要求摘要到 HANDOFF 的 `Active Cross-Stage Requirements`，不复制整份文件。
+
+## DECISIONS.md
+
+产品项目可以有一个 `DECISIONS.md`，只记录已经确认且会影响产品方向、阶段、Product Code、方案或项目去留的重要决策，不记录普通建议、聊天或工作日志。2-1 启动时检查相关决策，并保留决定人、依据和影响。
+
+```markdown
+# DECISIONS
+
+## D-003
+
+日期：2026-09-08
+阶段：2-1
+决策：<已经确认的正式决定>
+决定人：HZP / QMT
+
+原因：<原因>
+依据：<相对产品根目录的证据或会议记录路径>
+影响：<对下一阶段的影响>
+
+状态：ACTIVE
+```
+
+### 2-1 Entry Gate
+
+正式分析前必须确认 Product Code、目标/基准 ASIN、Keepa、Cerebro、Reviews、销量文件、投资试算图和核心 ASIN 一致性，并检查适用的人工要求与正式决策。缺少核心数据时结果为 `BLOCKED`；只有用户明确要求时才允许 `Partial Evidence / 部分证据分析`。
+
+### 2-1 Exit Gate
+
+交付前必须确认市场结论、`GO / CONDITIONAL GO / NO-GO`、Product Definition V1、P0/P1/P2、风险、Unknowns、HANDOFF 和跨阶段人工要求均已形成。完整交付写 `READY FOR NEXT STAGE`，否则写 `NOT READY`；`NO-GO` 时 HANDOFF 必须提醒 3-1 默认不要进入正式开发。
 
 ## 员工安装（可直接复制）
 

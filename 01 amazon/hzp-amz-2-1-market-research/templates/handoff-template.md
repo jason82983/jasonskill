@@ -4,13 +4,20 @@
 
 ## Metadata
 
-- Product ID: `[FACT] <ASIN 或稳定产品识别信息>`
+- Current Product Code: `[FACT] <产品项目根目录 PRODUCT.md 中的当前 Product Code>`
+- Previous Product Code: `[FACT] <如有代码迁移则填写；没有时写 未确认/不适用>`
+- Product Code History: `[FACT] <相对于 PRODUCT.md 的代码历史摘要；没有时写 无>`
+- Current Stage: `[FACT] 2-1`
+- Product Status: `[FACT] ACTIVE / WAITING / HOLD / COMPLETED / CANCELLED`
 - ASIN: `[FACT] <ASIN；无法确认时写 未确认>`
 - Product Name: `[FACT] <产品名称；来源或用户确认>`
 - Marketplace: `[FACT] Amazon US`
 - Source Skill: `[FACT] hzp-amz-2-1-market-research`
 - Source Skill Name: `[FACT] HZP Amazon 2-1｜产品市场分析`
 - Generated Date: `[FACT] <YYYY-MM-DD>`
+- Version: `[FACT] <整数版本，例如 1>`
+- Status: `[FACT] CURRENT`
+- Supersedes: `[FACT] <Version N 或 无>`
 - Next Recommended Skill: `[INFERENCE] 3-1 Product Development（Skill：hzp-amz-3-1-product-development；若 HZP 明确确认，再标记为 [DECISION]）`
 
 ## Decision
@@ -40,6 +47,10 @@
 - 不建议做 / 避免过度承诺: `[INFERENCE] / [TO-VERIFY] <边界>`
 - Product Definition V1: `[INFERENCE] <产品概念、核心承诺、目标用户、场景和验证前提的浓缩版本>`
 
+## Active Cross-Stage Requirements
+
+- `[MANUAL-REQ] <只写状态为 ACTIVE 或 TO-VERIFY、且会影响后续阶段的人工要求；保留内容、提出人、日期、适用阶段和状态>`
+
 ## Risks
 
 - `[FACT] / [INFERENCE] / [TO-VERIFY] <已观察或推断的主要风险>`
@@ -58,7 +69,9 @@
 
 ## Source Files
 
-- `[FACT] <相对于产品目录的原始文件路径、报告路径、数据日期和用途>`
+- `[FACT] <相对于产品项目根目录的原始文件路径、报告路径、数据日期和用途，例如 0-source/... 或 2-1-market-research/...>`
+- Manual Requirements: `[FACT] MANUAL_REQUIREMENTS.md（如不存在则写 不存在）`
+- Decisions: `[FACT] DECISIONS.md（如不存在则写 不存在）`
 
 ## Next Stage Instructions
 
@@ -67,6 +80,11 @@
 - 优先解决: `[TO-VERIFY] <按 P0、风险和验证阻塞项排序>`
 - 仅为推断: `[INFERENCE] <明确哪些结论来自分析而非直接数据>`
 - 必须重新验证: `[TO-VERIFY] <技术参数、成本、合规、耐久、供应商能力和其他需新证据确认的事项>`
+
+## Exit Gate
+
+- Result: `READY FOR NEXT STAGE` / `NOT READY`
+- Reason: `[FACT] / [INFERENCE] / [TO-VERIFY] <说明 HANDOFF、证据和决策是否足以进入下一阶段>`
 
 ### Conflict update format
 
