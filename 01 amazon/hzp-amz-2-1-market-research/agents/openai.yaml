@@ -1,5 +1,5 @@
 interface:
-  display_name: hzp amazon product market research
+  display_name: "HZP Amazon 2-1｜产品市场分析"
   short_description: Analyze one Amazon US product ASIN from matching Keepa, Helium
     10 Cerebro, Amazon Reviews, sales-record/estimate, investment-return-image inputs,
     and a public Amazon product-page snapshot, then produce an evidence-grounded Chinese

@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 3-1｜产品开发"
+  short_description: "把市场结论转成规格、打样、测试和工厂交接资料"
+  brand_color: "#0F766E"
+  default_prompt: "Use $hzp-amz-3-1-product-development to read the 2-1 HANDOFF first, then turn this Amazon product research into Product Definition V2, testable development requirements, and a 3-1 HANDOFF."
+
+policy:
+  allow_implicit_invocation: true

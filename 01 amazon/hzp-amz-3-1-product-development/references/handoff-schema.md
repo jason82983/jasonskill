@@ -1,6 +1,6 @@
-# 产品开发交接数据结构
+# 3-1 产品开发交接数据结构（JSON 兼容格式）
 
-`product-handoff-vN-YYYYMMDD.json` 是市场研究与产品开发之间的机器可读交接单。它只保存能够追溯到来源的事实、用户决定、开发假设和待验证项，不把推断写成事实。
+`3-1-[ProductID]_product-handoff-vN-YYYYMMDD.json` 是 3-1 的可选机器可读兼容文件。标准 AI 接口是同目录的 `3-1-[ProductID]_HANDOFF.md`，优先使用 [`../templates/handoff-template.md`](../templates/handoff-template.md)。两者只保存能够追溯到来源的事实、用户决定、开发假设和待验证项，不把推断写成事实。
 
 ## 必填字段
 
@@ -12,6 +12,7 @@
 | `variation` | 颜色、尺寸或款式；未知时写 `null` |
 | `marketplace` | 站点，例如 `Amazon US` |
 | `source_report` | 上游市场研究报告路径 |
+| `source_handoff` | 上游 AI HANDOFF 路径，例如 `2-1-[ProductID]_HANDOFF.md`；没有时写 `null` |
 | `decision` | `GO`、`CONDITIONAL GO`、`NO-GO` 或 `未决定` |
 | `customer_job` | 用户要完成的核心任务 |
 | `non_goals` | 本次开发明确不做的范围 |
@@ -32,10 +33,11 @@
   "variation": "Calacatta Viola / 13 x 6.3 x 13.2 in",
   "marketplace": "Amazon US",
   "source_report": "<absolute-or-relative-report-path>",
+  "source_handoff": "<2-1-handoff-path-or-null>",
   "decision": "CONDITIONAL GO",
   "customer_job": {
     "statement": "在台面上整理化妆品、香水或首饰，并获得稳定的展示与取用体验。",
-    "evidence_label": "资料事实"
+      "evidence_label": "[FACT]"
   },
   "non_goals": [
     "不在本版本承诺自动化收纳或其他未验证功能"
@@ -46,7 +48,7 @@
       "priority": "P0",
       "category": "packaging",
       "statement": "开箱时可无工具取出保护材料，且结构关键部位不因运输破损。",
-      "evidence_label": "资料事实",
+      "evidence_label": "[FACT]",
       "acceptance_criteria": "待供应链/实验室确认",
       "validation_method": "开箱计时 + 跌落/振动测试",
       "status": "待验证"
@@ -78,7 +80,7 @@
       "value": null,
       "currency": "CNY",
       "source": "待供应商报价",
-      "label": "待验证"
+      "label": "[TO-VERIFY]"
     }
   ],
   "open_decisions": [
@@ -102,6 +104,7 @@
 ## 使用规则
 
 - `null` 或 `数据缺失` 表示缺失，不能用 0 替代。
+- `evidence_label` 使用 `[FACT]`、`[INFERENCE]`、`[TO-VERIFY]` 或 `[DECISION]`；不得把 `[INFERENCE]` 或 `[TO-VERIFY]` 自动升级为 `[FACT]`。
 - `acceptance_criteria` 必须可观察；没有阈值时写明谁确认。
 - `cost_inputs` 保留原币种和来源，不把投资试算图的模型利润写成实际利润。
 - `sources` 至少包含上游报告和本次读取的关键文件。

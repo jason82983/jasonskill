@@ -1,8 +1,0 @@
-interface:
-  display_name: "HZP Amazon Product Development"
-  short_description: "把市场结论转成规格、打样、测试和工厂交接资料"
-  brand_color: "#0F766E"
-  default_prompt: "Use $hzp-amazon-product-development to turn this Amazon product research report into a testable product definition and development handoff."
-
-policy:
-  allow_implicit_invocation: true

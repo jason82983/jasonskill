@@ -6,8 +6,8 @@
 
 | Skill | 目录 | 用途 |
 |---|---|---|
-| `hzp-amazon-product-market-research` | [`01 amazon/hzp-amazon-product-market-research`](01%20amazon/hzp-amazon-product-market-research/) | 分析 Amazon US 单个 ASIN 的 Keepa、Helium 10 Cerebro、Amazon Reviews、销量记录/预估表、投资回报试算图和公开商品页数据，输出证据可追溯的中文 HTML 选品与产品开发决策报告。 |
-| `hzp-amazon-product-development` | [`01 amazon/hzp-amazon-product-development`](01%20amazon/hzp-amazon-product-development/) | 把产品市场研究报告转成 Product Definition V1、产品需求规格书、打样与测试计划、质量验收标准和工厂交接资料。 |
+| `hzp-amz-2-1-market-research` | [`01 amazon/hzp-amz-2-1-market-research`](01%20amazon/hzp-amz-2-1-market-research/) | 分析 Amazon US 单个 ASIN 的 Keepa、Helium 10 Cerebro、Amazon Reviews、销量记录/预估表、投资回报试算图和公开商品页数据，输出证据可追溯的中文 HTML 选品与产品开发决策报告。 |
+| `hzp-amz-3-1-product-development` | [`01 amazon/hzp-amz-3-1-product-development`](01%20amazon/hzp-amz-3-1-product-development/) | 优先读取 2-1 HANDOFF，把市场结论转成 Product Definition V2、产品需求规格书、打样与测试计划、质量验收标准和 3-1 HANDOFF。 |
 
 后续新增 Skill 时，在本 README 的清单中补充名称、目录和用途，并在对应目录中提供完整的 `SKILL.md` 与说明文件。
 
@@ -22,7 +22,7 @@
 
 所有活动 Amazon Skill 都从第一个目录递归读取，从第二个目录生成结果。目录校验、路径安全和相对链接规则见两个活动 Skill 内的 `references/product-directory-contract.md`。
 
-## hzp-amazon-product-market-research
+## hzp-amz-2-1-market-research
 
 ### 解决的问题
 
@@ -90,18 +90,19 @@
 
 ```text
 01 amazon/
-├── hzp-amazon-product-market-research/
-└── hzp-amazon-product-development/
+├── hzp-amz-2-1-market-research/
+└── hzp-amz-3-1-product-development/
     ├── SKILL.md
     ├── README.md
     ├── agents/openai.yaml
-    └── references/handoff-schema.md
+    ├── references/handoff-schema.md
+    └── templates/handoff-template.md
 ```
 
 研究 Skill 的目录结构：
 
 ```text
-hzp-amazon-product-market-research/
+hzp-amz-2-1-market-research/
     ├── SKILL.md
     ├── README.md
     ├── agents/openai.yaml
@@ -118,36 +119,37 @@ hzp-amazon-product-market-research/
 
 ### 调用与维护
 
-调用某个 Skill 时，使用其目录中的 `SKILL.md` 作为入口。更新 `hzp-amazon-product-market-research` 时，以本仓库目录为主版本：
+调用某个 Skill 时，使用其目录中的 `SKILL.md` 作为入口。更新 `hzp-amz-2-1-market-research` 时，以本仓库目录为主版本：
 
-`E:\codex\JasonSkill\01 amazon\hzp-amazon-product-market-research`
+`E:\codex\JasonSkill\01 amazon\hzp-amz-2-1-market-research`
 
 更新完成后同步到 Codex 安装目录：
 
-`C:\Users\qmhzp\.codex\skills\hzp-amazon-product-market-research`
+`C:\Users\qmhzp\.codex\skills\hzp-amz-2-1-market-research`
 
 同步后运行：
 
 ```powershell
 python C:\Users\qmhzp\.codex\skills\.system\skill-creator\scripts\quick_validate.py `
-  E:\codex\JasonSkill\01 amazon\hzp-amazon-product-market-research
+  E:\codex\JasonSkill\01 amazon\hzp-amz-2-1-market-research
 ```
 
 确认校验通过后，再执行 Git 提交和 push。提交前不要把临时文件、分析报告或其他无关文件加入仓库。
 
 ### 相关说明
 
-- Skill 详细规则：[`01 amazon/hzp-amazon-product-market-research/SKILL.md`](01%20amazon/hzp-amazon-product-market-research/SKILL.md)
-- 中文使用说明：[`01 amazon/hzp-amazon-product-market-research/README.md`](01%20amazon/hzp-amazon-product-market-research/README.md)
-- Amazon 页面协议：[`references/amazon-page-data.md`](01%20amazon/hzp-amazon-product-market-research/references/amazon-page-data.md)
-- 销量与投资回报协议：[`references/secondary-inputs.md`](01%20amazon/hzp-amazon-product-market-research/references/secondary-inputs.md)
-- HTML 报告大纲：[`templates/report-outline.md`](01%20amazon/hzp-amazon-product-market-research/templates/report-outline.md)
-- HTML 样式指南：[`templates/html-style-guide.md`](01%20amazon/hzp-amazon-product-market-research/templates/html-style-guide.md)
+- Skill 详细规则：[`01 amazon/hzp-amz-2-1-market-research/SKILL.md`](01%20amazon/hzp-amz-2-1-market-research/SKILL.md)
+- 中文使用说明：[`01 amazon/hzp-amz-2-1-market-research/README.md`](01%20amazon/hzp-amz-2-1-market-research/README.md)
+- Amazon 页面协议：[`references/amazon-page-data.md`](01%20amazon/hzp-amz-2-1-market-research/references/amazon-page-data.md)
+- 销量与投资回报协议：[`references/secondary-inputs.md`](01%20amazon/hzp-amz-2-1-market-research/references/secondary-inputs.md)
+- HTML 报告大纲：[`templates/report-outline.md`](01%20amazon/hzp-amz-2-1-market-research/templates/report-outline.md)
+- HTML 样式指南：[`templates/html-style-guide.md`](01%20amazon/hzp-amz-2-1-market-research/templates/html-style-guide.md)
 
-### hzp-amazon-product-development
+### hzp-amz-3-1-product-development
 
-这个 Skill 接收产品市场研究报告、Product Definition V1、评论痛点、样品和供应链资料，输出产品开发方向、需求规格书、样品与测试计划、质量验收标准、开发变更记录和产品开发交接 JSON。
+这个 Skill 优先接收 `2-1-[ProductID]_HANDOFF.md`，再结合产品市场研究报告、Product Definition V1、评论痛点、样品和供应链资料，输出 Product Definition V2、需求规格书、样品与测试计划、质量验收标准、开发变更记录和 3-1 HANDOFF。
 
-- Skill 详细规则：[`01 amazon/hzp-amazon-product-development/SKILL.md`](01%20amazon/hzp-amazon-product-development/SKILL.md)
-- 中文使用说明：[`01 amazon/hzp-amazon-product-development/README.md`](01%20amazon/hzp-amazon-product-development/README.md)
-- 交接字段结构：[`references/handoff-schema.md`](01%20amazon/hzp-amazon-product-development/references/handoff-schema.md)
+- Skill 详细规则：[`01 amazon/hzp-amz-3-1-product-development/SKILL.md`](01%20amazon/hzp-amz-3-1-product-development/SKILL.md)
+- 中文使用说明：[`01 amazon/hzp-amz-3-1-product-development/README.md`](01%20amazon/hzp-amz-3-1-product-development/README.md)
+- 交接字段结构：[`references/handoff-schema.md`](01%20amazon/hzp-amz-3-1-product-development/references/handoff-schema.md)
+- HANDOFF 模板：[`templates/handoff-template.md`](01%20amazon/hzp-amz-3-1-product-development/templates/handoff-template.md)

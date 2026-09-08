@@ -1,4 +1,4 @@
-# HZP 亚马逊产品市场研究 Skill
+# HZP Amazon 2-1｜产品市场分析 Skill
 
 这是一个面向亚马逊美国站的产品市场研究与开发决策技能。它把 Keepa、Helium 10 Cerebro、Amazon Reviews、销量记录/预估表、投资回报试算图和对应 ASIN 的 Amazon 商品页公开快照，整理为一份证据可追溯的中文 HTML 会议报告，重点回答“这个方向是否值得继续开发，以及我们的产品应该做成什么”。
 
@@ -24,7 +24,7 @@
 
 ## 输出内容
 
-默认生成一份自包含的中文 HTML 决策报告，包含：
+默认生成一份自包含的中文 HTML 决策报告和一份结构化 AI HANDOFF，包含：
 
 - 一句话结论与 `GO / CONDITIONAL GO / NO-GO` 决策；
 - Keepa 价格、BSR、评分和季节性趋势；
@@ -39,6 +39,38 @@
 - 销量记录的日期范围、记录/预估销量、最近 7/14/30 天文件范围内汇总、非零/零销量天数和同期价格/BSR/评分对照。
 - 投资试算图中的手动输入、场景假设、自动计算结果、利润/毛利/回报/周转字段，均保留币种、单位和图片定位。
 
+默认输出文件：
+
+```text
+02 所有AI分析结果/
+├── 2-1-[ASIN]_产品市场分析报告.html   # Human Report，给 HZP/QMT/团队阅读
+└── 2-1-[ASIN]_HANDOFF.md              # AI Handoff，给下游 Skill 读取
+```
+
+`2-1-[ASIN]_HANDOFF.md` 是下游 Skill 的标准接口。它只保存会影响下一阶段判断的浓缩信息，不复制完整 HTML，也不记录聊天过程。模板见 [`templates/handoff-template.md`](templates/handoff-template.md)。
+
+## 正式报告命名（强制）
+
+这个 Skill 的编号是 `2-1`。所有正式分析报告、会议报告和 HTML 报告，文件名必须以 `2-1-` 开头，并按下面格式命名：
+
+```text
+2-1-[产品识别信息]_[报告类型].[扩展名]
+```
+
+如果需要保留版本和日期，在扩展名前加入 `-vN-YYYYMMDD`：
+
+```text
+2-1-[产品识别信息]_[报告类型]-vN-YYYYMMDD.[扩展名]
+```
+
+有 ASIN 时优先使用 ASIN；没有 ASIN 时使用简短、稳定、可识别的产品名称。HTML、Markdown、PDF、Excel 等正式报告都遵守这条规则，例如：
+
+- `2-1-B0FJRYJH1J_产品市场分析报告.html`
+- `2-1-B0XXXXXXX_市场研究报告.pdf`
+- `2-1-B0XXXXXXX_市场研究数据.xlsx`
+
+以前已经生成的历史文件不重命名。正式 HTML 报告标题附近或报告信息区域还必须显示来源标识：`HZP Amazon 2-1｜产品市场分析`，作为识别信息，不要喧宾夺主。
+
 ## Amazon 页面数据补充
 
 页面快照只做公开、只读、可见内容采集。报告会记录请求 URL、最终 URL、访问时间、页面状态、页面显示 ASIN 和字段定位；页面重定向到其他 ASIN、无法确认身份或只显示子体时，不会把数据静默并入目标 ASIN。
@@ -52,6 +84,7 @@
 ## 证据原则
 
 - 区分 `数据支持`、`分析推断` 和 `待供应链验证`；
+- HANDOFF 使用统一标签 `[FACT]`、`[INFERENCE]`、`[TO-VERIFY]`、`[DECISION]`。下游不得把 `[INFERENCE]` 或 `[TO-VERIFY]` 自动升级为 `[FACT]`；只有新证据或明确的 HZP/QMT 决策才能改变状态。
 - 不从 BSR 推算月销量，不从售价推算利润；
 - H10 建议竞价只使用 Cerebro 原始行，不估算缺失值，也不把它当作实际 CPC、ACOS 或利润；
 - 评价引文必须来自单条真实评价，不合并、改写或编造；
@@ -76,7 +109,7 @@
 
 ## 衔接产品开发
 
-这个 Skill 输出市场决策、开发方向和 Product Definition V1；当用户要开始打样或做产品规格时，不要重新做市场分析，直接把报告路径和 `product-handoff-v1-YYYYMMDD.json` 交给 `hzp-amazon-product-development`。产品开发 Skill 会继续生成产品需求规格书、样品与测试计划、质量验收标准、开发变更记录和工厂交接资料。
+这个 Skill 输出市场决策、开发方向、Product Definition V1 和 `2-1-[ASIN]_HANDOFF.md`。当用户要开始打样或做产品规格时，下游 `3-1 Product Development` Skill（`hzp-amz-3-1-product-development`）必须先读取 HANDOFF，再按需核对 HTML 报告和原始文件；不要重新做市场分析，也不能把 HANDOFF 中的推断当成技术参数。现有 `product-handoff-v1-YYYYMMDD.json` 可以作为兼容性补充，但不替代 HANDOFF。
 
 可以直接把下面这句话发给 Codex：
 
@@ -86,12 +119,12 @@
 
 首次安装时，让员工把下面这句话完整发给 Codex：
 
-> 请使用 `skill-installer`，从 `https://github.com/jason82983/jasonskill/tree/main/01%20amazon/hzp-amazon-product-market-research` 安装 `hzp-amazon-product-market-research` Skill，并启用它。
+> 请使用 `skill-installer`，从 `https://github.com/jason82983/jasonskill/tree/main/01%20amazon/hzp-amz-2-1-market-research` 安装 `hzp-amz-2-1-market-research` Skill，并启用它。
 
 如果员工已经安装过，需要更新时发送：
 
-> 请从 `https://github.com/jason82983/jasonskill/tree/main/01%20amazon/hzp-amazon-product-market-research` 将 `hzp-amazon-product-market-research` Skill 更新到 `main` 分支最新版本，并保留原 Skill 名称。
+> 请从 `https://github.com/jason82983/jasonskill/tree/main/01%20amazon/hzp-amz-2-1-market-research` 将 `hzp-amz-2-1-market-research` Skill 更新到 `main` 分支最新版本，并保留原 Skill 名称。
 
-这是一个 GitHub 仓库中的子目录，路径里的空格已经编码为 `%20`。安装或更新后，让 Codex 重新开始一个对话，再发送 `$hzp-amazon-product-market-research` 调用技能。
+这是一个 GitHub 仓库中的子目录，路径里的空格已经编码为 `%20`。安装或更新后，让 Codex 重新开始一个对话，再发送 `$hzp-amz-2-1-market-research` 调用技能。
 
-详细执行规则见 [`SKILL.md`](SKILL.md)，Amazon 页面采集与冲突规则见 [`references/amazon-page-data.md`](references/amazon-page-data.md)，销量/投资输入规则见 [`references/secondary-inputs.md`](references/secondary-inputs.md)，字段映射见 [`references/data-field-mapping.md`](references/data-field-mapping.md)，HTML 样式要求见 [`templates/html-style-guide.md`](templates/html-style-guide.md)。
+详细执行规则见 [`SKILL.md`](SKILL.md)，HANDOFF 结构见 [`templates/handoff-template.md`](templates/handoff-template.md)，Amazon 页面采集与冲突规则见 [`references/amazon-page-data.md`](references/amazon-page-data.md)，销量/投资输入规则见 [`references/secondary-inputs.md`](references/secondary-inputs.md)，字段映射见 [`references/data-field-mapping.md`](references/data-field-mapping.md)，HTML 样式要求见 [`templates/html-style-guide.md`](templates/html-style-guide.md)。

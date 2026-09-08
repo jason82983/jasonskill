@@ -2,8 +2,19 @@
 
 The report is designed for QMT meeting decisions. The top of the page must answer the decision before the reader scrolls.
 
+## Output artifacts
+
+Generate these two sibling files in `02 所有AI分析结果` after a valid full analysis:
+
+- `2-1-[ASIN]_产品市场分析报告.html` — Human Report for HZP/QMT/team reading;
+- `2-1-[ASIN]_HANDOFF.md` — compact AI Handoff for the next Skill, using [`handoff-template.md`](handoff-template.md).
+
+The HANDOFF is not a copy of this HTML. It must preserve evidence state with `[FACT]`, `[INFERENCE]`, `[TO-VERIFY]`, and `[DECISION]`, and must identify `3-1 Product Development` as the recommended next Skill.
+
 ## 0. Header / source validation strip
+- Formal output filename must begin with `2-1-` and follow `2-1-[产品识别信息]_[报告类型]-vN-YYYYMMDD.[扩展名]` when version/date is used; use the validated ASIN first, and preserve older historical files.
 - Report title + ASIN + benchmark product
+- Subdued source marker near the title or in report metadata: `HZP Amazon 2-1｜产品市场分析`
 - data date
 - file check: Keepa / Cerebro / Reviews / 销量记录 / 投资试算图 / ASIN match / Amazon 页面状态
 - Amazon request URL, final URL, fetch time, displayed ASIN, and page limitation when attempted

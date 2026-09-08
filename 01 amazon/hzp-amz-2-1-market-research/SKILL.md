@@ -1,9 +1,9 @@
 ---
-name: hzp-amazon-product-market-research
+name: hzp-amz-2-1-market-research
 description: Analyze one Amazon US product ASIN from matching Keepa, Helium 10 Cerebro, Amazon Reviews, sales-record/estimate, investment-return-calculation image inputs, and a public Amazon product-page snapshot, then produce an evidence-grounded Chinese HTML decision report for product selection and product development. The report must use H10 bid data directly, distinguish recorded sales from modeled returns, quote short real reviews with Chinese translations, reconcile current page facts with historical/file evidence, emphasize Product Definition V1, distinguish facts/inference/supply-chain validation, and use QMT terminology only. Never invent missing metrics or merge reviews.
 ---
 
-# HZP Amazon Product Market Research
+# HZP Amazon 2-1｜产品市场分析
 
 ## Purpose
 Turn five product research inputs plus a current public Amazon product-page snapshot into a repeatable first-pass decision system for employees and QMT meetings.
@@ -30,7 +30,7 @@ All Amazon Skills use the runtime directory parameters defined in [`references/p
 产品相对目录：<相对于根目录的产品目录>
 ```
 
-Resolve `product_dir = 产品根目录 / 产品相对目录` with code before reading any files. Verify that the resolved directory is unique, remains inside the supplied root, and matches the product code when one is provided. Read source files recursively from `product_dir\01 产品分析所需数据`; write the report, handoff JSON, and other AI outputs only to `product_dir\02 所有AI分析结果`, creating that output folder when needed. Do not hardcode a drive or reuse a previous product directory. Record both parameters and the verified relative paths in the report.
+Resolve `product_dir = 产品根目录 / 产品相对目录` with code before reading any files. Verify that the resolved directory is unique, remains inside the supplied root, and matches the product code when one is provided. Read source files recursively from `product_dir\01 产品分析所需数据`; write the Human Report, required AI Handoff, optional handoff JSON, and other AI outputs only to `product_dir\02 所有AI分析结果`, creating that output folder when needed. Do not hardcode a drive or reuse a previous product directory. Record both parameters and the verified relative paths in the report.
 
 ---
 
@@ -65,7 +65,7 @@ Do not rely on upload order.
 
 Before scanning files, resolve the supplied product root and relative directory using the shared product-directory contract. If the relative directory is missing, use the product code to search for one unique matching product folder; if there are multiple matches or no match, stop and report the candidates. Do not scan unrelated drives or silently use a previous product path.
 
-The normal full workflow reads recursively from `01 产品分析所需数据` and writes the self-contained HTML report and `product-handoff` file to `02 所有AI分析结果`. Preserve source files and store source references relative to the verified product directory.
+The normal full workflow reads recursively from `01 产品分析所需数据` and writes the self-contained HTML Human Report and required `2-1-[ASIN]_HANDOFF.md` to `02 所有AI分析结果`. Preserve source files and store source references relative to the verified product directory.
 
 Use, in descending priority:
 1. ASIN contained in the file data/metadata when reliably available;
@@ -122,6 +122,7 @@ Use `references/secondary-inputs.md` for field mapping, format sniffing, image p
 
 ## Non-negotiable evidence rules
 - Separate **数据支持 / Source Fact**, **分析推断 / Analysis**, and **待供应链验证 / Supply-chain Validation**.
+- For the AI handoff, use the canonical evidence labels `[FACT]`, `[INFERENCE]`, `[TO-VERIFY]`, and `[DECISION]`. Keep each statement in its original evidence state: never promote `[INFERENCE]` or `[TO-VERIFY]` without new evidence or an explicit HZP/QMT decision.
 - Never infer real monthly unit sales from BSR alone unless a provided source explicitly supplies such an estimate.
 - Never infer profit from selling price.
 - Never claim ACOS, return rate, net margin, inventory depth, organic/paid mix, or off-Amazon traffic without evidence.
@@ -523,8 +524,25 @@ Good pattern:
 ---
 
 ### Step 9 — Final HTML output
-Default output is a **self-contained Chinese HTML meeting report** saved under the verified `product_dir\02 所有AI分析结果` folder. Use the version-before-date filename convention `<内容名称>-vN-YYYYMMDD.html`; preserve older versions. Do not write AI reports into `01 产品分析所需数据`.
-Use `templates/report-outline.md` for section order and `templates/html-style-guide.md` for visual hierarchy.
+Default output is a **Human Report + AI Handoff** pair saved under the verified `product_dir\02 所有AI分析结果` folder:
+
+1. Human Report: `2-1-[ASIN]_产品市场分析报告.html`
+2. AI Handoff: `2-1-[ASIN]_HANDOFF.md`
+
+If no ASIN is available after validation, replace `[ASIN]` with a short, stable, recognizable product identifier. The HANDOFF is the standard downstream interface and must be generated after a valid full analysis; do not copy the entire HTML report into it. Every formal report generated by this Skill must use the `2-1-` filename prefix and the following convention:
+
+```text
+2-1-[产品识别信息]_[报告类型].[扩展名]
+```
+
+When versioning is needed, insert the version and date before the extension:
+
+```text
+2-1-[产品识别信息]_[报告类型]-vN-YYYYMMDD.[扩展名]
+```
+
+Use the validated ASIN as `产品识别信息` whenever one exists; otherwise use a short, stable, recognizable product name. Apply this prefix to formal HTML, Markdown, PDF, Excel, and other report files. Examples: `2-1-B0FJRYJH1J_产品市场分析报告.html`, `2-1-B0FJRYJH1J_HANDOFF.md`, `2-1-B0XXXXXXX_市场研究报告.pdf`. Preserve previously generated historical files, including files that do not have this prefix. The formal HTML report must also show `HZP Amazon 2-1｜产品市场分析` near the title or in the report metadata area as a subdued source marker. Do not write AI reports into `01 产品分析所需数据`.
+Use `templates/report-outline.md` for section order, `templates/handoff-template.md` for the AI Handoff structure, and `templates/html-style-guide.md` for visual hierarchy.
 
 #### Required information hierarchy
 The top screen must answer the decision before showing detail.
@@ -570,6 +588,8 @@ Then present, in this order:
 - add print styles so the report remains legible when exported or printed, and honor `prefers-reduced-motion` if any motion is used;
 - before delivery, open or render the HTML and visually check the first screen, one dense table, one review card, the development matrix, and Product Definition V1 for clipping, contrast, overflow, and broken spacing;
 - ASIN must appear in page title and report heading;
+- filename must begin with `2-1-` and follow the formal report naming convention above;
+- the top of the HTML or its report metadata must show the subdued source marker `HZP Amazon 2-1｜产品市场分析`;
 - show the Amazon request URL, final URL/status, fetch time, and displayed ASIN when page enrichment was attempted;
 - show page-derived current facts separately from Keepa/Cerebro/Reviews and include a compact conflict/missing-data treatment;
 - show sales-record summaries with date range and `文件范围内计算`, and keep them separate from Keepa-derived history;
@@ -582,20 +602,45 @@ Also provide a concise 5–10 sentence executive summary in chat after generatin
 
 ---
 
+## Step 10 — Required AI Handoff
+
+After completing the analysis, write `2-1-[ASIN]_HANDOFF.md` next to the HTML report. Use `templates/handoff-template.md` and keep the file concise, structured, and limited to information that can change the next Skill's decision. It must contain these sections:
+
+- `# HZP AMAZON SKILL HANDOFF`
+- `## Metadata`: Product ID, ASIN, Product Name, Marketplace, Source Skill, Source Skill Name, Generated Date, Next Recommended Skill;
+- `## Decision`: current-stage conclusion and `GO / CONDITIONAL GO / NO-GO / HOLD`;
+- `## Confirmed Facts`;
+- `## Key Findings`;
+- `## Requirements For Next Stage`;
+- `## Risks`;
+- `## Unknowns`;
+- `## Validation Required`;
+- `## User / QMT / Supplier Decisions Required`;
+- `## Source Files`;
+- `## Next Stage Instructions`.
+
+The recommended next Skill is `3-1 Product Development` (`hzp-amz-3-1-product-development`). The handoff must pass through, when supported by the current evidence: product identity, market conclusion, decision status, target consumer, core use scene, JTBD/母需求, keyword demand clusters, competitor success reasons, positive/negative review findings, consumer pain points, product opportunities, Product Definition V1, P0/P1/P2 requirements, avoid/do-not-overpromise items, evidence-supported target price band, risks, unknowns, validation items, QMT/supplier questions, and original data sources.
+
+Every handoff statement must carry one canonical label: `[FACT]`, `[INFERENCE]`, `[TO-VERIFY]`, or `[DECISION]`. `[DECISION]` is reserved for an explicit HZP/QMT/user decision; an AI recommendation remains `[INFERENCE]` until confirmed. Do not silently remove upstream facts, requirements, constraints, risks, or decisions. If new evidence changes an upstream conclusion, show `上游结论` → `新证据` → `为什么修改` → `新结论`.
+
+The handoff is a compact interface, not a transcript or a duplicate report. Downstream Skills must read it first, then consult the HTML report and raw files as needed. Do not treat a handoff inference as a confirmed technical parameter, cost, compliance result, or supplier capability.
+
+---
+
 ## Product-development handoff
 
-This Skill stops at market decision, development direction, and Product Definition V1. When the user wants to begin product development, do not restart the market analysis. Pass the validated report, source list, Product Definition V1, development matrix, cost/price assumptions, and QMT unknowns to `hzp-amazon-product-development`.
+This Skill stops at market decision, development direction, and Product Definition V1. When the user wants to begin product development, do not restart the market analysis. Pass the validated report, source list, Product Definition V1, development matrix, cost/price assumptions, and QMT unknowns to `hzp-amz-3-1-product-development`.
 
 The development handoff should include:
 
 - supplied product root and product-relative directory, verified product directory, and the `01 产品分析所需数据` / `02 所有AI分析结果` locations;
-- source report path, product code/ASIN, variation, marketplace, decision status, and source dates;
+- source report path, HANDOFF path, product code/ASIN, variation, marketplace, decision status, and source dates;
 - customer job, target scene, non-goals, and the difference between `数据支持`, `分析推断`, and `待供应链验证`;
 - P0/P1/P2 requirements with evidence, cost/complexity risk, and a validation method;
 - price/cost/return or investment-model values as assumptions with currency and provenance;
 - open QMT and supplier questions that block sampling, testing, or production handoff.
 
-When practical, write a `product-handoff-v1-YYYYMMDD.json` next to the report using the development Skill's handoff schema. This file is an interface for the next Skill; it does not authorize ordering, contacting suppliers, mass production, listing publication, or advertising.
+When practical, also write a `product-handoff-v1-YYYYMMDD.json` next to the report using the development Skill's handoff schema for compatibility. This JSON is supplementary and does not replace the required `2-1-[ASIN]_HANDOFF.md`; it does not authorize ordering, contacting suppliers, mass production, listing publication, or advertising.
 
 ---
 
@@ -644,6 +689,11 @@ Before submitting, confirm all items below:
 - [ ] Report asks QMT professional product questions rather than pretending to replace QMT.
 - [ ] Final recommendation distinguishes market validation from ease of replication.
 - [ ] Top of HTML shows decision, KPI, success reason, biggest opportunity, biggest risk, and what we should develop.
+- [ ] Formal report filename begins with `2-1-` and identifies the ASIN/product and report type.
+- [ ] HTML report shows `HZP Amazon 2-1｜产品市场分析` near the title or in report metadata.
+- [ ] Human Report and `2-1-[ASIN]_HANDOFF.md` are both written to `02 所有AI分析结果`.
+- [ ] HANDOFF contains all required sections and the recommended next Skill is `3-1 Product Development`.
+- [ ] HANDOFF statements use `[FACT]`, `[INFERENCE]`, `[TO-VERIFY]`, or `[DECISION]` without evidence-state promotion.
 - [ ] Sales file format was checked by content, not only by `.xls`/`.xlsx` extension.
 - [ ] Sales date range, recorded/estimated-sales scope, zero/nonzero days, and file-range calculations are visible.
 - [ ] Investment image was visually read; visible fields have labels, units, image source, read time, and section/field locators.

@@ -15,12 +15,13 @@ Goal: executive clarity for desktop/browser/projector use. Clean, restrained, hi
 
 ## Information hierarchy
 1. Page title / ASIN
-2. one-sentence conclusion
-3. decision badge
-4. KPI row
-5. four executive cards
-6. detailed evidence sections
-7. development direction + Product Definition V1 should receive strongest visual emphasis in the body
+2. subdued Skill source marker: `HZP Amazon 2-1｜产品市场分析`
+3. one-sentence conclusion
+4. decision badge
+5. KPI row
+6. four executive cards
+7. detailed evidence sections
+8. development direction + Product Definition V1 should receive strongest visual emphasis in the body
 
 For reports longer than one screen, add a small local navigation row or table of contents below the source-validation strip. Use stable `id` anchors for the major sections and keep the current decision visible in the page header.
 
