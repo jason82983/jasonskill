@@ -6,10 +6,19 @@
 
 | Skill | 目录 | 用途 |
 |---|---|---|
+| `hzp-amz-0-1-product-file-structure` | [`01 amazon/hzp-amz-0-1-product-file-structure`](01%20amazon/hzp-amz-0-1-product-file-structure/) | 创建、检查和安全整理 Amazon 产品文件结构，保护原始证据并区分人工思路与 Skill 分析成果。 |
 | `hzp-amz-2-1-market-research` | [`01 amazon/hzp-amz-2-1-market-research`](01%20amazon/hzp-amz-2-1-market-research/) | 分析 Amazon US 单个 ASIN 的 Keepa、Helium 10 Cerebro、Amazon Reviews、销量记录/预估表、投资回报试算图和公开商品页数据，输出证据可追溯的中文 HTML 选品与产品开发决策报告。 |
 | `hzp-amz-3-1-product-development` | [`01 amazon/hzp-amz-3-1-product-development`](01%20amazon/hzp-amz-3-1-product-development/) | 优先读取 2-1 HANDOFF，把市场结论转成 Product Definition V2、产品需求规格书、打样与测试计划、质量验收标准和 3-1 HANDOFF。 |
 
 后续新增 Skill 时，在本 README 的清单中补充名称、目录和用途，并在对应目录中提供完整的 `SKILL.md` 与说明文件。
+
+## hzp-amz-0-1-product-file-structure
+
+这个基础 Skill 负责 Products Root 和单个产品项目的目录结构管理。它支持 `CREATE`、`CHECK`、`ORGANIZE`、`MIGRATE` 四种模式：先识别 `00_产品公用数据` 和 Product Root，再以 `01_产品档案.md` 中的产品编号确认身份；公共定义只保存一份，产品证据按产品保存，真正生成的 Skill 成果放入 `06_SKILL分析报告`。迁移前必须先扫描和输出计划；发现重名、覆盖或数据丢失风险时停止。
+
+详细规则：[`01 amazon/hzp-amz-0-1-product-file-structure/SKILL.md`](01%20amazon/hzp-amz-0-1-product-file-structure/SKILL.md)
+
+中文说明：[`01 amazon/hzp-amz-0-1-product-file-structure/README.md`](01%20amazon/hzp-amz-0-1-product-file-structure/README.md)
 
 ## Amazon 产品目录共用规则
 

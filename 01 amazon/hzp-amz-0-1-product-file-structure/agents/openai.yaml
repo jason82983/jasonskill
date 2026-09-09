@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 0-1｜产品文件结构管理"
+  short_description: "创建、检查和安全整理 Amazon 产品文件结构，保护原始证据"
+  brand_color: "#2563EB"
+  default_prompt: "Use $hzp-amz-0-1-product-file-structure for the selected Products Root or one Product Root. Identify Products Root from 00_产品公用数据/ when possible, determine product identity from 01_产品档案.md, then run CHECK or ORGANIZE before any migration; preserve original evidence, keep Shared Data outside Product Roots, separate human input from Skill outputs, and stop on any overwrite or data-loss risk."
+
+policy:
+  allow_implicit_invocation: true
