@@ -15,6 +15,19 @@ Its core rule is:
 
 This Skill can create folders, create lightweight blank templates, inspect files, classify evidence, move files, and rename files when the intended meaning is clear. It does not analyze a product, make a market or development decision, rewrite evidence, or invent missing product information.
 
+## Market research objects and roles
+
+Market research must keep two concepts separate:
+
+- **ASIN = stable research object identity**. An ASIN identifies one product record and does not change because the reason for studying it changes.
+- **Role = dynamic research context**. A role explains why the ASIN is being studied at a particular time or in a particular Niche.
+
+One ASIN may have several roles at the same time, for example `对标新品`, `Niche 榜1`, `高速增长新品`, or `高价代表产品`. Roles are metadata about the research context, not a second storage location. Do not create folders such as `榜1产品/`, `高速新品/`, or `机会产品/`, and do not copy one ASIN's Keepa, Cerebro, Reviews, or other source files because its role changes.
+
+When a role is recorded, keep it lightweight and human-readable in `01_产品档案.md`. A `Niche 榜1` role must be bound to the specific Niche and, whenever known, the data date. Do not record `ASIN = 榜1` without that market context. A role may be recorded only from a user instruction, explicit Amazon Niche evidence, or a reliable downstream analysis result; 0-1 must not infer `榜1`, `头部`, or `高速增长` from BSR, review count, sales estimates, or filenames.
+
+The role recorded in `01_产品档案.md` is a known research context, not a permanent market fact. Later market-research Skills must revalidate dynamic roles against current data. If a role is unknown, leave it blank or mark it `待确认`; do not block Product Root creation because no research object or Niche leader is known yet.
+
 ## Three directory levels
 
 Keep these levels separate:
@@ -43,9 +56,26 @@ When creating a new product project, create `01_产品档案.md` with this minim
 # 产品档案
 
 产品编号：
+产品名称：
+站点：
+
+## 市场研究对象
+
+### 对标产品
+
+- ASIN：
+  角色：
+  数据日期：
+
+### 细分市场头部代表
+
+- Niche：
+  ASIN：
+  角色：
+  数据日期：
 ```
 
-Fill the product number only when the user or an existing authoritative file clearly provides it. Leave all other unknown fields blank. Never guess an ASIN, product name, ERP number, store, owner, status, competitor ASIN, or other business fact.
+Fill only fields supported by the user or an existing authoritative file. Leave unknown fields blank. Multiple roles may be written under one ASIN; do not create duplicate ASIN entries merely to represent roles. Never guess an ASIN, product name, ERP number, store, owner, status, competitor ASIN, Niche, market rank, or other business fact.
 
 ## Products Root and Shared Data V1
 
@@ -59,6 +89,19 @@ When a Products Root is explicitly selected or safely identified, its shared-dat
 │  └─ 03_系统配置/
 └─ ... product directories ...
 ```
+
+When the user requests Shared Data initialization, create the three folders and these blank guidance files if they do not already exist:
+
+```text
+00_产品公用数据/
+├─ README.md
+├─ 01_Amazon平台资料/平台资料模板.md
+├─ 02_公司标准/公司标准模板.md
+├─ 03_系统配置/系统配置模板.md
+└─ 03_系统配置/sql-server-erp-connection.template.json
+```
+
+These are blank input templates, not platform definitions, company decisions, or system credentials. The SQL Server ERP JSON is a connection-shape template with placeholders and a secure credential reference; it must never contain a real password, token, or API key. Never overwrite an existing file with a template. Do not fill templates with guessed facts.
 
 `01_Amazon平台资料/` contains external platform definitions and official explanations, such as Opportunity Explorer or Niche metric definitions. `02_公司标准/` contains internal cross-product judgment rules, evidence standards, SOPs, and product or profit requirements. `03_系统配置/` contains non-sensitive ERP, SQL, field-mapping, and query configuration. These are different evidence types and must not be silently mixed.
 
@@ -84,10 +127,16 @@ The standard structure is:
 │  ├─ 03_关键词数据/
 │  ├─ 04_用户反馈/
 │  └─ 05_补充资料/
-└─ 06_SKILL分析报告/
+├─ 06_SKILL分析报告/
+└─ 07_产品资料/
+   ├─ 01_产品设计/
+   ├─ 02_供应链与打样/
+   ├─ 03_包装与说明书/
+   ├─ 04_图片视频素材/
+   └─ 05_合规与其他资料/
 ```
 
-Create the five top-level source-data folders when creating or repairing the standard structure. Create niche, ASIN, report, and other deeper subfolders only when actual files or a requested output need them. Do not create a large collection of empty Skill-number folders in advance.
+For a Product Root whose identity is confirmed, create the five top-level source-data folders and the five `07_产品资料` folders automatically when creating or repairing the standard structure. During an explicitly requested automatic organization, missing standard directories may be created before any file move. Create niche, ASIN, report, and other deeper subfolders only when actual files or a requested output need them. Do not create a large collection of empty Skill-number folders in advance.
 
 ## Human input files
 
@@ -116,6 +165,20 @@ Adapt the title and section wording for page or promotion thinking. Do not copy 
 
 `01_产品档案.md` is an identity file, not a place for analysis. `06_SKILL分析报告/` is the place for formal Skill outputs. This Skill itself does not generate a business `当前结论.md`.
 
+## Product assets in `07_产品资料`
+
+`07_产品资料/` stores real business assets created or used while designing, sampling, producing, packaging, photographing, and proving compliance for this product. It is distinct from research evidence in `05_分析源数据/` and processed conclusions in `06_SKILL分析报告/`:
+
+- `01_产品设计/` — design drawings, structure and dimension drawings, CAD/3D/STEP files, specifications, material, color, finish, function, and confirmed design revisions;
+- `02_供应链与打样/` — supplier and factory files, quotations, BOM, cost files, sample photos, sampling versions, modification records, factory feedback, material samples, process confirmations, and production confirmations;
+- `03_包装与说明书/` — packaging and dielines, box/label/FNSKU/UPC/EAN designs, manuals, installation instructions, warning labels, package dimensions, carton designs, and final print files;
+- `04_图片视频素材/` — product photography originals, white-background and lifestyle images, model and render assets, AI candidate assets, video source and final videos, final listing images, A+ visuals, and brand-story visuals;
+- `05_合规与其他资料/` — test and certification reports, SDS/MSDS, material proof, laboratory reports, patent or authorization files, compliance statements, safety files, and other product business material that cannot be classified above. Use this as the fallback when a file is confirmed to belong to the product but its specific 07 subcategory cannot yet be determined.
+
+`07_产品资料/` is not a default miscellaneous folder. Classify by the file's primary business purpose: market, competitor, consumer, or keyword evidence stays in `05_分析源数据/`; Skill-generated formal analysis stays in `06_SKILL分析报告/`; the product's own design, supply chain, sampling, packaging, visual, or compliance assets go in `07_产品资料/`. If the file is confirmed as a product asset but its specific 07 subcategory is uncertain, place it in `07_产品资料/05_合规与其他资料/` and report that conservative fallback. If it is not possible to confirm that the file is a product asset at all, leave it in place and report it for confirmation.
+
+Keep one authoritative copy of each original asset. Other Skills may read files directly across `05_分析源数据/`, `06_SKILL分析报告/`, and `07_产品资料/`; never copy an asset into another directory merely to make it easier to read. ERP data that is already managed in a structured system does not need to be exported into `07_产品资料/` just to satisfy the folder structure.
+
 ## Evidence rules for `05_分析源数据`
 
 `05_分析源数据` is an original-evidence repository. Original CSV, XLSX, XLS, TXT, PDF, images, DOCX, ZIP, and similar files may be read, classified, moved, and safely renamed. Their contents must not be rewritten, summarized over, or replaced by AI output. Never delete an evidence file, even when its category is unclear.
@@ -135,6 +198,8 @@ For example, a general Opportunity Explorer metric glossary belongs in `00_产�
 - Files clearly about one competitor or benchmark ASIN go to `01_产品数据/对标产品/[ASIN]/`.
 - Keep that ASIN's Keepa, Cerebro, Reviews, listing, sales record, and investment inputs together when they are primarily used to study that ASIN.
 - If a file is clearly about the whole market rather than an ASIN, use the market, keyword, feedback, or supplementary category instead.
+- The ASIN folder is the single source of truth for that ASIN's original data. If the same ASIN is both an `对标产品` and a Niche leader or growth example, keep one authoritative set of files and express the additional roles in metadata; never duplicate the files into role-named folders.
+- Do not force research roles into filenames. Prefer stable names such as `Keepa_[ASIN]_[日期].xlsx`, `Cerebro_[ASIN]_[日期].csv`, and `Amazon_Reviews_[ASIN]_[日期].xlsx`.
 
 ### `02_细分市场数据`
 
@@ -151,6 +216,38 @@ Use this for general Amazon Reviews, VOC, Q&A, return reasons, consumer feedback
 ### `05_补充资料`
 
 Use this for evidence that cannot be reliably classified above, including supplier material, inspection material, patent material, external research, temporary screenshots, and third-party files. An uncertain file belongs here rather than in a guessed category. Report the file as conservatively classified when applying a migration.
+
+### Role recording examples
+
+Use the lightweight `市场研究对象` section in `01_产品档案.md` to express the research context:
+
+```markdown
+## 市场研究对象
+
+### 对标产品
+
+- ASIN：B0FZRQDRYS
+  角色：对标新品
+
+### 细分市场头部代表
+
+- Niche：marble shelf
+  ASIN：B0XXXXXXXX
+  角色：榜1
+  数据日期：2026-09-09
+```
+
+If the benchmark itself is the Niche leader, keep one ASIN entry and list both roles with their context:
+
+```markdown
+### 对标产品
+
+- ASIN：B0FZRQDRYS
+  角色：对标产品、marble shelf 榜1
+  数据日期：2026-09-09
+```
+
+If one ASIN is also a growth example, append that role to the same entry. If the benchmark and the Niche leader are different ASINs, record two objects; neither object should be copied into a role-named directory. These are research-context records only. A later 2-2 market-analysis Skill must validate the current Niche, rank, and growth status again rather than treating this file as a permanent market fact.
 
 ### Shared-data candidates found in a Product Root
 
@@ -195,9 +292,9 @@ Use the stable product number in the filename; include an ASIN or other analysis
 
 Support four explicit modes at either the Products Root or one Product Root:
 
-1. **CREATE** — create a requested Products Root Shared Data skeleton or a Product Directory V1. Create only the standard folders for the selected level; leave unknown product fields blank.
+1. **CREATE** — create a requested Products Root Shared Data skeleton or a Product Directory V1. For a Product Root, create the standard 01–07 structure, including the five `07_产品资料` subfolders; leave unknown product fields blank.
 2. **CHECK** — read-only inspection. Report Products Root candidates, Product Root identity evidence, missing or extra paths, misplaced-looking files, `SHARED-DATA-CANDIDATE` files, duplicate names, and possible historical files. Do not modify anything.
-3. **ORGANIZE** — scan an existing Products Root or Product Root and produce a migration plan. Include the current tree, target tree, proposed new folders, every planned move or rename, uncertain classifications, shared-data candidates, and collision/overwrite risks. Do not apply the plan in this mode.
+3. **ORGANIZE** — scan an existing Products Root or Product Root and produce a migration plan. Include the current tree, target tree, proposed new folders, every planned move or rename, uncertain classifications, shared-data candidates, and collision/overwrite risks. By default do not move or rename files. If the user explicitly requests automatic structure creation, create only missing empty standard directories for a confirmed Product Root; file moves still require a reviewed or explicitly requested MIGRATE operation.
 4. **MIGRATE** — apply a reviewed or explicitly requested plan after a fresh scan. Only create folders and move or rename files when every destination is checked and no overwrite or data-loss risk exists. Never copy Shared Data into a Product Root.
 
 If the user's intent is ambiguous, prefer `CHECK` or `ORGANIZE`. Do not start a large migration merely because the directory looks old.
@@ -212,7 +309,10 @@ Before any change:
 - identify and verify the Products Root candidate from `00_产品公用数据/`, when Shared Data management is in scope;
 - enumerate all files and folders recursively, including hidden items where available;
 - read lightweight text metadata when needed to determine purpose; do not alter source files;
-- distinguish human input, original evidence, formal reports, generated media, and legacy report folders or index files;
+- distinguish human input, original evidence, formal reports, product assets, generated media, and legacy report folders or index files;
+- classify each file by primary purpose across `05_分析源数据/`, `06_SKILL分析报告/`, and `07_产品资料/`; do not use `07_产品资料/` as a catch-all;
+- inspect `01_产品档案.md` for `市场研究对象` metadata, keeping ASIN identity separate from roles and checking that every `榜1` role has a Niche and data date when known;
+- detect role-named folders, role-prefixed filenames, duplicated ASIN source files, and conflicting ASIN entries as structure risks; do not infer or silently repair a market role;
 - distinguish platform/company definitions from product-specific evidence and flag shared candidates;
 - identify duplicate names, existing destinations, ambiguous ownership, important historical files, and unnumbered legacy report categories.
 
@@ -225,6 +325,10 @@ Show the user:
 - directories and templates to create;
 - each move and rename, with source and destination;
 - files placed conservatively in `05_补充资料`;
+- files proposed for `07_产品资料/` with the specific subfolder and classification reason; use `05_合规与其他资料/` as the fallback for confirmed product assets whose subcategory is uncertain;
+- any duplicate or copied asset that would violate the single-source-of-truth rule;
+- any duplicate ASIN data caused by research roles, any role-named evidence folder, any role-prefixed source filename, and any `榜1` record missing its Niche or data date;
+- any role metadata that is user-confirmed, source-supported, or still `待确认`; do not turn a role classification into a market conclusion;
 - `SHARED-DATA-CANDIDATE` files and a proposed Shared Data destination, if applicable;
 - duplicate, overwrite, broken-link, historical-file, and legacy-category risks;
 - for every legacy report, the evidence that supports its destination Skill folder; if the Skill cannot be confirmed, leave it in place and report it as unresolved.
@@ -239,6 +343,7 @@ Apply only safe, explicit filesystem operations:
 - move files without changing their bytes;
 - rename a file only when its purpose is clear and the destination is free;
 - move a legacy formal report directly into its confirmed `[Skill编号]_[Skill中文名称]` folder only when its source Skill is clear and the dated destination is free;
+- move a confirmed product asset directly into the appropriate `07_产品资料/` subfolder when its primary purpose is clear and the destination is free; when only product ownership is clear, move it to `07_产品资料/05_合规与其他资料/` and record the conservative classification;
 - move a confirmed shared definition to the selected Products Root only when the user requested migration and the destination is free; never copy it into Product Roots;
 - list empty legacy report directories as candidates for removal, but do not remove them in the same operation; deletion requires a separate explicit user approval after the scan.
 
@@ -252,7 +357,9 @@ After applying:
 - confirm every planned source file exists at its destination;
 - confirm every migrated report is in its confirmed numbered Skill folder and no unresolved file was moved;
 - confirm required standard files exist and identity content was not guessed;
+- confirm one authoritative original-data set per ASIN, that research roles remain metadata rather than folder or filename categories, and that `榜1` records retain their Niche and data date;
 - confirm Shared Data remains outside Product Roots and no public/common file was duplicated;
+- confirm `07_产品资料/` contains product assets only and no original asset was duplicated into `05_分析源数据/` or `06_SKILL分析报告/`;
 - confirm original file count plus any newly created templates;
 - report all moves, renames, conservative classifications, unresolved legacy files, and any separately approved empty-directory cleanup;
 - state explicitly that no original evidence file was deleted or overwritten.

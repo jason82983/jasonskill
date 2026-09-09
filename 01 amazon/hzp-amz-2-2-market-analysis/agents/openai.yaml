@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 2-2｜细分市场分析"
+  short_description: "验证 Amazon 细分市场边界、需求、竞争结构与新品进入机会"
+  brand_color: "#0F766E"
+  default_prompt: "Use $hzp-amz-2-2-market-analysis to validate a product's Amazon market scope, test whether a benchmark-based improvement project is worth entering, and produce an evidence-grounded GO, CONDITIONAL GO, or NO-GO report."
+
+policy:
+  allow_implicit_invocation: true
