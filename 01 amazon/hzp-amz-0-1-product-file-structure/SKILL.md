@@ -162,7 +162,7 @@ The environment may provide a company-level shared-data directory outside the Pr
 
 ## Formal Skill outputs
 
-`06_SKILL分析报告/` contains processed Skill or AI deliverables, not original evidence. Organize actual outputs by Skill number and task, for example:
+`06_SKILL分析报告/` contains processed Skill or AI deliverables, not original evidence. Its only standard classification is one first-level folder per Skill, named `[Skill编号]_[Skill中文名称]`:
 
 ```text
 06_SKILL分析报告/
@@ -170,15 +170,26 @@ The environment may provide a company-level shared-data directory outside the Pr
 └─ 2-2_细分市场分析/
 ```
 
-Do not move original source exports into this directory. Do not create a report or `当前结论.md` merely because a Skill exists; there must be a real generated output. Historical reports must not be overwritten.
+Create a Skill folder only when that Skill has actually produced a formal report for the Product Root. Do not pre-create empty folders for future Skills. Do not create unnumbered category folders such as product analysis, page analysis, market analysis, or history/archive/index folders. Do not move original source exports into this directory.
 
-Recommended formal report filename:
+Historical reports stay in the same Skill folder and are distinguished by the date in their filenames. Never overwrite or delete an existing formal report. `当前结论.md` is not a required 0-1 file; the newest dated formal report is the current report for that Skill. Do not create a report or any report folder merely because a Skill exists; there must be a real generated output.
+
+Required formal report filename:
 
 ```text
 [Skill编号]-[产品编号]_[分析对象可选]_[报告类型]_[日期].html
 ```
 
-If multiple formal versions are created on one day, use `_v1`, `_v2`, and so on only when needed. Preserve historical names and files during a migration.
+The Skill number must also be the first part of the destination folder name. For example:
+
+```text
+06_SKILL分析报告/
+└─ 2-1_产品分析/
+   ├─ 2-1-N24_B0FJRYJH1J_产品分析报告_2026-09-01.html
+   └─ 2-1-N24_B0FJRYJH1J_产品分析报告_2026-09-09.html
+```
+
+Use the stable product number in the filename; include an ASIN or other analysis object only when useful. Do not add a version suffix by default. If multiple formal versions are genuinely created on the same date, append `_v2`, `_v3`, and so on. Preserve historical names and files during a migration.
 
 ## Operating modes
 
@@ -201,9 +212,9 @@ Before any change:
 - identify and verify the Products Root candidate from `00_产品公用数据/`, when Shared Data management is in scope;
 - enumerate all files and folders recursively, including hidden items where available;
 - read lightweight text metadata when needed to determine purpose; do not alter source files;
-- distinguish human input, original evidence, formal reports, generated media, and legacy indexes;
+- distinguish human input, original evidence, formal reports, generated media, and legacy report folders or index files;
 - distinguish platform/company definitions from product-specific evidence and flag shared candidates;
-- identify duplicate names, existing destinations, ambiguous ownership, and important historical files.
+- identify duplicate names, existing destinations, ambiguous ownership, important historical files, and unnumbered legacy report categories.
 
 ### PLAN
 
@@ -215,9 +226,10 @@ Show the user:
 - each move and rename, with source and destination;
 - files placed conservatively in `05_补充资料`;
 - `SHARED-DATA-CANDIDATE` files and a proposed Shared Data destination, if applicable;
-- duplicate, overwrite, broken-link, and historical-file risks.
+- duplicate, overwrite, broken-link, historical-file, and legacy-category risks;
+- for every legacy report, the evidence that supports its destination Skill folder; if the Skill cannot be confirmed, leave it in place and report it as unresolved.
 
-If a destination already contains a file, never overwrite it. Propose a distinct destination or stop for a user decision. If two files have the same name but different contents, keep both in separate history or source subfolders; do not merge them.
+If a destination already contains a file, never overwrite it. Propose a distinct dated filename or stop for a user decision. If two files have the same name but different contents, keep both at their current paths or stop for a user decision; do not create a history/archive subfolder or merge them.
 
 ### APPLY
 
@@ -226,9 +238,9 @@ Apply only safe, explicit filesystem operations:
 - create missing directories and blank standard templates;
 - move files without changing their bytes;
 - rename a file only when its purpose is clear and the destination is free;
-- preserve original subfolders when that prevents collisions;
+- move a legacy formal report directly into its confirmed `[Skill编号]_[Skill中文名称]` folder only when its source Skill is clear and the dated destination is free;
 - move a confirmed shared definition to the selected Products Root only when the user requested migration and the destination is free; never copy it into Product Roots;
-- remove a legacy directory only after verifying it is empty, and report that only an empty directory was removed.
+- list empty legacy report directories as candidates for removal, but do not remove them in the same operation; deletion requires a separate explicit user approval after the scan.
 
 Never delete a file, overwrite a destination, edit source evidence, rewrite a human note, fabricate an identity field, or treat an uncertain file as disposable. If a risk appears during APPLY, stop immediately and report the exact source and destination involved.
 
@@ -238,11 +250,11 @@ After applying:
 
 - enumerate the final complete tree;
 - confirm every planned source file exists at its destination;
-- confirm no files remain in an unintended legacy location;
+- confirm every migrated report is in its confirmed numbered Skill folder and no unresolved file was moved;
 - confirm required standard files exist and identity content was not guessed;
 - confirm Shared Data remains outside Product Roots and no public/common file was duplicated;
 - confirm original file count plus any newly created templates;
-- report all moves, renames, conservative classifications, and empty-directory cleanup;
+- report all moves, renames, conservative classifications, unresolved legacy files, and any separately approved empty-directory cleanup;
 - state explicitly that no original evidence file was deleted or overwritten.
 
 ## Public Skill boundary
