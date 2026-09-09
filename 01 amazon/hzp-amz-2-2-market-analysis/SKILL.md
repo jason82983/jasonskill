@@ -11,6 +11,8 @@ This Skill determines which Amazon submarket a target product truly belongs to, 
 
 It is a market-level Skill, not a second 2-1 single-ASIN report. Do not decide from a user-supplied Niche name alone, and do not let a user's preference determine the verdict.
 
+Resolve `Product Root` before reading product data. Prefer the current directory when it contains `01_产品档案.md` and `05_分析源数据/`; otherwise walk upward from a Product Root child. If the current directory is a Products Root, locate the Product Root by the requested product number/name. If multiple candidates remain, stop and ask the user rather than guessing. All data paths in this Skill are relative to the resolved Product Root; never hard-code a drive letter or a particular employee computer. Read [references/data-location-map.md](references/data-location-map.md).
+
 The default decision question is: “如果以这个对标产品为开发起点，在它背后的真实 Amazon 市场中进行改良开发，这个项目是否值得进入 3-1？” The benchmark is an analysis anchor and opportunity clue, never the market itself.
 
 ## Analysis modes
@@ -46,18 +48,21 @@ Apply the source hierarchy and evidence labels in [references/evidence-priority.
 
 Start with `01_产品档案.md`. The stable product identity is `产品编号`; ASINs and their research roles are context metadata. An ASIN can simultaneously be an `对标产品`, `Niche 榜1`, `高速增长新品`, or another role, but its original data is read from one authoritative ASIN location. Never duplicate a dataset because roles differ.
 
-If `01_产品档案.md` records a Niche leader, bind the role to its Niche and date. Treat that record as a research context that must be revalidated against current Niche data. Do not infer or silently repair roles.
+If `01_产品档案.md` records a Niche leader, bind the role to its Niche and date. Treat that record as a research context that must be revalidated against current Niche data. A saved role is not permanent: do not silently repair the archive, but report a current role change when newer Amazon data disagrees.
 
 ## Input discovery
 
-Use the Product Root supplied by the user. Otherwise locate a directory containing `01_产品档案.md`, verify its `产品编号`, and locate the selected Products Root Shared Data when available. Read:
+Use the resolved Product Root and standard relative paths. Read:
 
 1. `01_产品档案.md` for identity and declared research roles;
-2. `05_分析源数据/02_细分市场数据/` for all candidate Niches, head products, search terms, market metrics, share data, positive/negative review insights, and returns;
-3. `05_分析源数据/01_产品数据/` for the target, benchmark, and representative ASIN packages;
-4. `05_分析源数据/03_关键词数据/` and `04_用户反馈/` when they contain additional evidence;
-5. `00_产品公用数据/01_Amazon平台资料/` for metric definitions, without treating definitions as market values;
-6. `02_产品开发思路.md` only as `[人工假设]`, never as market evidence.
+2. `05_分析源数据/02_细分市场数据/所有细分市场/` first. This is the Market Discovery Layer and must be scanned for every valid `NichesProductAppears` file, across all research ASINs;
+3. matching folders under `05_分析源数据/02_细分市场数据/[候选Niche]/` for core market data, head products, search terms, share data, positive/negative review insights, and returns;
+4. `05_分析源数据/01_产品数据/` for the target, benchmark, leader, and representative ASIN packages;
+5. `05_分析源数据/03_关键词数据/`, `04_用户反馈/`, and `05_补充资料/` when they contain additional evidence;
+6. `[Products Root]/00_产品公用数据/01_Amazon平台资料/商机探测/` for metric definitions, without treating definitions as market values;
+7. `02_产品开发思路.md` only as `[人工假设]`, never as market evidence.
+
+The `所有细分市场` directory is a shared research pool, not a directory for only the benchmark ASIN. It may contain `NichesProductAppears` exports for the benchmark, leader, competitors, fast-growing products, and other representative ASINs. Discover files by path, filename pattern, readable headers/content, and ASIN fields together; do not require one fixed filename. A filename can locate a file, but cannot prove a Primary Market, Leader role, rank, or market importance. Read [references/asin-niche-discovery.md](references/asin-niche-discovery.md).
 
 Keep original ASIN files together by ASIN. If the same ASIN is declared under several roles, read it once and annotate the roles in the report.
 
@@ -69,15 +74,15 @@ When Benchmark-Driven Mode is active, first resolve the benchmark ASIN and its r
 
 Classify inputs before analysis:
 
-- **P0**: the target product's Niche appearances, at least one candidate Niche's core Amazon data, head products, main search terms, core market metrics, and click or brand concentration data;
+- **P0**: the target product's Niche appearances from `所有细分市场`, at least one candidate Niche's core Amazon data, head products, main search terms, core market metrics, and click or brand concentration data;
 - **P1**: Niche positive/negative/return insights, benchmark Keepa/Cerebro/Reviews/listing evidence, and current Niche leader evidence;
 - **P2**: more representative ASINs, precisely matched third-party data, social or Google Trends data, and external industry data.
 
-If the market boundary cannot be determined because P0 is missing or mismatched, stop the verdict and report `Data Readiness: STOP — [证据不足]`. If P1 is missing, continue only with an explicit confidence limitation. Do not add invented estimates to make the checklist complete. Read [references/data-readiness.md](references/data-readiness.md).
+If the market boundary cannot be determined because P0 is missing or mismatched, stop the verdict and report `Data Readiness: STOP — [证据不足]`. For every checked standard location, report `FOUND`, `MISSING`, `UNREADABLE`, or `CONFLICT`, including the relative path and what is missing. If P1 is missing, continue only with an explicit confidence limitation. Do not add invented estimates to make the checklist complete. Read [references/data-readiness.md](references/data-readiness.md) and [references/data-location-map.md](references/data-location-map.md).
 
-### 2. Market Scope Validation (P0)
+### 2. Market Discovery and Scope Validation (P0)
 
-List every Niche in which the target ASIN appears, then compare each candidate using search terms, products actually receiving clicks or purchases, consumer use, product form, search intent, reviews/returns, and the target's real function. Classify each as:
+Follow this order: read the archive; scan all valid `NichesProductAppears` files; build the `ASIN → Niche` Relationship Map; identify every Niche containing the benchmark; cross-check overlaps with competitor and leader ASINs; locate each candidate Niche's detailed folder; then validate market scope. Use search terms, products actually receiving clicks or purchases, consumer use, product form, search intent, reviews/returns, and the target's real function. Classify each as:
 
 - `Primary Market / 主市场`
 - `Secondary Market / 次级市场`
@@ -86,6 +91,12 @@ List every Niche in which the target ASIN appears, then compare each candidate u
 - `False or Weak Match / 弱匹配或错误市场`
 
 Do not select a market because its name sounds similar. Read [references/market-scope-validation.md](references/market-scope-validation.md).
+
+The `ASIN → Niche` map must include ASIN, research role, Niche, relation to Benchmark, evidence source, and data date. Use it to distinguish a Niche shared by the benchmark and several competitors from a single-ASIN incidental appearance. The shared appearance count is supporting evidence only, not a Primary Market decision by itself.
+
+For each candidate, perform `Primary Market Determination` from Amazon data and product fit: benchmark appearance, functional/use-scene match, search intent, head-product fit, click/purchase evidence, cross-ASIN overlap, and detailed Niche quality. Classify `Primary`, `Secondary`, `Overlapping`, `Adjacent`, or `Weak / False`; do not use row order or a user label as the decision. If two markets remain materially close and the choice would change the decision, report the conflict and ask for clarification instead of inventing certainty.
+
+For Leader identification, use current Niche data that explicitly identifies a `榜1`, `Top Product`, `Top Clicked Product`, or equivalent head-product role. Bind every recorded role to `Niche + Data Date + evidence source`. If an appearance file only proves membership, continue to the Niche head-product/product-tab/Top Products data. If the role still cannot be proven, write `Leader = [待验证]`; never guess.
 
 ### Benchmark Definition (Benchmark-Driven Mode)
 
@@ -109,7 +120,11 @@ For every benchmark feature, also classify SHOULD KEEP, SHOULD IMPROVE, OPTIONAL
 
 ### 3. Candidate Niche comparison
 
-For every viable candidate Niche, compare demand, trend evidence, search conversion, price structure, product count, new-product count, successful new products, concentration, consumer intent, product fit, and entry conditions. Select a `Primary Entry Market`, optional `Secondary Opportunity Market`, and any `Avoid / Weak Match Market`. Do not force a single Niche when the evidence supports multiple entry paths.
+For every viable candidate Niche, compare demand, trend evidence, search conversion, price structure, product count, new-product count, successful new products, concentration, consumer intent, product fit, and entry conditions. Select a `Primary Entry Market`, optional `Secondary Opportunity Market`, and any `Avoid / Weak Match Market`. Do not force a single Niche when the evidence supports multiple entry paths. Deep-analyze Strong Candidate Niches first; a discovered Niche does not automatically require a full analysis.
+
+When multiple ASIN exports exist, run `Cross-ASIN Niche Validation`: compare benchmark, competitors, leader, and other representative ASINs across their Niche sets, identify shared and unique Niches, and test the shared Niche against search intent, product fit, consumer evidence, and Niche-level quality. Read [references/asin-niche-discovery.md](references/asin-niche-discovery.md).
+
+Use the following discovery order and narrow the scope before deep reading: resolve Product Root → read `01_产品档案.md` → scan `所有细分市场` → build Market Universe and relationship map → identify candidate Niches → read only matching Niche folders → classify markets → identify Benchmark, current Leader, and necessary competitors → read only those ASIN folders → read supporting layers as needed → write the report to `06_SKILL分析报告/2-2_细分市场分析/`. If a standard path exists, inspect it instead of asking the user where Keepa, Cerebro, Reviews, Niches, or Leader data are located.
 
 ### 4. Demand, size, and trend
 
@@ -225,20 +240,22 @@ Use this order:
 1. Executive Decision
 2. Benchmark Definition
 3. Market Scope Validation
-4. Candidate Market Comparison
-5. Market Quality
-6. Competition Structure
-7. Search Demand
-8. Consumer Need Map
-9. Benchmark Performance
-10. Leader Reference
-11. Benchmark vs Leader vs Market
-12. Improvement Opportunity Matrix
-13. Benchmark-Based Entry Thesis
-14. Risks & Failure Conditions
-15. GO / CONDITIONAL GO / NO-GO
-16. Input for 3-1 Product Opportunity Definition
-17. Evidence & Limitations
+4. Market Relationship Map
+5. Candidate Niche Decision Table
+6. Candidate Market Comparison
+7. Market Quality
+8. Competition Structure
+9. Search Demand
+10. Consumer Need Map
+11. Benchmark Performance
+12. Leader Reference
+13. Benchmark vs Leader vs Market
+14. Improvement Opportunity Matrix
+15. Benchmark-Based Entry Thesis
+16. Risks & Failure Conditions
+17. GO / CONDITIONAL GO / NO-GO
+18. Input for 3-1 Product Opportunity Definition
+19. Evidence & Limitations
 
 Write for investment decisions, product-development meetings, and team review: put conclusions first, trace key numbers to files, avoid data dumping, state action meaning and risk, and keep fact, inference, and verification separate.
 

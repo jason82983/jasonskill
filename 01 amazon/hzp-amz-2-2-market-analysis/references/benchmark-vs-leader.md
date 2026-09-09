@@ -10,6 +10,8 @@
 
 Use one ASIN data package per ASIN even when an ASIN carries multiple roles. Do not duplicate a complete 2-1 analysis for the leader; reuse a dated 2-1 report when it exists and focus 2-2 on market entry implications.
 
+The Leader role must be resolved from the current candidate Niche's head-product, product-tab, Top Products, or equivalent Amazon data. `NichesProductAppears` membership alone is not Leader evidence. Store the role as `Niche + ASIN + Data Date + Evidence Source` and revalidate it on every run. If no explicit head evidence exists, use `Leader = [待验证]` rather than guessing.
+
 ## Triangle validation
 
 Answer four questions:
@@ -32,4 +34,3 @@ Check sustained history, natural keyword coverage, review growth against the sal
 ## Benchmark equals leader
 
 If the benchmark is the current leader, mark Benchmark = Leader and do not duplicate the analysis. Add a second mature representative only when a specific comparison question requires it.
-

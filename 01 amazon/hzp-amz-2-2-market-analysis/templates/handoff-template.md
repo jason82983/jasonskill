@@ -28,6 +28,18 @@ Primary Market:
 Secondary Opportunity Market:
 Avoid / Weak Match Market:
 
+### ASIN-Niche Relationship Summary
+
+| ASIN | Current Role | Niche | Benchmark Relation | Evidence Source | Data Date |
+|---|---|---|---|---|---|
+
+### Candidate Niche Decision Summary
+
+| Niche | Benchmark Appears | Competitor Overlap | Demand Fit | Market Quality | Classification | Handling |
+|---|---|---|---|---|---|---|
+
+Leader evidence must be explicit and dated. If membership is the only evidence, write `Leader = [待验证]` and list the missing head-product source.
+
 ## Confirmed Facts
 
 - [数据支持]
