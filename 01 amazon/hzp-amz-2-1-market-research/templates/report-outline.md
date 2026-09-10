@@ -4,9 +4,11 @@ The report is designed for QMT meeting decisions. The top of the page must answe
 
 ## Output artifacts
 
+After the formal HTML report is successfully written, confirmed to exist, and checked for the correct filename, automatically call `$hzp-amz-0-2-report-index` with the same `Product Code`, `Products Root`, and `Product Root` captured at run start. Pass the Product Code unchanged; do not infer it from ASIN or filename, re-scan another product, or ask the user to enter it again. Do not call 0-2 after a failed report; if 0-2 fails, keep the report and report the two statuses separately. All index implementation remains exclusively in 0-2.
+
 Generate these two sibling files in the product project's `2-1-market-research/` directory after a valid full analysis. Use the current Product Code read from `PRODUCT.md`:
 
-- `2-1-[ProductCode]_产品市场分析报告.html` — Human Report for HZP/QMT/team reading;
+- `2-1_[ProductCode]_产品分析_V[版本号]_[YYYYMMDD]_[HHMMSS].html` — Human Report for HZP/QMT/team reading;
 - `2-1-[ProductCode]_HANDOFF.md` — compact AI Handoff for the next Skill, using [`handoff-template.md`](handoff-template.md).
 
 ASIN belongs in report metadata and evidence fields; it does not replace the current Product Code in the filename. All source and output references in the report use paths relative to the product project root.
@@ -14,7 +16,7 @@ ASIN belongs in report metadata and evidence fields; it does not replace the cur
 The HANDOFF is not a copy of this HTML. It must preserve evidence state with `[FACT]`, `[INFERENCE]`, `[TO-VERIFY]`, and `[DECISION]`, and must identify `3-1 Product Development` as the recommended next Skill.
 
 ## 0. Header / source validation strip
-- Formal output filename must begin with `2-1-` and follow `2-1-[ProductCode]_[报告类型]-vN-YYYYMMDD.[扩展名]` when version/date is used; use the current Product Code from `PRODUCT.md` and preserve older historical files.
+- Formal HTML output filename must follow `2-1_[ProductCode]_产品分析_V[版本号]_[YYYYMMDD]_[HHMMSS].html`; use the current Product Code from `PRODUCT.md`, increment the version for each separate report, and preserve older historical files.
 - Report title + ASIN + benchmark product
 - Subdued source marker near the title or in report metadata: `HZP Amazon 2-1｜产品市场分析`
 - data date

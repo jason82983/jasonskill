@@ -43,7 +43,7 @@
 
 ```text
 2-1-market-research/
-├── 2-1-[ProductCode]_产品市场分析报告.html   # Human Report，给 HZP/QMT/团队阅读
+├── 2-1_[ProductCode]_产品分析_V[版本号]_[YYYYMMDD]_[HHMMSS].html   # Human Report，给 HZP/QMT/团队阅读
 └── 2-1-[ProductCode]_HANDOFF.md              # AI Handoff，给下游 Skill 读取
 ```
 
@@ -51,25 +51,18 @@
 
 ## 正式报告命名（强制）
 
-这个 Skill 的编号是 `2-1`。所有正式分析报告、会议报告和 HTML 报告，文件名必须以 `2-1-` 开头，并按下面格式命名：
+这个 Skill 的编号是 `2-1`。所有正式 HTML 分析报告、会议报告和产品分析报告统一使用：
 
 ```text
-2-1-[ProductCode]_[报告类型].[扩展名]
+2-1_[ProductCode]_产品分析_V[版本号]_[YYYYMMDD]_[HHMMSS].html
 ```
 
-如果需要保留版本和日期，在扩展名前加入 `-vN-YYYYMMDD`：
+`ProductCode` 从产品项目根目录 `PRODUCT.md` 的 `Current Product Code` 读取；如果项目同时存在 `01_产品档案.md`，需交叉核对产品编号，冲突时停止。首次正式报告使用 `V1`，后续独立版本依次使用 `V2`、`V3` 等。日期使用 `YYYYMMDD`，时间使用带秒的 `HHMMSS`。例如：
 
-```text
-2-1-[ProductCode]_[报告类型]-vN-YYYYMMDD.[扩展名]
-```
+- `2-1_N24_产品分析_V1_20260928_192100.html`
+- `2-1_N24_产品分析_V2_20260928_193000.html`
 
-使用 `PRODUCT.md` 中当前的 Product Code；ASIN 和产品名称是辅助字段，不替代 Product Code。HTML、Markdown、PDF、Excel 等正式报告都遵守这条规则，例如：
-
-- `2-1-N24_产品市场分析报告.html`
-- `2-1-N24_市场研究报告.pdf`
-- `2-1-A7_市场研究数据.xlsx`
-
-以前已经生成的历史文件不重命名。正式 HTML 报告标题附近或报告信息区域还必须显示来源标识：`HZP Amazon 2-1｜产品市场分析`，作为识别信息，不要喧宾夺主。
+ASIN 和产品名称写入报告元数据，不替代 ProductCode。以前已经生成的历史文件不重命名，也不覆盖；同一产品再次生成正式报告时递增版本号并生成新的时间戳。正式 HTML 报告标题附近或报告信息区域还必须显示来源标识：`HZP Amazon 2-1｜产品分析`，作为识别信息，不要喧宾夺主。
 
 `PRODUCT.md` 的 `Current Stage` 与生命周期 `Status` 分开。Status 只使用 `ACTIVE`、`WAITING`、`HOLD`、`COMPLETED`、`CANCELLED`；本 Skill 的 `GO / CONDITIONAL GO / NO-GO` 是阶段决策，不替代生命周期状态。`ACTIVE` 才是默认可推进状态，`WAITING` / `HOLD` 需要用户明确要求恢复；Skill 可以建议状态变化，但不能擅自将项目标记为 `COMPLETED` 或 `CANCELLED`。
 

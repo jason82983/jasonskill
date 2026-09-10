@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 0-2｜分析报告索引"
+  short_description: "扫描正式报告并生成可离线打开的产品分析索引"
+  brand_color: "#0F6B78"
+  default_prompt: "Use $hzp-amz-0-2-report-index to scan the current Product Root and rebuild its 06_SKILL分析报告/index.html."
+
+policy:
+  allow_implicit_invocation: true

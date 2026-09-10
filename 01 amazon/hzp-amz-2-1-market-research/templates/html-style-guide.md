@@ -110,4 +110,6 @@ The decision badge should be prominent but restrained, with the exact label in t
 
 ## Visual QA before delivery
 
+After a successful report write and filename check, call `$hzp-amz-0-2-report-index` with the unchanged Product Code, Products Root, and Product Root captured at run start. Index generation and maintenance are exclusively owned by 0-2.
+
 Open or render the finished HTML before handing it off. Check the first screen, one dense table, one review card, the product-development matrix, and Product Definition V1 at desktop width and a narrow width. Fix clipped text, unreadable contrast, broken overflow, awkward empty space, misaligned numbers, or a chart whose labels cannot be understood without the surrounding prose.

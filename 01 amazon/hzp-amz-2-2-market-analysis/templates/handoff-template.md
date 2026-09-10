@@ -1,3 +1,5 @@
+> **当前执行边界：** 本模板保留给后续下游接口设计。当前 2-2 的阶段 1–7 均已设计完成；只有明确满足下游接口条件时才生成 HANDOFF。
+
 # HZP AMAZON SKILL HANDOFF
 
 ## Metadata
@@ -39,6 +41,17 @@ Avoid / Weak Match Market:
 |---|---|---|---|---|---|---|
 
 Leader evidence must be explicit and dated. If membership is the only evidence, write `Leader = [待验证]` and list the missing head-product source.
+
+## Keyword Click Conversion Summary
+
+Niche Clicks 360D:
+主要词总搜索量:
+推算总点击数:
+推算总订单量:
+综合点击转化率:
+主要词点击覆盖率:
+数据日期与 Niche:
+口径限制：以上为 Opportunity Explorer 原始指标推导的辅助值，不等同于 Amazon Advertising 广告 CVR。
 
 ## Confirmed Facts
 

@@ -1,10 +1,10 @@
-# Market Scope Validation
+# 市场范围验证
 
-## Goal
+## 目标
 
 从产品档案和 Amazon Opportunity Explorer 数据恢复真实的市场边界，不把用户提供的 Niche 名称、文件名或历史角色记录直接当作事实。
 
-## Standard flow
+## 标准流程
 
 1. 读取 `01_产品档案.md`，确认产品编号、产品名称、Benchmark ASIN 和已知研究对象。
 2. 扫描 `05_分析源数据/02_细分市场数据/所有细分市场/` 下全部候选文件。优先识别文件名包含 `所有细分市场`、`NichesProductAppears` 的文件，同时检查可读表头、内容和 ASIN 字段；不要依赖完整固定文件名。
@@ -15,17 +15,17 @@
 7. 先筛选 Strong Candidate Niches，再对主要候选市场做深度分析；发现的每个 Niche 不必全部深挖。
 8. 用产品功能、形态、使用场景、搜索意图、点击/购买关系、消费者证据和市场质量判定 Primary Market；最后才进入 Benchmark vs Leader vs Market。
 
-## ASIN-Niche Relationship Map
+## ASIN-细分市场关系图
 
 报告至少包含以下字段：
 
-| ASIN | 研究角色（当期） | Niche | 与 Benchmark 关系 | 证据来源 | 数据日期 |
+| ASIN | 研究角色（当期） | 所属细分市场 | 与对标产品关系 | 证据来源 | 数据日期 |
 |---|---|---|---|---|---|
-| B0XXXXXXX | Benchmark / Competitor / Leader / Representative | niche name | Benchmark / Shared / Unique | file + sheet/column or Amazon export | YYYY-MM-DD |
+| B0XXXXXXX | 对标产品 / 竞争 / 头部 / 代表性 | 细分市场名称 | 对标 / 共享 / 独有 | 文件 + 工作表/字段或 Amazon 导出 | YYYY-MM-DD |
 
 同一 ASIN 可有多个角色，但原始数据只读取一套。角色必须绑定具体 Niche 和数据日期。共同出现次数只能作为支持证据，不能独立决定主市场。
 
-## Cross-ASIN Niche Validation
+## 跨 ASIN 细分市场验证
 
 对每个研究 ASIN 形成 Niche 集合并比较：
 
@@ -45,7 +45,7 @@ Leader     → Niche A / B
 
 输出 `Shared / Benchmark-only / Competitor-only / Adjacent / Unclear`，并保留源文件和日期。若 Amazon 当前数据与历史人工记录冲突，优先当前数据，同时报告 `[数据冲突]` 或 `[研究角色发生变化]`。
 
-## Primary Market Determination
+## 主要细分市场判定
 
 对每个候选 Niche 建立证据行，至少判断：
 
@@ -59,21 +59,21 @@ Leader     → Niche A / B
 
 用 `Strong / Medium / Weak / Unclear` 表示证据强度，再归类：
 
-- **Primary Market**：Benchmark 功能与搜索意图强匹配，且 Niche 详细数据和竞争关系支持其作为主要进入市场。
-- **Secondary Market**：真实相关，但需求、形态或进入价值低于主市场。
-- **Overlapping Market**：Benchmark 与多个竞争/头部 ASIN 共同出现，且需求重叠明确；它可以同时是主市场的竞争交集，不自动等于 Primary。
-- **Adjacent Market**：有相邻用途或搜索意图，但缺少足够产品/购买匹配。
-- **False / Weak Match**：仅因名称、单行或偶然出现而相关，不能作为进入依据。
+- **主要细分市场**：对标产品功能与搜索意图强匹配，且细分市场详细数据和竞争关系支持其作为主要进入市场。
+- **次要细分市场**：真实相关，但需求、形态或进入价值低于主市场。
+- **重叠市场**：对标产品与多个竞争/头部 ASIN 共同出现，且需求重叠明确；它可以同时是主市场的竞争交集，不自动等于主要细分市场。
+- **邻近市场**：有相邻用途或搜索意图，但缺少足够产品/购买匹配。
+- **弱匹配或错误市场**：仅因名称、单行或偶然出现而相关，不能作为进入依据。
 
-### Candidate Niche Decision Table
+### 候选细分市场决策表
 
-| Niche | Benchmark 是否出现 | 竞争 ASIN 重叠 | 需求匹配度 | 市场质量 | 角色分类 | 最终处理 | 关键证据/限制 |
+| 细分市场 | 对标产品是否出现 | 竞争 ASIN 重叠 | 需求匹配度 | 市场质量 | 角色分类 | 最终处理 | 关键证据/限制 |
 |---|---|---|---|---|---|---|---|
-| niche name | Yes/No | Shared ASINs | Strong/Medium/Weak | Strong/Medium/Weak | Primary/Secondary/Overlapping/Adjacent/Weak | 深度分析/保留观察/排除 | source + date |
+| 细分市场名称 | 是/否 | 共享 ASIN | 强/中/弱 | 强/中/弱 | 主要/次要/重叠/邻近/弱匹配 | 深度分析/保留观察/排除 | 来源 + 日期 |
 
 如果两个或多个市场证据接近，并且选择会改变 GO/CONDITIONAL GO/NO-GO，必须标记冲突并请求确认；不得用文件第一行、用户标签或共同出现次数强行裁决。
 
-## Leader identification
+## 头部产品识别
 
 1. 优先读取候选 Niche 的头部商品、产品选项卡、Top Products 等当前 Amazon 数据。
 2. 只有数据明确标记 `榜1`、`Top Product`、`Top Clicked Product` 或同等头部角色时，才记录 `Leader ASIN`。

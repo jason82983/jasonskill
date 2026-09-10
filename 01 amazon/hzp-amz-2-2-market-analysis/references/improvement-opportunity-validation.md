@@ -1,33 +1,33 @@
-# Improvement Opportunity Validation
+# 改良机会验证
 
-## Purpose
+## 目的
 
 把对标产品的观察转化为可交给 3-1 的市场机会，而不是把每个差评直接写成改良建议。
 
-## Required sequence
+## 必要步骤
 
-1. **Benchmark Problem** — describe the observed problem without proposing a solution.
-2. **Evidence** — cite the benchmark review, Niche negative review, return insight, leader review, search term, or market metric.
-3. **Market Validation** — decide whether the problem repeats across the market or is specific to the benchmark.
-4. **Consumer Importance** — assess frequency, severity, purchase effect, rating effect, and return effect.
-5. **Existing Solution Check** — check whether the leader or another mature product already solves it.
-6. **Commercial Opportunity** — assess conversion, rating, return, differentiation, use-scene, audience, and price implications.
-7. **Development Handoff** — pass only evidence-backed opportunity and validation needs to 3-1.
+1. **对标产品问题** — 描述观察到的问题，不先提出解决方案。
+2. **证据** — 引用对标评论、细分市场负面评论、退货洞察、头部产品评论、搜索词或市场指标。
+3. **市场验证** — 判断问题是市场普遍存在，还是仅限于对标产品。
+4. **消费者重要度** — 评估频率、严重程度，以及对购买、评分和退货的影响。
+5. **已有方案检查** — 检查头部产品或其他成熟产品是否已经解决。
+6. **商业机会** — 评估对转化、评分、退货、差异化、使用场景、人群和价格的影响。
+7. **开发交接** — 只把有证据支持的机会和验证需求交给 3-1。
 
-## Matrix
+## 机会矩阵
 
 | 对标问题 | 对标证据 | 市场是否普遍 | 消费者重要度 | 榜1是否解决 | 市场缺口 | 改良价值 | 证据等级 | 进入 3-1 |
 |---|---|---|---|---|---|---|---|---|
 
 Use P0 for a core development opportunity, P1 for a valuable but non-decisive improvement, and P2 for an optional enhancement. Record the evidence grade separately as [数据支持], [分析推断], [待验证], [证据不足], or [样本有限].
 
-## Feature classification
+## 功能分类
 
 Every important benchmark feature must be classified as:
 
-- **SHOULD KEEP** — validated by market and consumer evidence;
-- **SHOULD IMPROVE** — recurring problem with a remaining market gap;
-- **OPTIONAL DIFFERENTIATION** — plausible advantage without enough evidence for a core requirement;
-- **SHOULD NOT COPY** — complaint source, return risk, low-value cost, or harmful design.
+- **应保留** — 有市场和消费者证据支持；
+- **应改良** — 反复出现的问题，且市场仍有缺口；
+- **可选差异化** — 可能形成优势，但证据不足以成为核心要求；
+- **不建议复制** — 投诉来源、退货风险、低价值成本或有害设计。
 
 Do not create a difference merely to make a proposal look innovative.

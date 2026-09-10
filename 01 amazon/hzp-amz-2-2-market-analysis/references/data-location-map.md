@@ -4,7 +4,7 @@ All paths below are relative to the resolved `Product Root`. Do not hard-code a 
 
 ## Product Root identification
 
-Use the current working directory when it contains both `01_产品档案.md` and `05_分析源数据/`. If the current directory is a Product Root child, walk upward until that pair is found. If the current directory is a Products Root, use the user's product number/name from `01_产品档案.md` to select the matching Product Root. If more than one candidate matches and identity cannot be resolved, stop and ask the user; do not guess.
+Use the current working directory when it contains both `01_产品档案.md` and `05_分析源数据/`. If the current directory is a Product Root child, walk upward until that pair is found. If the current directory is a Products Root, use the user's product number/name from `01_产品档案.md` to select the matching Product Root. Read Product Code and product Chinese name from that file; if either conflicts with the resolved Product Root identity, stop with `[产品身份冲突]` and identify the conflicting field. If the Product Code is confirmed but the name is absent, keep the name as `[产品名称缺失]` rather than guessing. If more than one candidate matches and identity cannot be resolved, stop and ask the user; do not guess.
 
 The usual Product Root shape is:
 
@@ -30,7 +30,7 @@ The usual Product Root shape is:
 | Supporting Evidence Layer | `05_分析源数据/03_关键词数据/`, `04_用户反馈/`, `05_补充资料/` | independent keywords, VOC/QA/Returns/community feedback, external or temporary evidence | as needed |
 | Human Hypothesis Layer | `02_产品开发思路.md` | 人工开发想法 | hypothesis only |
 | Shared Definition Layer | `[Products Root]/00_产品公用数据/01_Amazon平台资料/商机探测/` | Amazon metric definitions and terminology | definitions only |
-| Analysis Output Layer | `06_SKILL分析报告/2-2_细分市场分析/` | 2-2 HTML and HANDOFF outputs | write here only |
+| Analysis Output Layer | `06_SKILL分析报告/2-2_细分市场分析/` | 研究状态文件；当前已定义阶段完成后的正式 HTML/HANDOFF | write here only |
 
 ## Discovery rules
 
@@ -42,4 +42,4 @@ The usual Product Root shape is:
 
 ## Read/write boundary
 
-All locations under `05_分析源数据/` and shared definition data are read-only for 2-2. Write only formal outputs under `06_SKILL分析报告/2-2_细分市场分析/`, preserving the `2-2-` filename prefix and existing reports.
+All locations under `05_分析源数据/` and shared definition data are read-only for 2-2. Write only the research state file during stages 1–7 and the formal outputs under `06_SKILL分析报告/2-2_细分市场分析/`; formal HTML uses `2-2_[产品编号]_细分市场分析_V[版本号]_[YYYYMMDD]_[HHMMSS].html`, is generated after the currently defined stages (now stages 1–7), preserves existing reports, and never overwrites historical files. Index generation remains the sole responsibility of 0-2.

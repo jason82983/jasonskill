@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 2-3｜人工判断与AI同步"
+  short_description: "对照人工开发判断与2-1/2-2证据并整理3-1交接"
+  brand_color: "#7C3AED"
+  default_prompt: "Use $hzp-amz-2-3-human-ai-sync to synchronize the selected product's human development notes with the latest 2-1 and 2-2 evidence, expose conflicts, and produce the formal Chinese HTML handoff report."
+
+policy:
+  allow_implicit_invocation: true
