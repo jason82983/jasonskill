@@ -1,0 +1,188 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HZP Amazon Skills 手册 V1</title><style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#182230;--muted:#5c6878;--line:#dde4ee;--accent:#1f5eff;--soft:#eef4ff;--warn:#fff7e6;--code:#101827}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;color:var(--text);line-height:1.78}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 22px 70px}.hero{background:linear-gradient(135deg,#17233b,#244a8f);color:#fff;border-radius:20px;padding:30px 34px;box-shadow:0 14px 40px rgba(22,39,74,.16)}
+.eyebrow{font-size:13px;opacity:.78;letter-spacing:.08em}.hero h1{font-size:30px;line-height:1.3;margin:8px 0}.hero p{margin:8px 0 0;opacity:.9}.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:20px}
+.meta div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px 12px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 26px;margin-top:18px;box-shadow:0 4px 16px rgba(22,39,74,.05)}
+h2{font-size:22px;margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid var(--line)} h3{font-size:17px;margin:20px 0 8px}
+blockquote{margin:14px 0;padding:14px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:8px;font-weight:600}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--code);color:#e8eef8;border-radius:12px;padding:18px;overflow:auto;line-height:1.65}
+code{font-family:Consolas,Menlo,monospace}.tag{display:inline-block;background:#eef2f7;border:1px solid #dde3eb;border-radius:999px;padding:2px 8px;margin:2px;font-size:12px}
+ul,ol{padding-left:1.4em}.callout{background:var(--warn);border:1px solid #f5dca5;border-radius:12px;padding:14px 16px}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:24px}.nav a,.btn{display:inline-block;text-decoration:none;color:#fff;background:#244a8f;padding:10px 14px;border-radius:10px}
+.nav a.secondary,.btn.secondary{background:#fff;color:#244a8f;border:1px solid #b9c7dd}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}th,td{border:1px solid var(--line);padding:10px;vertical-align:top}th{background:#f0f4fa;text-align:left}
+.small{font-size:13px;color:var(--muted)} .toc a{color:#244a8f;text-decoration:none}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.stage{border-left:4px solid #244a8f}.footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
+@media(max-width:700px){.wrap{padding:14px 10px 48px}.hero{padding:22px}.hero h1{font-size:24px}.card{padding:18px}.nav{flex-direction:column}}
+</style></head><body><main class="wrap">
+<header class="hero">
+<div class="eyebrow">HZP Amazon AI Operating System</div>
+<h1>Skills 双手册总目录</h1>
+<p>每个 Skill 固定保存两份：① 底层逻辑；② Codex 创建指令。用于理解、培训、回查、重建和升级。</p>
+<div class="meta"><div>Skill 数量：21</div><div>HTML 文档：42 + index</div><div>范围：0-1 → 7-2</div><div>生成日期：2026-09-11</div></div>
+</header>
+<section class="card callout"><strong>使用方法：</strong>如果某个 Skill 输出有问题，先看“Codex创建指令”确认实现要求，再看“底层逻辑”判断是实现偏差还是业务设计需要升级。<br>
+<span class="small">说明：1-2 Codex 页由你本次上传的完整 Markdown 原文转换；其余页面按当前已经锁定的系统设计生成。它们不是历史对话逐字稿，而是当前V1正式参考手册。</span></section>
+<section class="card stage"><h2>0｜基础</h2><p class="small">目录、身份与报告索引基础设施</p>
+    <div style="overflow:auto"><table><thead><tr><th>Skill</th><th>为什么这样设计</th><th>如何让Codex实现</th><th>来源说明</th></tr></thead>
+    <tbody>
+        <tr>
+          <td><strong>0-1｜产品文件结构管理</strong><div class="small">hzp-amz-0-1-product-file-structure</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/0-1_产品文件结构管理_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/0-1_产品文件结构管理_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>0-2｜分析报告索引</strong><div class="small">hzp-amz-0-2-report-index</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/0-2_分析报告索引_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/0-2_分析报告索引_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr></tbody></table></div></section><section class="card stage"><h2>1｜选品</h2><p class="small">发现商机并快速筛选值得深挖的候选</p>
+    <div style="overflow:auto"><table><thead><tr><th>Skill</th><th>为什么这样设计</th><th>如何让Codex实现</th><th>来源说明</th></tr></thead>
+    <tbody>
+        <tr>
+          <td><strong>1-1｜商机发现</strong><div class="small">hzp-amz-1-1-opportunity-discovery</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/1-1_商机发现_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/1-1_商机发现_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>1-2｜选品初筛</strong><div class="small">hzp-amz-1-2-product-screening</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/1-2_选品初筛_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/1-2_选品初筛_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">原始上传转换</td>
+        </tr></tbody></table></div></section><section class="card stage"><h2>2｜分析</h2><p class="small">把产品、市场和人工经验研究清楚</p>
+    <div style="overflow:auto"><table><thead><tr><th>Skill</th><th>为什么这样设计</th><th>如何让Codex实现</th><th>来源说明</th></tr></thead>
+    <tbody>
+        <tr>
+          <td><strong>2-1｜产品分析</strong><div class="small">hzp-amz-2-1-product-analysis</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/2-1_产品分析_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/2-1_产品分析_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>2-2｜细分市场分析</strong><div class="small">hzp-amz-2-2-market-analysis</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/2-2_细分市场分析_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/2-2_细分市场分析_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>2-3｜人工判断与AI同步</strong><div class="small">hzp-amz-2-3-human-ai-sync</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/2-3_人工判断与AI同步_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/2-3_人工判断与AI同步_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr></tbody></table></div></section><section class="card stage"><h2>3｜开发</h2><p class="small">把机会定义成可评审的差异化产品方案</p>
+    <div style="overflow:auto"><table><thead><tr><th>Skill</th><th>为什么这样设计</th><th>如何让Codex实现</th><th>来源说明</th></tr></thead>
+    <tbody>
+        <tr>
+          <td><strong>3-1｜产品机会定义</strong><div class="small">hzp-amz-3-1-product-opportunity-definition</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/3-1_产品机会定义_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/3-1_产品机会定义_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>3-2｜差异化产品开发</strong><div class="small">hzp-amz-3-2-differentiated-product-development</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/3-2_差异化产品开发_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/3-2_差异化产品开发_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>3-3｜产品方案评审</strong><div class="small">hzp-amz-3-3-product-plan-review</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/3-3_产品方案评审_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/3-3_产品方案评审_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr></tbody></table></div></section><section class="card stage"><h2>4｜生产</h2><p class="small">用真实样品和量产准备度验证方案</p>
+    <div style="overflow:auto"><table><thead><tr><th>Skill</th><th>为什么这样设计</th><th>如何让Codex实现</th><th>来源说明</th></tr></thead>
+    <tbody>
+        <tr>
+          <td><strong>4-1｜打样评审</strong><div class="small">hzp-amz-4-1-sample-review</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/4-1_打样评审_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/4-1_打样评审_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>4-2｜量产前检查</strong><div class="small">hzp-amz-4-2-preproduction-check</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/4-2_量产前检查_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/4-2_量产前检查_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr></tbody></table></div></section><section class="card stage"><h2>5｜页面</h2><p class="small">把真实产品价值转成可上线的Amazon页面</p>
+    <div style="overflow:auto"><table><thead><tr><th>Skill</th><th>为什么这样设计</th><th>如何让Codex实现</th><th>来源说明</th></tr></thead>
+    <tbody>
+        <tr>
+          <td><strong>5-1｜页面策略</strong><div class="small">hzp-amz-5-1-listing-page-strategy</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/5-1_页面策略_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/5-1_页面策略_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>5-2｜Listing文案</strong><div class="small">hzp-amz-5-2-listing-copywriting</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/5-2_Listing文案_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/5-2_Listing文案_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>5-3｜图片视频策划</strong><div class="small">hzp-amz-5-3-image-video-planning</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/5-3_图片视频策划_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/5-3_图片视频策划_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>5-4｜页面审核优化</strong><div class="small">hzp-amz-5-4-listing-page-review-optimization</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/5-4_页面审核优化_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/5-4_页面审核优化_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr></tbody></table></div></section><section class="card stage"><h2>6｜推广</h2><p class="small">制定新品推广、诊断广告并监控运营</p>
+    <div style="overflow:auto"><table><thead><tr><th>Skill</th><th>为什么这样设计</th><th>如何让Codex实现</th><th>来源说明</th></tr></thead>
+    <tbody>
+        <tr>
+          <td><strong>6-1｜新品推广方案</strong><div class="small">hzp-amz-6-1-new-product-launch-strategy</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/6-1_新品推广方案_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/6-1_新品推广方案_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>6-2｜广告诊断优化</strong><div class="small">hzp-amz-6-2-advertising-diagnosis-optimization</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/6-2_广告诊断优化_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/6-2_广告诊断优化_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>6-3｜产品运营监控</strong><div class="small">hzp-amz-6-3-product-operations-monitoring</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/6-3_产品运营监控_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/6-3_产品运营监控_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr></tbody></table></div></section><section class="card stage"><h2>7｜备货</h2><p class="small">预测补货并持续管理库存风险</p>
+    <div style="overflow:auto"><table><thead><tr><th>Skill</th><th>为什么这样设计</th><th>如何让Codex实现</th><th>来源说明</th></tr></thead>
+    <tbody>
+        <tr>
+          <td><strong>7-1｜补货预测</strong><div class="small">hzp-amz-7-1-replenishment-forecast</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/7-1_补货预测_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/7-1_补货预测_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr>
+        <tr>
+          <td><strong>7-2｜库存风险管理</strong><div class="small">hzp-amz-7-2-inventory-risk-management</div></td>
+          <td><a class="btn secondary" href="01_底层逻辑/7-2_库存风险管理_底层逻辑.html">查看底层逻辑</a></td>
+          <td><a class="btn" href="02_Codex创建指令/7-2_库存风险管理_Codex创建指令.html">查看Codex创建指令</a></td>
+          <td class="small">按当前锁定设计生成</td>
+        </tr></tbody></table></div></section>
+<section class="card"><h2>整条主链</h2><pre>0 基础
+↓
+1 选品
+↓
+2 分析
+↓
+3 开发
+↓
+4 生产
+↓
+5 页面
+↓
+6 推广
+↓
+7 备货</pre>
+<p>核心业务线：1-1 → 1-2 → 2-1 → 2-2 → 2-3 → 3-1 → 3-2 → 3-3 → 4-1 → 4-2 → 5-1 → 5-2 / 5-3 → 5-4 → 6-1 → 6-2 / 6-3 → 7-1 → 7-2</p></section>
+<div class="footer">HZP Amazon Skills Manual V1 · Offline Bundle</div></main></body></html>

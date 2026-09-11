@@ -1,0 +1,27 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3-3｜产品方案评审｜底层逻辑说明</title><style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#182230;--muted:#5c6878;--line:#dde4ee;--accent:#1f5eff;--soft:#eef4ff;--warn:#fff7e6;--code:#101827}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;color:var(--text);line-height:1.78}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 22px 70px}.hero{background:linear-gradient(135deg,#17233b,#244a8f);color:#fff;border-radius:20px;padding:30px 34px;box-shadow:0 14px 40px rgba(22,39,74,.16)}
+.eyebrow{font-size:13px;opacity:.78;letter-spacing:.08em}.hero h1{font-size:30px;line-height:1.3;margin:8px 0}.hero p{margin:8px 0 0;opacity:.9}.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:20px}
+.meta div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px 12px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 26px;margin-top:18px;box-shadow:0 4px 16px rgba(22,39,74,.05)}
+h2{font-size:22px;margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid var(--line)} h3{font-size:17px;margin:20px 0 8px}
+blockquote{margin:14px 0;padding:14px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:8px;font-weight:600}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--code);color:#e8eef8;border-radius:12px;padding:18px;overflow:auto;line-height:1.65}
+code{font-family:Consolas,Menlo,monospace}.tag{display:inline-block;background:#eef2f7;border:1px solid #dde3eb;border-radius:999px;padding:2px 8px;margin:2px;font-size:12px}
+ul,ol{padding-left:1.4em}.callout{background:var(--warn);border:1px solid #f5dca5;border-radius:12px;padding:14px 16px}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:24px}.nav a,.btn{display:inline-block;text-decoration:none;color:#fff;background:#244a8f;padding:10px 14px;border-radius:10px}
+.nav a.secondary,.btn.secondary{background:#fff;color:#244a8f;border:1px solid #b9c7dd}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}th,td{border:1px solid var(--line);padding:10px;vertical-align:top}th{background:#f0f4fa;text-align:left}
+.small{font-size:13px;color:var(--muted)} .toc a{color:#244a8f;text-decoration:none}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.stage{border-left:4px solid #244a8f}.footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
+@media(max-width:700px){.wrap{padding:14px 10px 48px}.hero{padding:22px}.hero h1{font-size:24px}.card{padding:18px}.nav{flex-direction:column}}
+</style></head><body><main class="wrap">
+<header class="hero"><div class="eyebrow">HZP Amazon AI Operating System · 底层逻辑说明</div><h1>3-3｜产品方案评审</h1>
+<p>为什么这样设计</p><div class="meta"><div>所属阶段：3｜开发</div><div>机器名：hzp-amz-3-3-product-plan-review</div><div>文件类型：底层逻辑说明</div><div>版本：V1 手册</div></div></header>
+<div class="card callout">本页用于长期回查“为什么这样设计”。正文依据当前已锁定业务设计生成；不作为真实产品分析报告。</div>
+<section class="card"><h2>定位与边界</h2><blockquote>在花钱打样前，对3-2纸面方案做正式评审，决定是否值得进入真实样品阶段。</blockquote><p>3-3评的是方案，不评真实样品；4-1才验证样品是否做对。</p><pre>纸面方案 → 风险评审 → 是否值得打样 → 4-1</pre></section><section class="card"><h2>核心输入</h2><ul><li>01_产品档案.md</li><li>最新有效3-2</li><li>按需回查3-1/2-3/2-2/2-1</li><li>07_产品资料中的方案证据</li></ul></section><section class="card"><h2>第一原则</h2><ul><li>风险分A/B/C：A打样前必须解决；B允许打样验证；C后续量产前验证</li><li>必须检查方案是否真正解决3-1机会</li><li>必须检查可制造、可验证、消费者价值和商业合理性</li><li>重大未知不能靠乐观假设放行</li></ul></section><section class="card"><h2>为什么要这样设计</h2><h3>风险分A/B/C：A打样前必须解决；B允许打样验证；C后续量产前验证</h3><p>这一条不是为了增加规则数量，而是为了防止系统在信息不完整时做出看似确定、实际不可追溯的判断。执行时应先确认事实来源，再说明判断逻辑；如果证据不足，明确保留不确定性。</p><h3>必须检查方案是否真正解决3-1机会</h3><p>这一条不是为了增加规则数量，而是为了防止系统在信息不完整时做出看似确定、实际不可追溯的判断。执行时应先确认事实来源，再说明判断逻辑；如果证据不足，明确保留不确定性。</p><h3>必须检查可制造、可验证、消费者价值和商业合理性</h3><p>这一条不是为了增加规则数量，而是为了防止系统在信息不完整时做出看似确定、实际不可追溯的判断。执行时应先确认事实来源，再说明判断逻辑；如果证据不足，明确保留不确定性。</p><h3>重大未知不能靠乐观假设放行</h3><p>这一条不是为了增加规则数量，而是为了防止系统在信息不完整时做出看似确定、实际不可追溯的判断。执行时应先确认事实来源，再说明判断逻辑；如果证据不足，明确保留不确定性。</p></section><section class="card"><h2>核心输出</h2><ul><li>《方案一致性评审》</li><li>《机会覆盖检查》</li><li>《A/B/C风险》</li><li>《打样验证要求》</li><li>《评审结论》</li></ul></section><section class="card"><h2>允许的状态 / 关键状态</h2><ul><li>【通过｜进入打样】</li><li>【有条件通过｜完成指定事项后进入打样】</li><li>【退回3-2修改】</li><li>【停止该方案】</li><li>【证据不足，暂不决策】</li></ul></section><section class="card"><h2>典型错误与反方检查</h2><ul><li>把‘看起来不错’当通过</li><li>未解决A类风险就进入打样</li><li>评真实样品质量</li><li>越权给量产结论</li><li>证据不足时硬通过</li></ul><div class='callout'><strong>反方检查：</strong>正式结论前必须主动问：如果当前判断是错的，最可能错在哪里？有没有把“没有证据”误写成“没有问题”？有没有把单一信号误当成最终结论？</div></section><section class="card"><h2>上游与下游交接</h2><p>通过后把明确的样品验证标准交给4-1。</p></section><section class="card"><h2>一句话锁定</h2><blockquote>3-3｜产品方案评审：在花钱打样前，对3-2纸面方案做正式评审，决定是否值得进入真实样品阶段。</blockquote></section>
+<div class="nav"><a class="secondary" href="3-2_差异化产品开发_底层逻辑.html">← 3-2 差异化产品开发</a><a class="secondary" href="../index.html">↑ 返回总目录</a><a href="../02_Codex创建指令/3-3_产品方案评审_Codex创建指令.html">查看对应 Codex 创建指令</a><a href="4-1_打样评审_底层逻辑.html">4-1 打样评审 →</a></div>
+<div class="footer">HZP Amazon Skills Manual V1 · 生成日期 2026-09-11 · 离线可阅读</div>
+</main></body></html>

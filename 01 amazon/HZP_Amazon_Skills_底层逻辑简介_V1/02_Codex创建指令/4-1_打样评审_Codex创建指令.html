@@ -1,0 +1,48 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>4-1｜打样评审｜Codex 创建指令</title><style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#182230;--muted:#5c6878;--line:#dde4ee;--accent:#1f5eff;--soft:#eef4ff;--warn:#fff7e6;--code:#101827}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;color:var(--text);line-height:1.78}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 22px 70px}.hero{background:linear-gradient(135deg,#17233b,#244a8f);color:#fff;border-radius:20px;padding:30px 34px;box-shadow:0 14px 40px rgba(22,39,74,.16)}
+.eyebrow{font-size:13px;opacity:.78;letter-spacing:.08em}.hero h1{font-size:30px;line-height:1.3;margin:8px 0}.hero p{margin:8px 0 0;opacity:.9}.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:20px}
+.meta div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px 12px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 26px;margin-top:18px;box-shadow:0 4px 16px rgba(22,39,74,.05)}
+h2{font-size:22px;margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid var(--line)} h3{font-size:17px;margin:20px 0 8px}
+blockquote{margin:14px 0;padding:14px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:8px;font-weight:600}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--code);color:#e8eef8;border-radius:12px;padding:18px;overflow:auto;line-height:1.65}
+code{font-family:Consolas,Menlo,monospace}.tag{display:inline-block;background:#eef2f7;border:1px solid #dde3eb;border-radius:999px;padding:2px 8px;margin:2px;font-size:12px}
+ul,ol{padding-left:1.4em}.callout{background:var(--warn);border:1px solid #f5dca5;border-radius:12px;padding:14px 16px}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:24px}.nav a,.btn{display:inline-block;text-decoration:none;color:#fff;background:#244a8f;padding:10px 14px;border-radius:10px}
+.nav a.secondary,.btn.secondary{background:#fff;color:#244a8f;border:1px solid #b9c7dd}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}th,td{border:1px solid var(--line);padding:10px;vertical-align:top}th{background:#f0f4fa;text-align:left}
+.small{font-size:13px;color:var(--muted)} .toc a{color:#244a8f;text-decoration:none}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.stage{border-left:4px solid #244a8f}.footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
+@media(max-width:700px){.wrap{padding:14px 10px 48px}.hero{padding:22px}.hero h1{font-size:24px}.card{padding:18px}.nav{flex-direction:column}}
+</style></head><body><main class="wrap">
+<header class="hero"><div class="eyebrow">HZP Amazon AI Operating System · Codex 创建指令</div><h1>4-1｜打样评审</h1>
+<p>如何让 Codex 实现</p><div class="meta"><div>所属阶段：4｜生产</div><div>机器名：hzp-amz-4-1-sample-review</div><div>文件类型：Codex 创建指令</div><div>版本：V1 手册</div></div></header>
+<div class="card callout">本页用于回查“当初要求 Codex 如何实现”。除明确标注的原始转换页外，内容按当前已锁定设计规范重建为完整创建指令参考版。</div>
+<section class="card"><h2>创建目标</h2><pre>请在当前 HZP Amazon Skills 仓库中新建：
+
+hzp-amz-4-1-sample-review
+
+中文名称：
+
+HZP Amazon 4-1｜打样评审</pre></section><section class="card"><h2>Skill定位</h2><blockquote>拿真实样品和3-3已批准方案对照，判断样品是否真正把方案做出来。</blockquote><p>4-1评真实样品；没有真实样品/可靠样品证据时不得完成正式样品评审。</p></section><section class="card"><h2>核心输入</h2><ul><li>01_产品档案.md</li><li>最新有效3-3</li><li>真实样品图片/视频/实测</li><li>供应商/工厂确认</li><li>人工体验</li><li>07_产品资料</li></ul></section><section class="card"><h2>固定执行原则</h2><ul><li>证据标签：图片可见/视频可见/实测数据/测试结果/工厂确认/供应商确认/人工体验/文件记录/AI推断/待验证</li><li>必须逐项对照批准方案</li><li>外观像不等于功能达标</li><li>关键性能尽量实测，不用视觉臆测</li></ul></section><section class="card"><h2>固定执行流程</h2><pre>确认对象身份
+↓
+读取必要输入
+↓
+检查输入有效性/数据语义
+↓
+执行核心判断
+↓
+主动寻找反向证据
+↓
+形成输出与状态
+↓
+生成交接包/路由
+↓
+生成正式HTML或明确失败原因</pre></section><section class="card"><h2>必须生成的核心输出</h2><ul><li>《样品证据清单》</li><li>《方案实现对照》</li><li>《功能/结构/材料/体验评审》</li><li>《问题与修改要求》</li><li>《4-2输入交接信息》</li></ul></section><section class="card"><h2>状态约束</h2><p>只使用本Skill定义的业务状态；不得自行创造含义相近但不可追踪的新状态。</p><ul><li>【通过｜进入4-2量产前检查】</li><li>【有条件通过｜完成指定修正后进入4-2】</li><li>【修改后重打】</li><li>【退回3-2重新开发】</li><li>【证据不足｜暂无法完成样品评审】</li></ul></section><section class="card"><h2>证据与数据真实性</h2><ul><li>只读取当前对象/当前Product Root的数据，不跨产品拼接。</li><li>凡读取版本化正式分析报告，必须选择当前产品最新有效正式版本；最大V优先，同V异常重复时文件名时间戳最新优先。</li><li>禁止依赖filesystem顺序、modified time、created time、first-found文件来判断最新版。</li><li>最新版如果有效性无法确认，返回【上游报告有效性无法确认】，不得静默回退旧版。</li><li>如果为了历史比较读取旧报告，必须标记【历史版本对照】，且当前正式输入仍是最新版有效报告。</li><li>所有事实、推断、待验证必须区分；不得编造销量、利润、CPC、ACoS、Review、专利、合规、供应商、成本或测试结果。</li><li>正式HTML中如实际读取了上游版本化报告，生成《输入版本追溯》，只记录真正读过的报告。</li></ul></section><section class="card"><h2>HTML与版本规则</h2><ul><li>图表只使用真实数据；数据不足时写【数据不足，未生成该图表】；禁止虚假评分图、伪趋势线和无意义3D图。</li><li>正式输出成功后，如处于正式Product Root并适用，则调用0-2更新唯一index.html；0-2失败不得删除已成功生成的正式报告。</li><li>不要修改原始数据、历史正式HTML或其他Skill；不要git commit，不要git push。</li></ul><pre>正式文件名建议：
+4-1_[产品编号]_打样评审_V[版本]_[YYYYMMDD]_[HHMMSS].html</pre></section><section class="card"><h2>绝对禁止</h2><ul><li>没有样品也给通过</li><li>从照片猜材料/强度</li><li>供应商说没问题就视为通过</li><li>忽略3-3标准</li><li>把量产准备度混入样品评审</li><li>越权替代相邻Skill</li><li>为了让报告完整而补造不存在的数据</li><li>因为旧版本结论更喜欢而改读旧版</li></ul></section><section class="card"><h2>轻量模拟测试</h2><ul><li>正常数据：应形成符合本Skill边界的正式输出。</li><li>关键数据缺失：应保留不确定性，不伪造结论。</li><li>上游最新版与旧版冲突：必须使用最新版有效报告，并可提示建议复核上游。</li><li>跨产品同名文件：不得读取。</li><li>输入存在明显反向证据：必须进入结论，不能只保留支持证据。</li><li>证据不足时：不得使用比证据更强的状态。</li><li>不得修改真实产品历史HTML、原始数据或其他Skill。</li><li>完成后不得git commit/git push。</li></ul></section><section class="card"><h2>完成后只汇报</h2><ul><li>新建了哪些文件</li><li>机器名是否为 hzp-amz-4-1-sample-review</li><li>中文名是否为 HZP Amazon 4-1｜打样评审</li><li>是否严格遵守本Skill边界</li><li>是否使用真实数据与证据标签</li><li>是否正确执行最新版有效报告规则</li><li>是否生成规定输出与交接内容</li><li>是否没有修改其他Skill/历史报告/原始数据</li><li>是否没有运行未授权真实产品</li><li>是否没有git commit/git push</li></ul></section><section class="card"><h2>下游交接</h2><p>通过后把确认过的样品事实与剩余风险交给4-2。</p></section>
+<div class="nav"><a class="secondary" href="3-3_产品方案评审_Codex创建指令.html">← 3-3 产品方案评审</a><a class="secondary" href="../index.html">↑ 返回总目录</a><a href="../01_底层逻辑/4-1_打样评审_底层逻辑.html">查看对应底层逻辑</a><a href="4-2_量产前检查_Codex创建指令.html">4-2 量产前检查 →</a></div>
+<div class="footer">HZP Amazon Skills Manual V1 · 生成日期 2026-09-11 · 离线可阅读</div>
+</main></body></html>
