@@ -11,7 +11,7 @@ Marketplace:
 Source Skill: hzp-amz-2-2-market-analysis
 Source Skill Name: HZP Amazon 2-2｜细分市场分析
 Generated Date:
-Next Recommended Skill: hzp-amz-3-1-product-development
+Next Recommended Skill: 后续产品开发 Skill（当前待重建）
 
 ## Analysis Mode
 

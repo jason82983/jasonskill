@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 5-4｜页面审核优化"
+  short_description: "审核 Amazon 页面一致性、真实性与优化优先级"
+  brand_color: "#C2410C"
+  default_prompt: "Use $hzp-amz-5-4-page-audit-optimization to audit the current product's 5-1 strategy, 5-2 copy, 5-3 visual plan, and any real page assets, then produce an evidence-based priority fix list."
+
+policy:
+  allow_implicit_invocation: true

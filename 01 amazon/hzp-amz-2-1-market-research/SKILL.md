@@ -653,7 +653,7 @@ After completing the analysis, write `2-1-[ProductCode]_HANDOFF.md` next to the 
 - `## Next Stage Instructions`.
 - `## Exit Gate`: `READY FOR NEXT STAGE` or `NOT READY`, with the reason. A `NO-GO` market decision may still have a complete handoff, but it must tell 3-1 not to begin formal development unless the user explicitly changes that decision.
 
-The recommended next Skill is `3-1 Product Development` (`hzp-amz-3-1-product-development`). The handoff must pass through, when supported by the current evidence: product identity, market conclusion, decision status, target consumer, core use scene, JTBD/母需求, keyword demand clusters, competitor success reasons, positive/negative review findings, consumer pain points, product opportunities, Product Definition V1, P0/P1/P2 requirements, avoid/do-not-overpromise items, evidence-supported target price band, risks, unknowns, validation items, QMT/supplier questions, and original data sources.
+The recommended next Skill is `后续产品开发 Skill（当前待重建）` (`后续产品开发 Skill（当前待重建）`). The handoff must pass through, when supported by the current evidence: product identity, market conclusion, decision status, target consumer, core use scene, JTBD/母需求, keyword demand clusters, competitor success reasons, positive/negative review findings, consumer pain points, product opportunities, Product Definition V1, P0/P1/P2 requirements, avoid/do-not-overpromise items, evidence-supported target price band, risks, unknowns, validation items, QMT/supplier questions, and original data sources.
 
 Every handoff statement must carry one canonical label: `[FACT]`, `[INFERENCE]`, `[TO-VERIFY]`, or `[DECISION]`. `[DECISION]` is reserved for an explicit HZP/QMT/user decision; an AI recommendation remains `[INFERENCE]` until confirmed. Do not silently remove upstream facts, requirements, constraints, risks, or decisions. If new evidence changes an upstream conclusion, show `上游结论` → `新证据` → `为什么修改` → `新结论`.
 
@@ -663,7 +663,7 @@ The handoff is a compact interface, not a transcript or a duplicate report. Down
 
 ## Product-development handoff
 
-This Skill stops at market decision, development direction, and Product Definition V1. When the user wants to begin product development, do not restart the market analysis. Pass the validated report, source list, Product Definition V1, development matrix, cost/price assumptions, and QMT unknowns to `hzp-amz-3-1-product-development`.
+This Skill stops at market decision, development direction, and Product Definition V1. When the user wants to begin product development, do not restart the market analysis. Pass the validated report, source list, Product Definition V1, development matrix, cost/price assumptions, and QMT unknowns to `后续产品开发 Skill（当前待重建）`.
 
 The development handoff should include:
 
@@ -736,7 +736,7 @@ Before submitting, confirm all items below:
 - [ ] `DECISIONS.md` was checked when present and only confirmed decisions were treated as decisions.
 - [ ] `0-source/` evidence was not overwritten; newer evidence uses new files.
 - [ ] HANDOFF contains `Version`, `Status: CURRENT`, `Supersedes`, and an Exit Gate result of `READY FOR NEXT STAGE` or `NOT READY`; `PRODUCT.md` points to that current HANDOFF.
-- [ ] HANDOFF contains all required sections and the recommended next Skill is `3-1 Product Development`.
+- [ ] HANDOFF contains all required sections and the recommended next Skill is `后续产品开发 Skill（当前待重建）`.
 - [ ] HANDOFF statements use `[FACT]`, `[INFERENCE]`, `[TO-VERIFY]`, or `[DECISION]` without evidence-state promotion.
 - [ ] Sales file format was checked by content, not only by `.xls`/`.xlsx` extension.
 - [ ] Sales date range, recorded/estimated-sales scope, zero/nonzero days, and file-range calculations are visible.

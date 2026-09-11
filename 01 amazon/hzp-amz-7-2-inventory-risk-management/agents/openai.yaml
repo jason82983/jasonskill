@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 7-2｜库存风险管理"
+  short_description: "持续监控库存偏差、在途与资金风险并路由处理"
+  brand_color: "#7C3AED"
+  default_prompt: "Use $hzp-amz-7-2-inventory-risk-management to monitor the current product's real inventory and supply-chain risk, compare reality with the latest 7-1 forecast, decide whether to rerun 7-1, and route the minimum necessary action."
+
+policy:
+  allow_implicit_invocation: true

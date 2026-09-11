@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 3-2｜差异化产品开发"
+  short_description: "将 3-1 产品机会转化为可评审、可打样、可验证的差异化产品方案 V1"
+  brand_color: "#0E7490"
+  default_prompt: "Use $hzp-amz-3-2-differentiated-product-development to turn the selected product project's 3-1 opportunity handoff into a traceable, validation-ready differentiated product plan V1."
+
+policy:
+  allow_implicit_invocation: true

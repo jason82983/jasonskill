@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 7-1｜补货预测"
+  short_description: "基于真实库存、销售速度和 Lead Time 形成有条件的补货预测"
+  brand_color: "#2563EB"
+  default_prompt: "Use $hzp-amz-7-1-replenishment-forecast to calculate evidence-based replenishment timing and quantity for the current product, separating timely inventory, demand scenarios, lead-time uncertainty, and stockout or overstock risk."
+
+policy:
+  allow_implicit_invocation: true

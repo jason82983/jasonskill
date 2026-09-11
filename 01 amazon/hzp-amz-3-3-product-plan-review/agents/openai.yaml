@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 3-3｜产品方案评审"
+  short_description: "评审差异化产品方案是否值得进入真实打样验证"
+  brand_color: "#7C3AED"
+  default_prompt: "Use $hzp-amz-3-3-product-plan-review to review the current product project's latest 3-2 differentiated plan and decide whether it may enter sample validation."
+
+policy:
+  allow_implicit_invocation: true

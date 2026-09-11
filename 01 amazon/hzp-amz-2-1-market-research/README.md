@@ -107,7 +107,7 @@ ASIN 和产品名称写入报告元数据，不替代 ProductCode。以前已经
 
 ## 衔接产品开发
 
-这个 Skill 输出市场决策、开发方向、Product Definition V1 和 `2-1-[ProductCode]_HANDOFF.md`。当用户要开始打样或做产品规格时，下游 `3-1 Product Development` Skill（`hzp-amz-3-1-product-development`）必须先读取同一产品项目 `2-1-market-research/` 下的 HANDOFF，再读取适用的人工要求，按需核对 HTML 报告和 `0-source/` 原始文件；不要重新做市场分析，也不能把 HANDOFF 或人工要求中的推断当成技术参数。产品代码变更时，按 `PRODUCT.md` 中的 Previous Product Code/Product Code History 追溯历史文件。现有 `2-1-[ProductCode]_product-handoff-v1-YYYYMMDD.json` 可以作为兼容性补充，但不替代 HANDOFF。
+这个 Skill 输出市场决策、开发方向、Product Definition V1 和 `2-1-[ProductCode]_HANDOFF.md`。当用户要开始打样或做产品规格时，下游 `后续产品开发 Skill（当前待重建）` Skill（`后续产品开发 Skill（当前待重建）`）必须先读取同一产品项目 `2-1-market-research/` 下的 HANDOFF，再读取适用的人工要求，按需核对 HTML 报告和 `0-source/` 原始文件；不要重新做市场分析，也不能把 HANDOFF 或人工要求中的推断当成技术参数。产品代码变更时，按 `PRODUCT.md` 中的 Previous Product Code/Product Code History 追溯历史文件。现有 `2-1-[ProductCode]_product-handoff-v1-YYYYMMDD.json` 可以作为兼容性补充，但不替代 HANDOFF。
 
 可以直接把下面这句话发给 Codex：
 

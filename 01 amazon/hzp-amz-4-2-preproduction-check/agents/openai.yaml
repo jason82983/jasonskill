@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 4-2｜量产前检查"
+  short_description: "核查已通过样品评审的产品是否具备正式量产条件"
+  brand_color: "#1D4ED8"
+  default_prompt: "Use $hzp-amz-4-2-preproduction-check to verify the latest 4-1 sample-review handoff and real preproduction evidence, then decide whether the product may enter production."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 6-3｜产品运营监控"
+  short_description: "监控 Amazon 产品经营健康并路由异常"
+  brand_color: "#0F766E"
+  default_prompt: "Use $hzp-amz-6-3-product-operations-monitoring to monitor the current product's real Amazon operating data, distinguish normal fluctuation from evidence-based anomalies, and route the minimum necessary follow-up."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 5-2｜Listing文案"
+  short_description: "生成有证据约束的 Amazon US Listing 文案"
+  brand_color: "#0F766E"
+  default_prompt: "Use $hzp-amz-5-2-listing-copywriting to turn the latest 5-1 page strategy and verified keyword evidence into recommended Amazon US Listing copy with Claim checks and 5-3/5-4 handoff packages."
+
+policy:
+  allow_implicit_invocation: true

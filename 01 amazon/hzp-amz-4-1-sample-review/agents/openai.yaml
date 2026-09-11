@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 4-1｜打样评审"
+  short_description: "基于真实样品证据评审方案并决定是否进入量产前检查"
+  brand_color: "#0F766E"
+  default_prompt: "Use $hzp-amz-4-1-sample-review to review the current product's latest approved 3-3 handoff and real sample evidence, then decide the next gate."
+
+policy:
+  allow_implicit_invocation: true

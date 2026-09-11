@@ -18,7 +18,7 @@
 - Version: `[FACT] <整数版本，例如 1>`
 - Status: `[FACT] CURRENT`
 - Supersedes: `[FACT] <Version N 或 无>`
-- Next Recommended Skill: `[INFERENCE] 3-1 Product Development（Skill：hzp-amz-3-1-product-development；若 HZP 明确确认，再标记为 [DECISION]）`
+- Next Recommended Skill: `[INFERENCE] 后续产品开发 Skill（当前待重建）（Skill：后续产品开发 Skill（当前待重建）；若 HZP 明确确认，再标记为 [DECISION]）`
 
 ## Decision
 

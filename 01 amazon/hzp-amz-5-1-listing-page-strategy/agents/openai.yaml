@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 5-1｜页面策略"
+  short_description: "制定 Amazon 页面销售战略并交接给文案和视觉阶段"
+  brand_color: "#7C3AED"
+  default_prompt: "Use $hzp-amz-5-1-listing-page-strategy to turn the current product evidence and manual page direction into a page strategy, then prepare aligned 5-2 and 5-3 handoff packages."
+
+policy:
+  allow_implicit_invocation: true

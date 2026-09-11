@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 1-2｜选品初筛"
+  short_description: "基于1-1证据快速筛选值得进入2-1深度分析的候选商机"
+  brand_color: "#2563EB"
+  default_prompt: "Use $hzp-amz-1-2-product-screening to screen 1-1 candidate opportunities for research priority, check hard risks and feasibility, and prepare only the candidates worth entering 2-1 without making a final GO/NO-GO decision."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 1-1｜商机发现"
+  short_description: "从真实市场信号发现可验证的候选商机并交接给1-2初筛"
+  brand_color: "#EA580C"
+  default_prompt: "Use $hzp-amz-1-1-opportunity-discovery to discover evidence-based consumer demand and product opportunities, then prepare a research-priority handoff for 1-2 without making the final product decision."
+
+policy:
+  allow_implicit_invocation: true

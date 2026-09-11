@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 5-3｜图片视频策划"
+  short_description: "规划 Amazon 图片、A+ 与视频并守住产品真实性"
+  brand_color: "#2563EB"
+  default_prompt: "Use $hzp-amz-5-3-image-video-planning to turn the latest 5-1 page strategy, 5-2 listing copy, and verified product assets into an evidence-safe image, A+ and video production blueprint."
+
+policy:
+  allow_implicit_invocation: true

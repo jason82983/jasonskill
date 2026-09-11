@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 3-1｜产品机会定义"
+  short_description: "从前序市场证据收敛可验证的 Amazon 产品机会定义"
+  brand_color: "#0E7490"
+  default_prompt: "Use $hzp-amz-3-1-product-opportunity-definition to define evidence-grounded product opportunities from the selected product project's 2-1, 2-2, and 2-3 outputs."
+
+policy:
+  allow_implicit_invocation: true
