@@ -1,0 +1,413 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HZP Amazon｜人工数据文件与示例模板</title><style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;margin:0;color:#111827;background:#fff}
+main{max-width:1280px;margin:auto;padding:42px 28px 80px}
+h1{font-size:34px;margin:0 0 8px}h2{font-size:27px;margin-top:42px;padding-top:14px;border-top:2px solid #111827}h3{font-size:21px;margin:24px 0 10px}
+p,li{line-height:1.7}.muted{font-size:14px;color:#6b7280}.note{background:#f8fafc;padding:18px 22px;border-radius:14px;margin:18px 0}
+table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid #e5e7eb;padding:10px;vertical-align:top;text-align:left;font-size:14px}th{background:#f9fafb}
+pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;padding:18px;font-size:14px;line-height:1.6}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#ecfdf5;color:#166534}
+.toc{columns:2;column-gap:30px}.toc li{margin:6px 0}a{color:#2563eb;text-decoration:none}
+@media(max-width:900px){main{padding:24px 14px 60px}.toc{columns:1}h1{font-size:28px}}
+</style></head>
+<body><main>
+<h1>HZP Amazon｜人工数据文件与示例内容模板</h1>
+<p class="muted">版本：2026-09-11｜用途：给你、QMT、员工和供应链统一说明“哪些人工文件需要维护、每个文件怎么写”。</p>
+
+<div class="note">
+<p><strong>使用原则：</strong></p>
+<ul>
+<li>人工文件负责记录<strong>真实人工事实、经验、判断、约束、计划和执行记录</strong>。</li>
+<li>AI可以帮忙整理格式，但不能把未经确认的内容自动写成事实。</li>
+<li>不知道的字段直接写“待确认”，不要为了完整而猜。</li>
+<li>02/03/04属于“人工思路”；运营事件、体验、供应商沟通、补货记录属于“执行过程人工记录”。</li>
+<li>这些模板是起点，不要求每次所有字段都填满，只填与当前产品真正相关的内容。</li>
+</ul>
+</div>
+
+<h2>文件总览</h2>
+<table>
+<thead><tr><th>文件</th><th>类型</th><th>主要用途</th><th>建议位置</th></tr></thead>
+<tbody>
+<tr><td>01_产品档案.md</td><td>人工</td><td>产品身份与稳定事实</td><td>Product Root</td></tr>
+<tr><td>02_产品开发思路.md</td><td>人工</td><td>产品经验、开发方向、约束、假设</td><td>Product Root</td></tr>
+<tr><td>03_产品页面思路.md</td><td>人工</td><td>页面卖点、视觉、视频、A+人工想法</td><td>Product Root</td></tr>
+<tr><td>04_产品推广思路.md</td><td>人工</td><td>价格、广告、预算、关键词、推广策略</td><td>Product Root</td></tr>
+<tr><td>运营事件记录.md</td><td>人工/系统记录</td><td>记录页面、价格、广告等运营动作</td><td>05_分析源数据/运营数据</td></tr>
+<tr><td>人工体验记录.md</td><td>人工</td><td>样品实际体验与人工观察</td><td>07_产品资料/样品测试</td></tr>
+<tr><td>供应商/工厂沟通记录.md</td><td>人工</td><td>沉淀报价、工艺、交期等口头确认</td><td>07_产品资料/供应链与工艺</td></tr>
+<tr><td>补货/库存人工信息记录.md</td><td>人工/供应链</td><td>补足PO、生产、在途、Lead Time等人工信息</td><td>05_分析源数据/库存数据</td></tr>
+</tbody></table>
+
+<h2>快速索引</h2>
+<ul class="toc"><li><a href="#f1">01_产品档案.md</a></li><li><a href="#f2">02_产品开发思路.md</a></li><li><a href="#f3">03_产品页面思路.md</a></li><li><a href="#f4">04_产品推广思路.md</a></li><li><a href="#f5">运营事件记录.md</a></li><li><a href="#f6">人工体验记录.md</a></li><li><a href="#f7">供应商/工厂沟通记录.md</a></li><li><a href="#f8">补货/库存人工信息记录.md</a></li></ul>
+
+
+<h2 id="f1">01_产品档案.md</h2>
+<p><span class="badge">人工</span></p>
+<p>产品身份与稳定基础事实</p>
+<h3>示例内容模板</h3>
+<pre># 01_产品档案
+
+## 1. 产品身份
+- Product Code：N24
+- 产品中文名：置物架
+- Marketplace：Amazon US
+- 品牌：待确认
+- 当前阶段：产品分析
+- 主ASIN：待确认
+- 核心对标ASIN：B0FZRQDRYS
+
+## 2. 产品基本信息
+- 产品类型：台面/桌面置物架
+- 主要材质：待确认
+- 主要尺寸：待确认
+- 目标售价：待确认
+- 目标用户：待确认
+
+## 3. 项目约束
+- 目标市场：美国
+- 目标价格带：待确认
+- 目标利润要求：待确认
+- 不接受的方向：侵权、高合规风险、难量产
+- 供应链能力：待人工填写
+
+## 4. 当前状态
+- 是否已立项：是/否
+- 是否已有样品：是/否
+- 是否已有供应商：是/否
+- 是否已上架：是/否
+
+## 5. 备注
+- 这里仅记录稳定身份事实，不写长篇市场分析和AI结论。
+</pre>
+
+<h2 id="f2">02_产品开发思路.md</h2>
+<p><span class="badge">人工</span></p>
+<p>你/QMT/开发团队的产品经验、判断、假设和开发边界</p>
+<h3>示例内容模板</h3>
+<pre># 02_产品开发思路
+
+## 1. 为什么看这个产品
+- 我们为什么关注它：
+- 哪个对标产品最值得研究：
+- 我们认为它成功的关键原因：
+
+## 2. 人工发现的问题
+- 问题1：
+- 问题2：
+- 问题3：
+
+## 3. 想保留的优点
+- 优点1：
+- 优点2：
+
+## 4. 想做的差异化方向
+- 方向1：
+- 方向2：
+- 方向3：
+
+## 5. 供应链/工程判断
+- QMT判断：
+- 工厂判断：
+- 哪些改动容易做：
+- 哪些改动成本高：
+- 哪些改动风险大：
+
+## 6. 项目约束
+- 目标成本：
+- 目标售价：
+- MOQ限制：
+- 材料限制：
+- 尺寸/重量限制：
+- 合规/IP限制：
+
+## 7. 目前仍是“假设”的内容
+- 产品假设：
+- 商业假设：
+- 待验证点：
+
+## 8. 不希望AI擅自改变的内容
+- 例如：产品结构、核心材质、目标用户等。
+</pre>
+
+<h2 id="f3">03_产品页面思路.md</h2>
+<p><span class="badge">人工</span></p>
+<p>页面定位、卖点表达、主图/副图/视频/A+的人工想法</p>
+<h3>示例内容模板</h3>
+<pre># 03_产品页面思路
+
+## 1. 页面核心定位
+- 最想让消费者第一眼记住什么：
+- 页面最重要的购买理由：
+- 最大购买顾虑：
+
+## 2. 核心卖点
+- 卖点1：
+- 卖点2：
+- 卖点3：
+- 卖点4：
+
+## 3. 主图思路
+- 产品应该怎么摆：
+- 是否需要展示配件：
+- 想突出什么：
+- 绝对不能改错的结构/数量/颜色：
+
+## 4. 副图思路
+- 副图1任务：
+- 副图2任务：
+- 副图3任务：
+- 副图4任务：
+- 副图5任务：
+
+## 5. 视频思路
+- 想展示的过程：
+- 想证明的Claim：
+- 使用场景：
+
+## 6. A+思路
+- 品牌故事：
+- 深度结构说明：
+- 对比模块：
+- 使用场景：
+
+## 7. 页面风格
+- 风格关键词：
+- 想参考的竞品页面：
+- 不喜欢的表达方式：
+
+## 8. 待确认
+- 哪些卖点需要补证据：
+- 哪些图片需要重新拍：
+</pre>
+
+<h2 id="f4">04_产品推广思路.md</h2>
+<p><span class="badge">人工</span></p>
+<p>新品推广、预算、价格、广告、促销和运营假设</p>
+<h3>示例内容模板</h3>
+<pre># 04_产品推广思路
+
+## 1. 推广目标
+- 当前阶段：新品/验证期/放量期/稳定期
+- 主要目标：拿订单 / 验证关键词 / 验证转化 / 放量 / 控ACoS
+
+## 2. 价格策略
+- 正常售价：
+- Launch价格：
+- Coupon：
+- 最低可接受售价：
+
+## 3. 广告预算
+- 每日预算：
+- 可接受测试周期：
+- 可接受最大测试成本：
+
+## 4. 关键词思路
+- 核心精准词：
+- 次核心词：
+- 长尾词：
+- 场景词：
+- 竞品词：
+- 暂不投的词：
+
+## 5. 广告结构想法
+- Auto：
+- Manual Exact：
+- Manual Phrase：
+- Product Targeting：
+- Placement：
+
+## 6. 观察指标
+- Impressions：
+- CTR：
+- CPC：
+- CVR：
+- ACoS：
+- Orders：
+- Organic Rank：
+
+## 7. 人工判断
+- 哪些词必须重点争取：
+- 哪些词贵但可能值得：
+- 哪些词即使有单也不想要：
+
+## 8. 重要运营事件
+- 日期：
+- 动作：
+- 原因：
+- 预期结果：
+</pre>
+
+<h2 id="f5">运营事件记录.md</h2>
+<p><span class="badge">人工/系统记录</span></p>
+<p>把每次运营动作留痕，帮助6-2/6-3解释销量和广告变化</p>
+<h3>示例内容模板</h3>
+<pre># 运营事件记录
+
+| 日期时间 | 动作类型 | 具体动作 | 原因 | 预期影响 | 实际结果 | 负责人 |
+|---|---|---|---|---|---|---|
+| 2026-09-01 10:00 | 主图 | 更换主图V2 | 提升CTR | CTR上升 | 待观察 | 张三 |
+| 2026-09-03 15:00 | 价格 | $29.99→$27.99 | 测试转化 | CVR上升 | 待观察 | 李四 |
+| 2026-09-05 09:00 | Coupon | 开10% Coupon | 提升点击/转化 | CVR提升 | 待观察 | 张三 |
+| 2026-09-07 18:00 | 广告 | exact bid +20% | 扩精准词流量 | Impressions增加 | 待观察 | 李四 |
+
+## 记录规则
+- 每次影响流量、点击、转化、价格、广告、页面、库存的动作都记录。
+- 不要只记“改了”，还要记为什么改。
+- 以后AI判断异常时，会用这份记录解释因果。
+</pre>
+
+<h2 id="f6">人工体验记录.md</h2>
+<p><span class="badge">人工</span></p>
+<p>样品实际体验、手感、安装、穿着、使用等主观但有价值的人类观察</p>
+<h3>示例内容模板</h3>
+<pre># 人工体验记录
+
+## 基本信息
+- Product Code：
+- 样品版本：
+- 体验日期：
+- 体验人：
+
+## 外观
+- 第一印象：
+- 做工：
+- 颜色：
+- 表面处理：
+- 是否符合预期：
+
+## 使用体验
+- 安装难度：
+- 操作难度：
+- 舒适度/手感：
+- 稳定性：
+- 功能是否顺畅：
+
+## 与方案对比
+- 做对的地方：
+- 没做对的地方：
+- 意外发现的问题：
+- 比预期更好的地方：
+
+## 结论
+- 是否愿意继续推进：
+- 必须修改：
+- 建议修改：
+- 可接受但需观察：
+
+## 注意
+- 这是人工体验，不等于实测数据。
+- 承重、尺寸、材料等必须用真实测试或文件证明。
+</pre>
+
+<h2 id="f7">供应商/工厂沟通记录.md</h2>
+<p><span class="badge">人工</span></p>
+<p>沉淀供应商口头信息，避免重要事实只存在微信/电话里</p>
+<h3>示例内容模板</h3>
+<pre># 供应商/工厂沟通记录
+
+## 沟通信息
+- 日期：
+- 供应商/工厂：
+- 联系人：
+- 沟通方式：
+- 负责人：
+
+## 本次确认事项
+1. 材料：
+2. 工艺：
+3. 尺寸：
+4. MOQ：
+5. 报价：
+6. 模具：
+7. 生产周期：
+8. 包装：
+9. 测试：
+10. 其他：
+
+## 供应商明确确认
+- [供应商确认]：
+
+## 供应商暂未确认
+- [待确认]：
+
+## 我方判断
+- [人工事实]：
+- [专家判断]：
+- [产品假设]：
+
+## 后续动作
+- 谁负责：
+- 截止时间：
+- 需要补的文件/样品/报价：
+</pre>
+
+<h2 id="f8">补货/库存人工信息记录.md</h2>
+<p><span class="badge">人工/供应链</span></p>
+<p>补足ERP和Amazon后台看不到的PO、生产、在途、预计可售等信息</p>
+<h3>示例内容模板</h3>
+<pre># 补货 / 库存人工信息记录
+
+## 当前库存
+- Available：
+- Reserved：
+- Inbound：
+- 海外仓：
+- 国内库存：
+- Unsellable：
+
+## 已下单 / 生产
+- PO编号：
+- 下单数量：
+- 下单日期：
+- 当前生产状态：
+- 预计完工日期：
+- QC日期：
+
+## 运输
+- 发货日期：
+- 运输方式：
+- 当前节点：
+- 预计到港：
+- 预计清关完成：
+- Amazon预约日期：
+- 预计Receiving：
+- 预计真正可售日期：
+
+## Lead Time分段
+- 下单→开工：
+- 生产：
+- QC：
+- 国内运输：
+- 国际运输：
+- 清关：
+- 预约：
+- Receiving：
+- Buffer：
+
+## 风险
+- 当前最大风险：
+- 是否延误：
+- 延误原因：
+- 是否需要加急：
+
+## 负责人
+- 采购：
+- 货代：
+- 运营：
+</pre>
+
+
+<h2>一句话规则</h2>
+<div class="note">
+<p><strong>01：</strong>产品是谁。</p>
+<p><strong>02：</strong>我们准备怎么开发。</p>
+<p><strong>03：</strong>我们准备怎么在页面上卖。</p>
+<p><strong>04：</strong>我们准备怎么推广。</p>
+<p><strong>运营事件：</strong>我们实际做了什么。</p>
+<p><strong>人工体验：</strong>人实际体验到了什么。</p>
+<p><strong>供应商沟通：</strong>工厂到底确认了什么。</p>
+<p><strong>补货库存人工记录：</strong>平台看不到的供应链真实状态是什么。</p>
+</div>
+</main></body></html>

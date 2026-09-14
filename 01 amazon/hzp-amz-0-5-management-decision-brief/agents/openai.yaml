@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 0-5｜上级决策与经营问询"
+  short_description: "发现真正需要上级决策的 Amazon 经营事项并生成决策周报"
+  brand_color: "#7C3AED"
+  default_prompt: "Use $hzp-amz-0-5-management-decision-brief to identify material management decisions from the incremental evidence window and produce a concise Chinese decision brief."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 5-5｜线上ASIN页面审计与优化"
+  short_description: "审计真实线上ASIN页面与策略执行，诊断转化问题并路由优化"
+  brand_color: "#0F766E"
+  default_prompt: "Use $hzp-amz-5-5-live-asin-page-audit to audit the current live Amazon ASIN against the latest valid 5-1 to 5-4 inputs, diagnose evidence-based issues, and produce a prioritized routing report without changing the page."
+
+policy:
+  allow_implicit_invocation: true

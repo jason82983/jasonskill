@@ -45,6 +45,8 @@ Sources:
 - URL/product identifier columns
 - user-supplied ASIN
 
+For Reviews workbooks specifically, inspect worksheet names as identity metadata. A worksheet such as `B0XXXXXXXX-Review(155)` is valid ASIN evidence when no ASIN column exists and the filename/sheet identity is consistent. Record the source as `Reviews worksheet name`; do not treat ASINs found only inside review hyperlinks or variation URLs as the workbook's primary ASIN. Conflicting populated-sheet or filename ASINs trigger the hard-stop mismatch rule.
+
 If multiple conflicting ASINs are reliably detected, stop.
 
 ## Reviews — common fields to resolve semantically

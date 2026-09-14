@@ -1,0 +1,13 @@
+{
+  "product_code": "",
+  "event_id": "",
+  "target_sell_start": "",
+  "current_stage": "",
+  "expected_stage": "",
+  "days_remaining": null,
+  "deadline": "",
+  "risk_level": "[正常]|[进入准备窗口]|[进入执行窗口]|[时间偏紧]|[明显滞后]|[高风险错过窗口]|[数据不足]",
+  "recommended_action": "",
+  "route_skill": "",
+  "evidence": []
+}

@@ -79,6 +79,8 @@ Use, in descending priority:
 2. ASIN embedded in filename;
 3. ASIN explicitly supplied by the user.
 
+For Amazon Reviews workbooks, the ASIN may be present only in the worksheet name (for example, `B0XXXXXXXX-Review(155)`) and absent from the row columns. When the workbook filename and/or worksheet name contains one consistent ASIN, treat that worksheet identity as the Reviews source ASIN and record the detection source explicitly. Inspect all populated review sheets; a conflicting worksheet/file ASIN is a hard-stop mismatch. ASINs embedded in review hyperlinks or variation URLs are not primary workbook identity and must not be merged into the target ASIN unless independently confirmed.
+
 Typical filename patterns include:
 - `keepa-B0XXXXXXXX-YYYYMMDD.xlsx`
 - `US_AMAZON_cerebro_B0XXXXXXXX_YYYY-MM-DD.csv`

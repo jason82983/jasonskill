@@ -1,0 +1,16 @@
+{
+  "knowledge_id": "AMZ-US-EXAMPLE-001",
+  "title": "某某 Amazon 规则主题",
+  "marketplace": "US",
+  "category": "01_Amazon平台规则",
+  "keywords": ["example"],
+  "status": "[待确认]",
+  "change_risk": "MEDIUM",
+  "last_verified_at": "YYYY-MM-DD",
+  "version": "V1",
+  "source_types": ["Amazon官方"],
+  "affected_skills": [],
+  "affected_product_types": [],
+  "report_path": "01_Amazon平台规则/Amazon_US_某某规则_V1_YYYYMMDD.html",
+  "superseded_by": ""
+}

@@ -1,0 +1,22 @@
+{
+  "decision_id": "DEC-YYYY-0001",
+  "created_at": "YYYY-MM-DDTHH:MM:SS+08:00",
+  "product_code": "",
+  "project": "",
+  "question": "",
+  "priority": "P1",
+  "options": {"A": "", "B": "", "C": "", "D": "其他/自定义"},
+  "ai_recommendation": "",
+  "boss_answer": null,
+  "boss_comment": null,
+  "answered_at": null,
+  "decision_status": "NEW",
+  "deadline": "[无硬性截止日期]",
+  "affected_skills": [],
+  "execution_owner": "",
+  "follow_up_date": null,
+  "result": null,
+  "reopened_reason": null,
+  "evidence": [],
+  "material_new_evidence": false
+}

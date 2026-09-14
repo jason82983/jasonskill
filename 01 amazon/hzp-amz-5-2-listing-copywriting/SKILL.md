@@ -9,7 +9,7 @@ metadata:
 
 ## 定位与边界
 
-5-2 把 5-1 已确定的页面销售战略写成面向 Amazon US 消费者的正式英文 Listing 文案，并把证据边界交给 5-3 和 5-4。它负责关键词理解与布局、Title、Bullet Points、Product Description、A+ 文字基础、Claim 审核和 SEO/可读性检查。
+5-2 是 Amazon Listing Content & Creation Data Builder：把 5-1 已确定的页面销售战略、产品事实和关键词证据整理成可支持 Amazon 最终创建/更新 Listing 的完整内容数据包，并把证据边界交给 5-3 和 5-4。它负责 Product Title、Item Highlights、Bullet Points、Product Description、Backend Search Terms、动态产品属性、Core Selling Points、关键词布局、A+ 文字基础、Claim 审核和 SEO/可读性检查。
 
 - 5-1 决定卖什么、先讲什么和页面购买逻辑；5-2 负责把它写出来；5-3 负责图片/视频策划；5-4 负责页面审核优化。
 - 不重新做市场分析、产品开发或页面战略；不制作图片、视频成片或完整 A+ 视觉模块；不得擅自改变 5-1 的 P0/P1/P2 和核心卖点优先级。
@@ -23,7 +23,9 @@ metadata:
 3. 在 `[Product Root]/06_SKILL分析报告/` 中按“当前 Product Code + Skill 编号”定位最新有效的 5-1 正式 HTML：最大 V 优先，同 V 取文件名 `YYYYMMDD_HHMMSS` 最新者。排除 `index.html`、Draft、Preview、Test、Temp、Demo、Debug、失败、未完成、废弃、无效和临时文件；不得依赖目录顺序或文件系统时间。最新版异常时使用最新版并标记 `[建议复核上游最新版]`，不得静默回退。
 4. 读取 5-1 报告中的《5-2输入交接包》，作为核心输入；只有为核实具体 Claim 时，才按需回查 4-2、4-1、3-3、3-2、3-1、2-3、2-2、2-1 的最新有效报告，不重新执行这些 Skill。若 4-1/4-2 的真实产品状态与 5-1 冲突，优先当前真实状态；冲突影响页面战略时输出 `[上游页面策略冲突｜需返回5-1]`，不在 5-2 中偷偷改战略。
 5. 主动检查 `[Product Root]/05_分析源数据/03_关键词数据/`，读取实际字段、数据日期、数据语义和来源。可识别 Cerebro、Magnet、ABA、Search Query Performance、Brand Analytics、Search Terms、Keyword Tracker、广告搜索词等，但文件名只是线索，内容才是证据。
-6. 可按需读取真实评论和产品资料用于 Claim/消费者表达核实；真实评价必须保留来源和原意，不编造或拼接 Quote。
+6. 主动读取 `01_产品档案.md` 中已有的 Brand、Product Name、Product Type、Model、Color、Size、Material、Dimensions、Weight、Quantity、Package Quantity、Included Components、Style、Theme、Occasion、Target Audience、Recommended Use、Indoor/Outdoor、Power Source、Battery、Mounting Type、Finish、Care、Safety、Country of Origin 等属性；再按 Product Type 动态决定需要的 Listing Attributes，不机械套用全部字段。
+7. 同时检查 `[Product Root]/07_产品资料/` 中的规格、包装、实拍、说明书、BOM、尺寸、重量、材质、包装清单、认证、测试、型号、颜色和变体等资料。只读，不修改；缺失事实保留为缺失。
+8. 可按需读取真实评论和产品资料用于 Claim/消费者表达核实；真实评价必须保留来源和原意，不编造或拼接 Quote。
 
 正式 HTML 必须包含《输入版本追溯》，只记录本次实际读取的版本化正式报告，并标明 5-1 为 `[核心输入]`、其他回查为 `[辅助回查]`；`01_产品档案.md`、`03_产品页面思路.md` 和原始关键词文件单列为非版本化资料。
 
@@ -44,7 +46,16 @@ metadata:
 
 ## 固定执行流程
 
-读取身份 → 读取 `03_产品页面思路.md` → 选择最新有效 5-1 → 优先读取《5-2输入交接包》 → 主动检查关键词资料 → 按需核实产品/消费者证据 → 继承页面战略 → 关键词分类与使用地图 → Title 方案与推荐 → Bullet Points 正式稿 → Product Description 正式稿 → A+ 文字建议 → Claim—Evidence 审核 → SEO 与可读性检查 → 反方检查 → 形成 5-3 文案协同包 → 形成 5-4 输入交接包 → 生成正式 HTML → 确认文件存在和命名正确 → 调用 0-2。
+读取身份 → 读取 `03_产品页面思路.md` → 选择最新有效 5-1 → 优先读取《5-2输入交接包》 → 主动读取 01/07 产品事实与关键词资料 → 按当前 Amazon 规则建立 Product Title + Item Highlights 首屏组合 → 关键词分配 → Backend Search Terms 去重与风险过滤 → Bullet Points → Product Description → 动态 Listing Attributes → Core Selling Points → A+ 文字建议 → 全字段 Claim—Evidence 审核 → Listing Creation Data Package → SEO 与可读性检查 → 反方检查 → 形成 5-3 文案协同包 → 形成 5-4 输入交接包 → 生成正式 HTML → 确认文件存在和命名正确 → 调用 0-2。
+
+## Amazon US 2026 首屏字段规则
+
+当前共享资料目录未发现已保存的最新版 Title/Item Highlights 平台规则文件，因此本 Skill 记录规则来源和更新时间，不把它当作永久不变的经验值：Amazon Seller Central 官方公告《Updates to improve your product titles begin on July 27》（https://sellercentral.amazon.com/seller-forums/discussions/t/33f0a42a-17f1-46ef-b110-ba7512a3c881）于 2026-07-27 起对除 Media 外类目要求 Product Title 不超过 75 characters（包含空格），并提供可搜索、与标题共同出现在搜索结果和详情页的 Item Highlights，最多 125 characters；Item Highlights 可用于材料、推荐用途等帮助消费者比较的信息。每次运行如发现更新的平台资料或后台限制，优先采用更新资料并记录来源日期。
+
+- Product Title 必须自动以 Python/等价程序计算 `len(text)`，包含空格；74/75 通过，76 失败。超过 75 不得标为最终推荐，必须压缩。
+- Item Highlights 必须自动以同一规则计算字符数；124/125 通过，126 失败。超过 125 不得标为最终版本，必须重写。
+- Title 先回答“这是什么”，Item Highlights 补充 Title 无法容纳的材料、用途或关键比较信息；两者必须联合检查重复、产品类型、主要消费者/用途、差异、自然美国英语、Claim 风险和移动端可读性。
+- 不为 SEO 堆词，不把所有卖点塞进 Title；规则数字仅代表当前官方资料，后台实际字段若另有限制必须标记 `[需按当前Amazon后台字段规则复核]`。
 
 ## 必须生成的内容
 
@@ -59,6 +70,34 @@ metadata:
 ### 《Title方案与最终推荐》
 
 提供少量真正有差异的方案（通常 2–3 个，明显最佳时可少于 2 个），例如转化优先、SEO/转化平衡、移动端精简，并明确《推荐正式Title》及理由。Title 必须让美国消费者看懂产品是什么、主要购买意图和决定性差异化，不能成为关键词仓库或无依据 Claim。
+
+### 《Product Title｜主标题》与《Item Highlights｜商品亮点》
+
+必须独立输出推荐 Product Title 和 Item Highlights，并显示各自字符数与状态：`Characters: XX / 75`、`Characters: XXX / 125`。Title 与 Item Highlights 组成 `Search Result First-Screen Copy`，不得孤立生成；需要检查无意义重复、关键词浪费、Product Type、主要消费者/用途、核心差异、自然美国英语、Claim 风险和移动端首屏理解。Title 超过 75 或 Item Highlights 超过 125 时只能标记为待修正，不能标记为最终推荐。
+
+### 《Keyword Allocation Map》
+
+每个实际采用或排除的关键词记录 Keyword、中文含义、Search Intent、Evidence、Priority、推荐位置（Title / Item Highlights / Bullet / Backend Search Terms / Attributes / A+ / Image Copy）和状态。关键词不应全部塞入 Title；分配目标是覆盖真实搜索意图，同时避免堆词和重复。
+
+### 《Backend Search Terms》
+
+必须正式输出后台搜索词候选、来源、去重/风险检查和证据状态。优先使用 H10、Cerebro、ABA、SQP、Amazon Search Term、Own historical Search Terms 和 Niche 的真实数据；没有数据时只能生成 `[语义候选Search Terms｜待关键词数据验证]`，不得伪造 Search Volume、Rank、Conversion、Click Share、Purchase Share 或 Core Converting Keyword。必须过滤与 Title/Item Highlights 的无意义重复、词形重复、无关词、竞品品牌/商标、ASIN、未确认材料或功能、夸大词及其他 Claim 风险；后台长度/字节限制无法从最新版平台资料确认时，标记 `[需按当前Amazon后台字段规则复核]`。
+
+### 《Amazon Listing Attributes｜产品属性》
+
+根据 Product Type 从 `01_产品档案.md`、`07_产品资料` 和必要的有效上游报告动态生成属性表，至少包含 Attribute、Value、Source、Evidence Status、Amazon Use、Missing/Conflict。产品档案中的已确认属性不能无理由忽略；不同产品可以有不同属性集合。01、07、上游报告或 03 页面思路对同一属性给出不同值时，输出 `[产品属性冲突]`，逐列列出 Source A/Value A、Source B/Value B 和待人工确认，不得静默选择。
+
+### 《Core Selling Points｜核心卖点》
+
+该内部分析模块不得再叫 Product Highlights，以免与 Amazon Item Highlights 混淆。每条记录 Feature、Consumer Benefit、Reason to Buy、Evidence、Priority（P0/P1/P2/P3）和 Recommended Placement，并映射到 Title、Item Highlights、Bullets、Images、A+、Video、Advertising。P0 是消费者必须立即理解的信息，P1 是主要购买理由，P2 是辅助购买理由，P3 是规格/信息支持。
+
+### 《Amazon Listing Creation Data Package》
+
+正式报告必须输出可供最终创建/更新 Listing 的完整数据包：IDENTITY、SEARCH RESULT COPY（Title/Item Highlights/字符数/状态）、BULLET POINTS、PRODUCT DESCRIPTION、BACKEND SEO、CORE SELLING POINTS、PRODUCT ATTRIBUTES、CLAIMS（Allowed/Pending/Forbidden）、MISSING DATA 和 CONFLICTS。Claim-Evidence 审核覆盖 Title、Item Highlights、Bullets、Description、Backend Search Terms、Attributes 和 A+，未经证据支持的材料、性能、安全、认证、专利、Included Components、Durability、Waterproof、Load Capacity、Best/#1 等不得进入 Allowed。
+
+### 《Listing创建准备度》
+
+最终状态可使用：`【Listing创建数据完整｜可进入最终审核】`、`【核心文案完整｜部分属性待补】`、`【文案基本完整｜Backend SEO证据不足】`、`【关键产品属性缺失｜暂不建议创建】`、`【产品属性存在冲突｜需人工确认】` 或 `【关键Claim存在风险｜需修正】`。不假评分；缺失或冲突应明确列出。
 
 ### 《Bullet Points正式稿》
 
@@ -103,6 +142,12 @@ metadata:
 - `【关键词证据不足｜可先形成转化版文案】`
 - `【关键产品事实不足｜暂无法形成可靠文案】`
 - `【上游页面策略冲突｜需返回5-1】`
+- `【Listing创建数据完整｜可进入最终审核】`
+- `【核心文案完整｜部分属性待补】`
+- `【文案基本完整｜Backend SEO证据不足】`
+- `【关键产品属性缺失｜暂不建议创建】`
+- `【产品属性存在冲突｜需人工确认】`
+- `【关键Claim存在风险｜需修正】`
 
 待确认 Claim 不自动阻止其他可靠文案；如果连产品是什么、核心规格、材料和核心差异化都无法可靠确认，才使用关键事实不足，不得硬写。
 
@@ -117,18 +162,27 @@ metadata:
 1. 产品身份与《Listing文案结论》
 2. 《输入版本追溯》
 3. 《Listing文案战略摘要》
-4. 《关键词使用地图》
-5. 《Title方案与最终推荐》
-6. 《Bullet Points正式稿》
-7. 《Product Description正式稿》
-8. 《A+文字内容建议》
-9. 《Claim—Evidence检查表》
-10. 《SEO与可读性检查》
-11. 《反方检查》
-12. 《5-3文案协同包》
-13. 《5-4输入交接包》
-14. 数据与证据局限
-15. 《名词术语解释》
+4. 《Search Result First-Screen Copy》
+5. 《Product Title｜主标题》
+6. 《Item Highlights｜商品亮点》
+7. 《Keyword Allocation Map》
+8. 《关键词使用地图》
+9. 《Title方案与最终推荐》
+10. 《Bullet Points正式稿》
+11. 《Product Description正式稿》
+12. 《Backend Search Terms》
+13. 《Amazon Listing Attributes｜产品属性》
+14. 《Core Selling Points｜核心卖点》
+15. 《A+文字内容建议》
+16. 《Claim—Evidence检查表》
+17. 《Amazon Listing Creation Data Package》
+18. 《Listing创建准备度》
+19. 《SEO与可读性检查》
+20. 《反方检查》
+21. 《5-3文案协同包》
+22. 《5-4输入交接包》
+23. 数据与证据局限
+24. 《名词术语解释》
 
 首页优先显示产品代码+中文名称、5-1 来源版本、一句话文案策略、最终状态、推荐 Title、页面 P0、核心产品词、核心购买理由、最重要 Claim、最大 Claim 风险、最大待确认项和下一步 5-3/5-4。报告使用 UTF-8、响应式布局和清晰证据标签；不为“视觉丰富”强行生成图表，不使用雷达图、综合评分、AI 信心分、3D 图表或花哨动画。
 

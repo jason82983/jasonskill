@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 0-4｜Amazon规则、合规与官方知识"
+  short_description: "查询、核验并沉淀 Amazon 规则、FBA 与产品合规知识"
+  brand_color: "#0F6B78"
+  default_prompt: "Use $hzp-amz-0-4-amazon-rules-compliance-knowledge to answer the Amazon rules or compliance question with current official evidence."
+
+policy:
+  allow_implicit_invocation: true

@@ -11,12 +11,19 @@
 
 每个 Skill 的详细使用说明，见对应目录中的 `README.md`；本文件只说明 Amazon 行业的基本分工和入口。
 
+## 公共产品身份接口
+
+`00_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx` 是 Amazon 产品与 SellerSpace 店铺身份映射主表。需要读取店铺真实数据的 Skill 先按 `Product Code` 读取这张表，再用 `SellerSpace_Store + Marketplace + ASIN + SKU` 做只读二次验证。统一规则见 [Amazon产品身份解析规则](<Amazon产品身份解析规则.md>)。映射表由人工维护，Skills 只读，不自动修改其中的数据。
+
 ## Skill 清单
 
 | 编号 | Skill | 用途 | 下一步 |
 |---|---|---|---|
 | 0-1 | `hzp-amz-0-1-product-file-structure` | 建立、检查和整理产品资料目录，保护原始数据 | 进入分析 |
 | 0-2 | `hzp-amz-0-2-report-index` | 扫描正式 HTML 报告并维护当前产品的 `06_SKILL分析报告/index.html` | 随报告自动调用 |
+| 0-3 | `hzp-amz-0-3-amazon-business-calendar-alerts` | 维护 Amazon 经营日历、季节/Launch 倒排、每日预警和 Skill 路由 | 按需调用 |
+| 0-4 | hzp-amz-0-4-amazon-rules-compliance-knowledge | 查询、核验并沉淀 Amazon 平台规则、FBA、合规与官方帮助知识 | 被其他 Skill 按需查询 |
+| 0-5 | `hzp-amz-0-5-management-decision-brief` | 发现需要上级决策的经营事项，生成决策周报并记录路由 | 管理决策 |
 | 1-1 | `hzp-amz-1-1-opportunity-discovery` | 从真实市场信号发现需求—产品候选商机 | 进入 1-2 |
 | 1-2 | `hzp-amz-1-2-product-screening` | 基于 1-1 证据快速筛选值得进入 2-1 的候选商机 | 进入 2-1 |
 | 2-1 | `hzp-amz-2-1-market-research` | 分析单个 Amazon 产品、需求、竞品、评论和开发可行性 | 进入 2-2 |
@@ -31,6 +38,7 @@
 | 5-2 | `hzp-amz-5-2-listing-copywriting` | 生成有证据约束的 Amazon US Listing 文案 | 进入 5-3/5-4 |
 | 5-3 | `hzp-amz-5-3-image-video-planning` | 规划 Amazon 图片、A+ 与视频并守住产品真实性 | 进入 5-4 |
 | 5-4 | `hzp-amz-5-4-page-audit-optimization` | 审核页面策略、文案、视觉和真实成品并输出修改优先级 | 进入 6-1 |
+| 5-5 | hzp-amz-5-5-live-asin-page-audit | 审计真实线上 ASIN 页面与策略执行，诊断根因并路由优化 | 进入 6-1/按需回路 |
 | 6-1 | `hzp-amz-6-1-new-product-launch-strategy` | 设计新品首阶段推广、广告验证、预算和继续/停止规则 | 进入 6-2 |
 | 6-2 | `hzp-amz-6-2-advertising-diagnosis-optimization` | 诊断真实广告数据并输出最小必要优化动作 | 进入 6-3 |
 | 6-3 | `hzp-amz-6-3-product-operations-monitoring` | 监控产品经营健康并将异常路由到广告、页面、产品、供应链或库存 Skill | 进入 7 阶段 |
@@ -78,6 +86,9 @@ Skill 会根据标准 Product Root 结构自动查找资料。具体数据位置
 
 - [0-1 产品文件结构管理](<hzp-amz-0-1-product-file-structure/README.md>)
 - [0-2 分析报告索引](<hzp-amz-0-2-report-index/README.md>)
+- [0-3 Amazon经营日历与预警](<hzp-amz-0-3-amazon-business-calendar-alerts/README.md>)
+- [0-4 Amazon规则、合规与官方知识](<hzp-amz-0-4-amazon-rules-compliance-knowledge/README.md>)
+- [0-5 上级决策与经营问询](<hzp-amz-0-5-management-decision-brief/README.md>)
 - [1-1 商机发现](<hzp-amz-1-1-opportunity-discovery/README.md>)
 - [1-2 选品初筛](<hzp-amz-1-2-product-screening/README.md>)
 - [2-1 产品市场分析](<hzp-amz-2-1-market-research/README.md>)
@@ -92,11 +103,14 @@ Skill 会根据标准 Product Root 结构自动查找资料。具体数据位置
 - [5-2 Listing文案](<hzp-amz-5-2-listing-copywriting/README.md>)
 - [5-3 图片视频策划](<hzp-amz-5-3-image-video-planning/README.md>)
 - [5-4 页面审核优化](<hzp-amz-5-4-page-audit-optimization/README.md>)
+- [5-5 线上 ASIN 页面审计与优化](<hzp-amz-5-5-live-asin-page-audit/README.md>)
 - [6-1 新品推广方案](<hzp-amz-6-1-new-product-launch-strategy/README.md>)
 - [6-2 广告诊断优化](<hzp-amz-6-2-advertising-diagnosis-optimization/README.md>)
 - [6-3 产品运营监控](<hzp-amz-6-3-product-operations-monitoring/README.md>)
 - [7-1 补货预测](<hzp-amz-7-1-replenishment-forecast/README.md>)
 - [7-2 库存风险管理](<hzp-amz-7-2-inventory-risk-management/README.md>)
+
+
 
 
 

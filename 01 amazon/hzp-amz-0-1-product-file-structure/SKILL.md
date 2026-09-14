@@ -126,8 +126,10 @@ The standard structure is:
 │  ├─ 02_细分市场数据/
 │  ├─ 03_关键词数据/
 │  ├─ 04_用户反馈/
-│  └─ 05_补充资料/
+│  ├─ 05_补充资料/
+│  └─ 06_广告数据下载/          # 广告系统原始导出，不是AI结论
 ├─ 06_SKILL分析报告/
+│  └─ 广告表现汇报优化日志/       # 阶段6运行日志，不是正式报告
 └─ 07_产品资料/
    ├─ 01_产品设计/
    ├─ 02_供应链与打样/
@@ -136,7 +138,7 @@ The standard structure is:
    └─ 05_合规与其他资料/
 ```
 
-For a Product Root whose identity is confirmed, create the five top-level source-data folders and the five `07_产品资料` folders automatically when creating or repairing the standard structure. During an explicitly requested automatic organization, missing standard directories may be created before any file move. Create niche, ASIN, report, and other deeper subfolders only when actual files or a requested output need them. Do not create a large collection of empty Skill-number folders in advance.
+For a Product Root whose identity is confirmed, create the six top-level source-data folders and the five `07_产品资料` folders automatically when creating or repairing the standard structure. During an explicitly requested automatic organization, missing standard directories may be created before any file move. Create niche, ASIN, report, and other deeper subfolders only when actual files or a requested output need them. Do not create a large collection of empty Skill-number folders in advance.
 
 ## Human input files
 
@@ -207,7 +209,7 @@ Use one folder per Amazon Niche, plus `所有细分市场/` for cross-Niche tabl
 
 ### `03_关键词数据`
 
-Use this for independent keyword or search-traffic research such as Cerebro, Magnet, Brand Analytics, Search Query Performance, search-term reports, and keyword trends. A Cerebro export that is clearly a single-ASIN research package may remain with that ASIN.
+Use this for independent keyword or search-traffic research such as Cerebro, Magnet, Brand Analytics, Search Query Performance, and keyword trends. Original advertising Search Term / search-query exports belong in `06_广告数据下载/`; a Cerebro export that is clearly a single-ASIN research package may remain with that ASIN.
 
 ### `04_用户反馈`
 
@@ -216,6 +218,14 @@ Use this for general Amazon Reviews, VOC, Q&A, return reasons, consumer feedback
 ### `05_补充资料`
 
 Use this for evidence that cannot be reliably classified above, including supplier material, inspection material, patent material, external research, temporary screenshots, and third-party files. An uncertain file belongs here rather than in a guessed category. Report the file as conservatively classified when applying a migration.
+
+### `06_广告数据下载`
+
+This is the raw-evidence location for original advertising files downloaded or exported from Amazon Advertising, Seller Central, SellerSpace / 优麦云, SellerSpace MCP `export_data`, or another reliable advertising source. Typical files include Search Term, Keyword, Campaign, Ad Group, Advertised Product, Placement, Targeting, Purchased Product, negative-target, hourly, daily, period-summary, and other Excel, CSV, or JSON reports. Keep the original bytes, original filename, and time information unchanged: do not overwrite, edit, delete, or write AI conclusions back into these files. Do not place AI diagnoses, recommendations, human decisions, execution records, or effect-validation logs here; those belong in `06_SKILL分析报告/广告表现汇报优化日志/`.
+
+If a cleaned or aggregated intermediate file is necessary, label it explicitly as `派生数据` / `Derived Data` and keep its relationship to the original source. A live MCP query that does not create a file does not need to be exported solely for archiving. When an export is intentionally saved, its default destination is `[Product Root]/05_分析源数据/06_广告数据下载/`. Preserve historical snapshots and do not mechanically create duplicate daily exports.
+
+For later stage-6 Skills, the unified source boundary is: SellerSpace MCP live read-only data and files in this raw-data directory are both evidence sources; AI diagnoses, recommendations, human decisions, execution records, and 1/3/7-day validation belong in `06_SKILL分析报告/广告表现汇报优化日志/`. If both evidence sources cover the same window but disagree, preserve both and report `【广告数据源冲突】` with source A, source B, window, metric name and definition, difference, possible cause, and suggested verification; do not silently select one. Raw advertising files are not formal Skill reports and are not candidates for the 0-2 report index. This is a directory/interface rule; it does not change the business logic of 6-1, 6-2, or 6-3.
 
 ### Role recording examples
 
@@ -257,17 +267,24 @@ In `CHECK`, `ORGANIZE`, and `MIGRATE`, flag an apparently reusable platform glos
 
 The environment may provide a company-level shared-data directory outside the Product Root, such as `00_产品公用数据/`. It can contain reusable platform definitions, company standards, field mappings, or other common material. This Skill may identify that such a directory exists, but must not copy shared data into every product or hardcode its path. Use it only when the user or runtime supplies the location.
 
+### Amazon product/store identity mapping
+
+When the supplied Products Root contains `00_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx`, register it as the read-only **Amazon 产品与 SellerSpace 店铺身份映射主表**. The workbook's required sheets are `产品店铺映射`, `填写说明`, `产品对应变体`, and `店铺产品代码前缀`. Key fields include `Product_Code`, `Product_NewCode`, `Product_Name`, `广告组合`, `SellerSpace_Store`, `Marketplace`, `ASIN`, `SKU`, `Status`, `Var_Code`, `Var_Name`, and `Product_Code_Prefix`. Do not copy it into Product Roots or modify its rows, fields, or status values. 0-1 only defines the location and performs a read-only schema/existence check; it does not derive a formal code from a prefix or make a store decision. Missing sheets/fields are reported as `[Amazon经营身份映射结构不完整]`; multiple ACTIVE rows are reported for human confirmation. The shared resolution and SellerSpace secondary-verification contract is in the Amazon industry shared file `Amazon广告身份解析规则.md`.
+
+`00_公共资料/` is an accepted runtime name for this supplied public-data area; do not rename it to `00_产品公用数据/` or move the workbook merely to match the Product Directory V1 label. When the Products Root is explicitly supplied, CHECK must inspect this exact relative path even if the Products Root's other shared-data folders use a different legacy name.
+
 ## Formal Skill outputs
 
-`06_SKILL分析报告/` contains processed Skill or AI deliverables, not original evidence. Its only standard classification is one first-level folder per Skill, named `[Skill编号]_[Skill中文名称]`:
+`06_SKILL分析报告/` contains processed Skill or AI deliverables, not original evidence. Its formal-report classification uses one first-level folder per Skill, named `[Skill编号]_[Skill中文名称]`. The one fixed exception is `广告表现汇报优化日志/`, which stores high-frequency stage-6 operational logs and is not a formal-report folder:
 
 ```text
 06_SKILL分析报告/
+├─ 广告表现汇报优化日志/       # Operational Logs; excluded from formal-report indexing
 ├─ 2-1_产品分析/
 └─ 2-2_细分市场分析/
 ```
 
-Create a Skill folder only when that Skill has actually produced a formal report for the Product Root. Do not pre-create empty folders for future Skills. Do not create unnumbered category folders such as product analysis, page analysis, market analysis, or history/archive/index folders. Do not move original source exports into this directory.
+Create the operational-log directory for every confirmed Product Root. Create a formal Skill folder only when that Skill has actually produced a formal report for the Product Root. Do not pre-create empty folders for future Skills. Do not create other unnumbered category folders such as product analysis, page analysis, market analysis, history/archive/index folders. Do not move original source exports into a formal Skill folder. The 0-2 report-index Skill must exclude `广告表现汇报优化日志/` from formal-report scanning; logs may be read as stage-6 evidence but never replace a versioned formal report.
 
 Historical reports stay in the same Skill folder and are distinguished by the date in their filenames. Never overwrite or delete an existing formal report. `当前结论.md` is not a required 0-1 file; the newest dated formal report is the current report for that Skill. Do not create a report or any report folder merely because a Skill exists; there must be a real generated output.
 
@@ -292,10 +309,10 @@ Use the stable product number in the filename; include an ASIN or other analysis
 
 Support four explicit modes at either the Products Root or one Product Root:
 
-1. **CREATE** — create a requested Products Root Shared Data skeleton or a Product Directory V1. For a Product Root, create the standard 01–07 structure, including the five `07_产品资料` subfolders; leave unknown product fields blank.
-2. **CHECK** — read-only inspection. Report Products Root candidates, Product Root identity evidence, missing or extra paths, misplaced-looking files, `SHARED-DATA-CANDIDATE` files, duplicate names, and possible historical files. Do not modify anything.
-3. **ORGANIZE** — scan an existing Products Root or Product Root and produce a migration plan. Include the current tree, target tree, proposed new folders, every planned move or rename, uncertain classifications, shared-data candidates, and collision/overwrite risks. By default do not move or rename files. If the user explicitly requests automatic structure creation, create only missing empty standard directories for a confirmed Product Root; file moves still require a reviewed or explicitly requested MIGRATE operation.
-4. **MIGRATE** — apply a reviewed or explicitly requested plan after a fresh scan. Only create folders and move or rename files when every destination is checked and no overwrite or data-loss risk exists. Never copy Shared Data into a Product Root.
+1. **CREATE** — create a requested Products Root Shared Data skeleton or a Product Directory V1. For a Product Root, create the standard 01–07 structure, the six `05_分析源数据` subfolders including `06_广告数据下载/`, the five `07_产品资料` subfolders, and `06_SKILL分析报告/广告表现汇报优化日志/`; leave unknown product fields blank.
+2. **CHECK** — read-only inspection. Report Products Root candidates, Product Root identity evidence, missing or extra paths, including missing `05_分析源数据/06_广告数据下载/` or `广告表现汇报优化日志/`, misplaced-looking files, `SHARED-DATA-CANDIDATE` files, duplicate names, and possible historical files. A legacy Product Root missing this new directory is a reported compatibility gap, not a destructive error. Do not modify anything.
+3. **ORGANIZE** — scan an existing Products Root or Product Root and produce a migration plan. Include the current tree, target tree, proposed new folders, every planned move or rename, uncertain classifications, shared-data candidates, and collision/overwrite risks. If the user explicitly requests automatic structure creation, create missing standard directories, including `05_分析源数据/06_广告数据下载/` and `广告表现汇报优化日志/`, for a confirmed Product Root. Do not modify, overwrite, delete, or casually rename an existing raw advertising file; do not move an uncertain historical file. Moving a file into either destination requires reliable evidence of its raw-advertising or stage-6 operational-log purpose.
+4. **MIGRATE** — apply a reviewed or explicitly requested plan after a fresh scan. Create missing `05_分析源数据/06_广告数据下载/` and operational-log directories. Move a historical file into the raw-advertising directory only when it is reliably an original advertising download/export; move a file into the operational-log directory only when its stage-6 log purpose is reliable. Check the destination and do not overwrite or risk data loss. If its purpose is unclear, leave it in place, mark it `【需人工确认】`, and report it. Never copy Shared Data into a Product Root.
 
 If the user's intent is ambiguous, prefer `CHECK` or `ORGANIZE`. Do not start a large migration merely because the directory looks old.
 
@@ -310,7 +327,7 @@ Before any change:
 - enumerate all files and folders recursively, including hidden items where available;
 - read lightweight text metadata when needed to determine purpose; do not alter source files;
 - distinguish human input, original evidence, formal reports, product assets, generated media, and legacy report folders or index files;
-- classify each file by primary purpose across `05_分析源数据/`, `06_SKILL分析报告/`, and `07_产品资料/`; do not use `07_产品资料/` as a catch-all;
+- classify each file by primary purpose across `05_分析源数据/`, `06_SKILL分析报告/`, and `07_产品资料/`; treat `05_分析源数据/06_广告数据下载/` as the dedicated destination for reliably identified original advertising downloads/exports, and `06_SKILL分析报告/广告表现汇报优化日志/` as the dedicated destination only for reliably identified stage-6 operational logs; do not use `07_产品资料/` as a catch-all;
 - inspect `01_产品档案.md` for `市场研究对象` metadata, keeping ASIN identity separate from roles and checking that every `榜1` role has a Niche and data date when known;
 - detect role-named folders, role-prefixed filenames, duplicated ASIN source files, and conflicting ASIN entries as structure risks; do not infer or silently repair a market role;
 - distinguish platform/company definitions from product-specific evidence and flag shared candidates;
@@ -325,6 +342,8 @@ Show the user:
 - directories and templates to create;
 - each move and rename, with source and destination;
 - files placed conservatively in `05_补充资料`;
+- historical files proposed for `06_SKILL分析报告/广告表现汇报优化日志/`, with the evidence that they are stage-6 operational logs; uncertain files stay at their current paths;
+- original advertising files proposed for `05_分析源数据/06_广告数据下载/`, with the evidence that they are raw downloads/exports; uncertain files stay at their current paths;
 - files proposed for `07_产品资料/` with the specific subfolder and classification reason; use `05_合规与其他资料/` as the fallback for confirmed product assets whose subcategory is uncertain;
 - any duplicate or copied asset that would violate the single-source-of-truth rule;
 - any duplicate ASIN data caused by research roles, any role-named evidence folder, any role-prefixed source filename, and any `榜1` record missing its Niche or data date;
@@ -343,6 +362,8 @@ Apply only safe, explicit filesystem operations:
 - move files without changing their bytes;
 - rename a file only when its purpose is clear and the destination is free;
 - move a legacy formal report directly into its confirmed `[Skill编号]_[Skill中文名称]` folder only when its source Skill is clear and the dated destination is free;
+- move a historical advertising report, diagnosis, recommendation, execution record, or effect-validation log into `06_SKILL分析报告/广告表现汇报优化日志/` only when its stage-6 operational-log purpose is reliable and the destination is free; otherwise leave it in place and report it;
+- move an original advertising download/export into `05_分析源数据/06_广告数据下载/` only when its raw-evidence purpose is reliable and the destination is free; preserve bytes and never mix AI analysis or operational logs into that directory;
 - move a confirmed product asset directly into the appropriate `07_产品资料/` subfolder when its primary purpose is clear and the destination is free; when only product ownership is clear, move it to `07_产品资料/05_合规与其他资料/` and record the conservative classification;
 - move a confirmed shared definition to the selected Products Root only when the user requested migration and the destination is free; never copy it into Product Roots;
 - list empty legacy report directories as candidates for removal, but do not remove them in the same operation; deletion requires a separate explicit user approval after the scan.

@@ -1,0 +1,69 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HZP Amazon AI Operating System｜全系统数据源总表</title><style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;margin:0;color:#111827}
+main{max-width:1500px;margin:auto;padding:42px 28px 80px}
+h1{font-size:34px;margin:0 0 8px}h2{font-size:27px;border-top:2px solid #111827;padding-top:14px;margin-top:42px}
+p{line-height:1.7}.muted{color:#6b7280;font-size:14px}.note{background:#f8fafc;padding:18px 22px;border-radius:14px}
+table{width:100%;border-collapse:collapse;border:1px solid #e5e7eb}th,td{font-size:13.5px;line-height:1.5;padding:10px;border-bottom:1px solid #e5e7eb;vertical-align:top;text-align:left}th{background:#f9fafb;position:sticky;top:0}
+.path{font-family:Consolas,monospace;font-size:12.5px}.toc{columns:2}.toc li{margin:6px 0}a{color:#2563eb;text-decoration:none}
+@media(max-width:900px){main{padding:24px 12px}.toc{columns:1}table{display:block;overflow-x:auto}h1{font-size:28px}}
+</style></head><body><main>
+<h1>HZP Amazon AI Operating System｜全系统数据源总表</h1>
+<p class="muted">版本：2026-09-11｜用途：统一说明整个系统需要哪些数据、谁提供、去哪里找、放哪里、哪些Skill使用。</p>
+
+<div class="note">
+<p><strong>四类数据：</strong><br>
+A｜人工业务数据：你、QMT、员工提供的事实、经验、判断、约束和计划。<br>
+B｜平台/第三方原始数据：Amazon、Keepa、Helium 10、Review、广告、运营等未经AI加工的数据。<br>
+C｜产品/供应链真实资料：样品、BOM、报价、测试、材料、合规、包装、库存、Lead Time等现实世界资料。<br>
+D｜AI产生的数据：正式报告、交接包、索引。它们可以作为下游输入，但不能自动升级成“真实事实”。</p>
+</div>
+
+<h2>总索引</h2>
+<ul class="toc">
+<li><a href="#cat0">A｜人工业务数据</a></li>
+<li><a href="#cat1">B｜平台/第三方原始数据</a></li>
+<li><a href="#cat2">C｜产品/供应链真实资料</a></li>
+<li><a href="#cat3">D｜AI产生的数据</a></li>
+</ul>
+
+
+<h2 id="cat0">A｜人工业务数据</h2>
+<table><thead><tr>
+<th>数据名称</th><th>类型</th><th>说明</th><th>去哪里找</th><th>建议放哪里</th><th>主要Skill</th><th>重要性</th>
+</tr></thead><tbody><tr><td><strong>项目身份与基础档案</strong></td><td>人工</td><td>Product Code、产品名、Marketplace、主ASIN、对标ASIN、品牌、当前阶段</td><td>项目负责人；Amazon前台/后台；立项会议</td><td class='path'>01_产品档案.md</td><td>0-1、2-1及几乎所有后续Skill</td><td>必须</td></tr><tr><td><strong>产品开发思路</strong></td><td>人工</td><td>用户/QMT/供应链的判断、经验、想改什么、不能改什么、硬约束、方案意向</td><td>产品会议；你/QMT；产品开发；供应商</td><td class='path'>02_产品开发思路.md</td><td>2-3、3-1、3-2</td><td>必须</td></tr><tr><td><strong>页面思路</strong></td><td>人工</td><td>卖点、品牌调性、图片/视频方向、竞品页面启发、页面禁忌</td><td>你；运营；美工；页面会议</td><td class='path'>03_产品页面思路.md</td><td>5-1、5-2、5-3、5-4</td><td>必须</td></tr><tr><td><strong>推广思路</strong></td><td>人工</td><td>预算、价格、Coupon、目标ACoS、核心关键词、推广节奏、广告限制</td><td>你；运营负责人；广告负责人</td><td class='path'>04_产品推广思路.md</td><td>6-1、6-2、6-3</td><td>必须</td></tr><tr><td><strong>竞品清单与对标ASIN</strong></td><td>人工+平台数据</td><td>确定核心Benchmark和对标产品，避免AI随意换参照物</td><td>你/QMT；Amazon搜索；H10</td><td class='path'>01_产品档案.md + 05_分析源数据/01_产品数据/对标产品</td><td>1-1、1-2、2-1、2-2</td><td>必须</td></tr><tr><td><strong>人工体验记录</strong></td><td>人工</td><td>穿着、手感、安装难度、操作体验、外观感受</td><td>你/QMT/员工/测试人员</td><td class='path'>07_产品资料/样品测试</td><td>4-1、2-3、3-2</td><td>建议</td></tr><tr><td><strong>运营事件记录</strong></td><td>人工/系统记录</td><td>哪天改主图、改价格、开Coupon、调Bid、改Listing等</td><td>运营人员每次动作时记录</td><td class='path'>05_分析源数据/运营数据/运营事件记录</td><td>6-2、6-3、7-1</td><td>强烈建议</td></tr><tr><td><strong>历史补货与断货记录</strong></td><td>人工+平台数据</td><td>过去补货、断货、到货偏差、实际销售损失</td><td>ERP；采购记录；Seller Central；历史运营记录</td><td class='path'>05_分析源数据/库存数据</td><td>7-1、7-2</td><td>建议</td></tr><tr><td><strong>库存成本 / 仓储 / 库龄</strong></td><td>人工+平台数据</td><td>库存资金占用、老化、仓储费、慢周转风险</td><td>ERP；采购；Seller Central库存龄/费用报告</td><td class='path'>05_分析源数据/库存数据</td><td>7-2</td><td>做资金/老化判断时必须</td></tr></tbody></table>
+
+<h2 id="cat1">B｜平台/第三方原始数据</h2>
+<table><thead><tr>
+<th>数据名称</th><th>类型</th><th>说明</th><th>去哪里找</th><th>建议放哪里</th><th>主要Skill</th><th>重要性</th>
+</tr></thead><tbody><tr><td><strong>Amazon前台产品数据</strong></td><td>平台原始数据</td><td>ASIN页面、价格、变体、Review数、评分、主图、卖点、类目、在售状态</td><td>Amazon美国站前台</td><td class='path'>05_分析源数据/01_产品数据</td><td>1-1、1-2、2-1、2-2、5-4、6阶段</td><td>必须</td></tr><tr><td><strong>Keepa历史数据</strong></td><td>第三方原始数据</td><td>价格、BSR、Offer等历史趋势</td><td>Keepa</td><td class='path'>05_分析源数据/01_产品数据</td><td>2-1、2-2、6-3</td><td>建议</td></tr><tr><td><strong>Cerebro / Helium 10关键词数据</strong></td><td>第三方原始数据</td><td>Organic Rank、Search Volume、Competing Products、Suggested Bid等</td><td>Helium 10 Cerebro / Magnet / Black Box</td><td class='path'>05_分析源数据/03_关键词数据</td><td>1-1、1-2、2-1、2-2、5-1、5-2、6-1</td><td>必须</td></tr><tr><td><strong>Amazon Niche / Search Terms / Head Products</strong></td><td>平台原始数据</td><td>细分市场、点击分布、品牌/产品集中度、新品进入、搜索词结构</td><td>Amazon Product Opportunity Explorer / Niche导出</td><td class='path'>05_分析源数据/02_细分市场数据</td><td>1-1、1-2、2-2</td><td>2-2必须</td></tr><tr><td><strong>真实Review / 用户反馈</strong></td><td>用户原始数据</td><td>正负面Review、重复痛点、购买理由、使用场景、质量问题</td><td>Amazon Review；VOC；客服；退货反馈</td><td class='path'>05_分析源数据/04_用户反馈</td><td>1-1、2-1、2-2、3-1、5-1、6-3</td><td>必须</td></tr><tr><td><strong>Amazon最终页面成品</strong></td><td>平台成品</td><td>真实Title、Bullet、主图、副图、A+、视频、变体、价格、Coupon</td><td>Seller Central；Amazon前台；设计团队</td><td class='path'>07_产品资料/页面成品</td><td>5-4、6-1</td><td>推广前必须</td></tr><tr><td><strong>Amazon Ads广告数据</strong></td><td>平台原始数据</td><td>Campaign、Targeting、Search Term、Placement、Impressions、Clicks、CPC、Spend、Orders、Sales、ACoS等</td><td>Seller Central / Amazon Ads导出</td><td class='path'>05_分析源数据/广告数据</td><td>6-2、6-3</td><td>投放后必须</td></tr><tr><td><strong>Business Reports运营数据</strong></td><td>平台原始数据</td><td>Sessions、Page Views、CVR、销量等</td><td>Seller Central Business Reports</td><td class='path'>05_分析源数据/运营数据</td><td>6-3、7-1</td><td>运营期必须</td></tr><tr><td><strong>自然关键词排名</strong></td><td>第三方/平台数据</td><td>核心关键词自然排名和趋势</td><td>Helium 10 Keyword Tracker；其他排名工具；人工记录</td><td class='path'>05_分析源数据/运营数据</td><td>6-3</td><td>建议</td></tr><tr><td><strong>Review数量 / Rating变化</strong></td><td>平台原始数据</td><td>Review新增、低星、评分变化、质量信号</td><td>Amazon前台；Seller Central VOC</td><td class='path'>05_分析源数据/运营数据</td><td>6-3</td><td>必须监控</td></tr><tr><td><strong>竞品价格 / Coupon / 页面变化</strong></td><td>平台原始数据</td><td>竞争对手降价、促销、主图、页面、新品变化</td><td>Amazon前台；Keepa；人工监控</td><td class='path'>05_分析源数据/运营数据</td><td>6-3</td><td>建议</td></tr><tr><td><strong>Available / Reserved / Inbound</strong></td><td>平台库存数据</td><td>FBA可售、预留、入库中库存</td><td>Seller Central Inventory；ERP</td><td class='path'>05_分析源数据/库存数据</td><td>6-3、7-1、7-2</td><td>必须</td></tr></tbody></table>
+
+<h2 id="cat2">C｜产品/供应链真实资料</h2>
+<table><thead><tr>
+<th>数据名称</th><th>类型</th><th>说明</th><th>去哪里找</th><th>建议放哪里</th><th>主要Skill</th><th>重要性</th>
+</tr></thead><tbody><tr><td><strong>供应商报价</strong></td><td>人工/供应商</td><td>单价、阶梯价、MOQ、模具费、包装费、特殊工艺成本</td><td>供应商；采购；1688/工厂正式报价</td><td class='path'>07_产品资料/供应链与报价</td><td>3-2、3-3、4-2、7-1</td><td>开发后必须</td></tr><tr><td><strong>供应链能力与工艺信息</strong></td><td>人工/供应商</td><td>材料能否做、工艺难度、良率、模具、生产限制、替代方案</td><td>QMT；产品开发；供应商；工厂工程师</td><td class='path'>07_产品资料/供应链与工艺</td><td>2-3、3-1、3-2、3-3、4-2</td><td>开发后必须</td></tr><tr><td><strong>产品结构图 / CAD / 尺寸图 / BOM</strong></td><td>人工/工程资料</td><td>真实结构、尺寸、部件、材料、配件关系</td><td>产品开发；工厂；工程师；供应商</td><td class='path'>07_产品资料/工程资料</td><td>3-2、3-3、4-1、4-2、5-3</td><td>开发后必须</td></tr><tr><td><strong>实物产品图片</strong></td><td>实物资料</td><td>真实外观、材质、结构、配件、颜色</td><td>样品拍摄；工厂；摄影团队</td><td class='path'>07_产品资料/产品图片</td><td>3-2、4-1、4-2、5-1、5-3、5-4</td><td>建议尽早准备</td></tr><tr><td><strong>样品照片 / 视频</strong></td><td>实物资料</td><td>验证真实样品是否按方案实现</td><td>收到样品后拍摄</td><td class='path'>07_产品资料/样品</td><td>4-1</td><td>4-1必须</td></tr><tr><td><strong>样品实测数据</strong></td><td>实测数据</td><td>尺寸、重量、强度、安装、耐久、舒适性、功能等测试结果</td><td>产品开发；你/QMT；工厂；实验室</td><td class='path'>07_产品资料/样品测试</td><td>4-1、4-2、5-1</td><td>核心项必须</td></tr><tr><td><strong>材料证明 / 测试报告</strong></td><td>供应商/第三方证据</td><td>材料牌号、承重、耐久、安全等强Claim证据</td><td>供应商；第三方实验室；内部测试</td><td class='path'>07_产品资料/测试与证明</td><td>4-1、4-2、5-1、5-2、5-3、5-4</td><td>涉及强Claim时必须</td></tr><tr><td><strong>专利 / 商标 / IP资料</strong></td><td>外部检索+人工</td><td>设计专利、发明专利、商标、版权风险与检索结果</td><td>USPTO；Google Patents；律师/专利代理人</td><td class='path'>07_产品资料/合规与知识产权</td><td>2-2、3-2、3-3、4-2</td><td>高风险产品必须</td></tr><tr><td><strong>合规 / 认证 / 安全资料</strong></td><td>官方/第三方资料</td><td>Amazon要求、法规、认证、检测、儿童/电气/食品接触等</td><td>Seller Central政策；法规；实验室；合规机构；供应商</td><td class='path'>07_产品资料/合规与知识产权</td><td>2-2、3-2、3-3、4-2、5-4</td><td>涉及类目时必须</td></tr><tr><td><strong>量产最终BOM与冻结规格</strong></td><td>人工/供应链</td><td>最终量产材料、部件、关键尺寸、公差、不可变更项</td><td>工厂；产品开发；采购；4-2确认</td><td class='path'>07_产品资料/量产资料</td><td>4-2、5阶段</td><td>量产前必须</td></tr><tr><td><strong>QC / 验收标准</strong></td><td>人工/公司标准</td><td>关键缺陷、尺寸、功能、外观、包装、检验方法</td><td>公司标准；工厂QC；第三方验货</td><td class='path'>07_产品资料/量产资料</td><td>4-2</td><td>量产前必须</td></tr><tr><td><strong>包装 / 箱规 / 运输资料</strong></td><td>人工/供应链</td><td>单品包装、外箱、箱规、重量、防护、运输要求</td><td>供应商；包装厂；货代；产品开发</td><td class='path'>07_产品资料/包装与物流</td><td>4-2、7-1</td><td>量产前必须</td></tr><tr><td><strong>国内库存 / 海外仓 / 在途 / PO</strong></td><td>人工/仓库/供应链</td><td>Amazon之外的真实库存和已下单库存状态</td><td>ERP；采购；仓库；海外仓；货代；供应商</td><td class='path'>05_分析源数据/库存数据</td><td>7-1、7-2</td><td>必须</td></tr><tr><td><strong>生产与补货执行状态</strong></td><td>人工/供应链</td><td>已下单、生产中、QC、已发货、清关、预约、Receiving、可售日期</td><td>供应商；采购；货代；Seller Central</td><td class='path'>05_分析源数据/库存数据</td><td>7-2</td><td>必须</td></tr><tr><td><strong>Lead Time分段数据</strong></td><td>人工/供应链</td><td>下单→生产→QC→国内运输→国际运输→清关→预约→Receiving→可售</td><td>采购；供应商；货代；Seller Central历史记录</td><td class='path'>05_分析源数据/库存数据/LeadTime</td><td>7-1、7-2</td><td>必须</td></tr></tbody></table>
+
+<h2 id="cat3">D｜AI产生的数据</h2>
+<table><thead><tr>
+<th>数据名称</th><th>类型</th><th>说明</th><th>去哪里找</th><th>建议放哪里</th><th>主要Skill</th><th>重要性</th>
+</tr></thead><tbody><tr><td><strong>AI正式分析报告</strong></td><td>AI</td><td>2-1到7-2等Skill生成的正式版本化HTML，是下游结构化输入</td><td>06_SKILL分析报告</td><td class='path'>06_SKILL分析报告</td><td>2-2以后所有下游Skill</td><td>自动产生</td></tr><tr><td><strong>AI输入交接包</strong></td><td>AI</td><td>上游Skill给下游的结构化交接，如3-1输入包、4-1输入包、7-1输入包</td><td>上游正式报告内</td><td class='path'>06_SKILL分析报告</td><td>对应下游Skill</td><td>自动产生</td></tr><tr><td><strong>AI报告索引 index.html</strong></td><td>AI/系统</td><td>把06目录正式报告按Skill/版本整理，便于人和AI导航</td><td>0-2自动生成</td><td class='path'>06_SKILL分析报告/index.html</td><td>人类备查；辅助导航</td><td>自动产生</td></tr></tbody></table>
+
+
+<h2>员工准备数据的顺序</h2>
+<div class="note">
+<p><strong>立项：</strong>先补01产品档案、02产品开发思路。</p>
+<p><strong>分析：</strong>收集Amazon前台、Keepa、Cerebro、Niche、Review、对标ASIN，统一放05。</p>
+<p><strong>开发/生产：</strong>补齐报价、工艺、结构图、尺寸、BOM、样品、测试、合规/IP，统一放07。</p>
+<p><strong>页面：</strong>补齐最终产品图片、测试证据、页面成品。</p>
+<p><strong>推广运营：</strong>持续保存广告报表、Business Reports、自然排名、Review变化和运营事件。</p>
+<p><strong>补货库存：</strong>持续维护Available、Reserved、Inbound、在途、PO、生产进度、Lead Time、库龄。</p>
+</div>
+
+<h2>最关键的目录原则</h2>
+<div class="note">
+<p><strong>01–04：</strong>人工输入与业务思路。</p>
+<p><strong>05_分析源数据：</strong>AI拿来分析的原始证据，尽量不要覆盖或改写原文件。</p>
+<p><strong>06_SKILL分析报告：</strong>AI加工后的正式结论与交接包。</p>
+<p><strong>07_产品资料：</strong>真实产品开发、供应链、样品、量产、合规、页面成品等执行资料。</p>
+<p><strong>一句话：</strong>05 = 证据，06 = AI结论，07 = 真实产品与执行资料。</p>
+</div>
+</main></body></html>

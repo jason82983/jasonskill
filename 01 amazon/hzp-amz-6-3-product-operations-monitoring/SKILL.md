@@ -21,16 +21,17 @@ metadata:
 使用本次确认的 Products Root、Product Root 和 Product Code。先读取：
 
 1. `[Product Root]/01_产品档案.md`；身份缺失或冲突时停止，禁止根据 ASIN、文件名或产品名猜身份。
-2. `[Product Root]/04_产品推广思路.md`（可为空，但必须记录为空）。
-3. `[Product Root]/06_SKILL分析报告/` 中当前产品最新有效的 6-1 和 6-2 正式报告，优先读取 6-2 的《6-3输入交接包》。
-4. `[Product Root]/05_分析源数据/` 中实际存在的 Business Reports、Sales Dashboard、Detail Page Sales and Traffic、Search Query/Catalog Performance、广告、排名、Brand Analytics、退货、Review、库存、定价和竞品数据。
-5. `[Product Root]/07_产品资料/` 中售价、Coupon、Promotion、Review、Rating、页面变更、库存、Buy Box、竞品、运营和质量资料。
+2. 在任何 SellerSpace 真实查询前，读取 Amazon 行业共享规则 `Amazon产品身份解析规则.md` 和 `00_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx`，按当前 Product Code 形成唯一 ACTIVE 的 Store + Marketplace + ASIN + SKU，再用 MCP 只读验证。缺失、重复 ACTIVE、INACTIVE/TEST、映射与 MCP 或 `01_产品档案.md` 冲突时按共享规则处理，不猜测、不自动修改主表；MCP 不可用时标记 `【SellerSpace实时身份验证未完成】` 并降级到可追溯本地证据。
+3. `[Product Root]/04_产品推广思路.md`（可为空，但必须记录为空）。
+4. `[Product Root]/06_SKILL分析报告/` 中当前产品最新有效的 6-1 和 6-2 正式报告，优先读取 6-2 的《6-3输入交接包》。
+5. `[Product Root]/05_分析源数据/` 中实际存在的 Business Reports、Sales Dashboard、Detail Page Sales and Traffic、Search Query/Catalog Performance、广告、排名、Brand Analytics、退货、Review、库存、定价和竞品数据。
+6. `[Product Root]/07_产品资料/` 中售价、Coupon、Promotion、Review、Rating、页面变更、库存、Buy Box、竞品、运营和质量资料。
 
 文件名只是线索，必须读取实际字段、内容、日期和时间窗口。不得扫描整个硬盘；优先限定当前 Product Root。
 
 ## 最新版本与追溯
 
-按 `Product Code + Skill 编号` 选择版本化正式报告：最大 `V` 优先，同 `V` 按文件名 `YYYYMMDD_HHMMSS` 最新。排除 `index`、失败、invalid、incomplete、deprecated、draft、preview、temp、test 和非正式输出；不得使用 filesystem 顺序、modified time 或跨产品文件。无法确认有效性时标记 `【上游报告有效性无法确认】`，不得静默回退。
+按 `Product Code + Skill 编号` 选择版本化正式报告：最大 `V` 优先，同 `V` 按文件名 `YYYYMMDD_HHMMSS` 最新。排除 `index`、失败、invalid、incomplete、deprecated、draft、preview、temp、test、非正式输出以及 `广告表现汇报优化日志/` 目录及其子目录；不得使用 filesystem 顺序、modified time 或跨产品文件。无法确认有效性时标记 `【上游报告有效性无法确认】`，不得静默回退。
 
 正式 HTML 必须有《输入版本追溯》，记录每个实际读取的报告的 Skill 编号、中文名、文件名、版本、时间戳、输入类型和用途。6-1/6-2 为【核心输入】；其他 Skill 按需为【辅助回查】；历史版本仅为【历史版本对照】。不得重新完整运行上游 Skill。
 
@@ -89,16 +90,76 @@ metadata:
 - `【出现明确异常｜需要专项处理】`
 - `【出现高风险异常｜优先处理核心问题】`
 - `【关键数据不足｜暂无法判断整体运营状态】`
+## 阶段6增长闭环与运行日志
+
+6-3 读取 6-1/6-2 正式报告和阶段6运行日志，但运行日志只作为【运行证据】或【历史验证】，不替代最新有效正式报告，也不进入 0-2 正式索引或最新版选择。
+
+- 增加增长飞轮观察：广告订单 → 核心 Search Term 重复成交 → Keyword 自然排名 → Organic order → Organic share → Total order → 经济性 → 是否具备放量条件。只能根据真实变化描述，不能声称存在公开统一的 Amazon“整体权重”公式。
+- 增加《放量资格判断》：综合 CTR、CVR、广告/自然订单、Organic share、核心词重复成交、核心词排名、CPC、边际 ACoS、Review、Coupon 依赖、Price 稳定性、库存覆盖、竞争和页面状态；不使用固定 3/10/30/100 单机械门槛。
+- 增加《Coupon依赖判断》：比较 Coupon 调整前后 CVR、总订单、自然订单、关键词排名、利润和广告经济性，输出可回撤、继续维持、强折扣依赖、测试较低 Coupon 或证据不足。
+- 今日运营结论必须能路由到加速、维持、优化、减速或停止，并明确最重要动作、责任 Skill、人工介入和验证窗口。
+- 日常监控、人工批准/否决、实际执行和验证记录写入 `06_SKILL分析报告/广告表现汇报优化日志/`；正式 6-3 HTML 仍写入 `06_SKILL分析报告/` 根目录。
+- MCP接入继续区分读取与写入能力；6-3默认只做产品级判断和路由，无法写入时不假装替广告 Skill 执行动作。
+
 ## 报告与索引
 
 正式 HTML 保存到当前 Product Root 的 `06_SKILL分析报告/`，不覆盖历史：
 
-`6-3_[产品编号]_产品运营监控_V[最大版本号+1]_[YYYYMMDD]_[HHMMSS].html`
+`6-3_[产品编号]_产品运营监控_[周期标识]_V[最大版本号+1]_[YYYYMMDD]_[HHMMSS].html`
+
+周期标识使用稳定短值（如 `3D`、`7D`、`14D`、`30D`、`WEEKLY` 或 `CUSTOM_YYYYMMDD-YYYYMMDD`）。历史未带周期标识的正式文件继续兼容；版本选择仍只看 `V` 和文件名时间戳，不能另造第二套版本系统。
 
 首页第一屏显示产品代码+中文名、Marketplace、监控窗口、产品阶段、整体状态、销量/流量/转化/广告/自然排名/Review/库存状态、最大异常/机会/风险、今天最重要动作和是否需要人工介入。只有真实数据支持时生成趋势图；否则明确显示 `[数据不足，未生成该图表]`。
 
 报告写入并确认文件存在、命名正确后，调用 `hzp-amz-0-2-report-index`，原样传递 Product Code、Products Root、Product Root。6-3 不扫描、生成、排序、维护或备用更新 `index.html`。报告失败不调用 0-2；报告成功但索引失败时保留报告并分别报告两种状态。
 
 详细监控规则见 [references/monitoring-framework.md](references/monitoring-framework.md)，7-1 交接字段见 [references/handoff-schema.md](references/handoff-schema.md)，HTML 章节模板见 [templates/report-outline.md](templates/report-outline.md)。
+## Portfolio 级运营监控（增量规则）
 
+6-3 沿用共享 `Amazon广告身份解析规则.md`，读取映射表 `广告组合` 作为 Portfolio Name，并通过 SellerSpace 只读解析 Portfolio ID。监控范围记录 Store、Marketplace、Own ASIN、SKU、Portfolio Name/ID/Status；Portfolio ID 不得硬编码。
 
+可按 Portfolio 聚合广告 Impressions、Clicks、Spend、Orders、Ad Sales 等，但必须明确区分 `Portfolio Ad Sales` 与 `Product Total Sales`，不能把 Portfolio 销售额直接当作当前产品总销售额。若 Campaign/广告数据落在错误 Portfolio、同名多 ID、Portfolio 缺失或无法验证，输出 `【Portfolio Identity Anomaly｜广告组合身份异常】`，保留只读监控并路由 6-2/6-1；不得替换身份或执行广告写操作。
+
+## 统一产品与变体身份（增量规则）
+
+6-3 与 6-1、6-2 共用 `resolve_advertising_identity()`，监控层级固定为 `Product_NewCode → Product_Code → Portfolio → Var_Code → Campaign`，并保留 Store、Marketplace、Own ASIN、Child ASIN、SKU。`Product_NewCode`（包括 N+数字）只是研究代码，不能替代正式 Product_Code；不得按 ASIN、文件名、前缀或中文名猜身份。Own ASIN、Benchmark ASIN、Product Target ASIN 严格分开。
+
+只有可靠的 `Var_Code → Child ASIN → SKU` 才能做变体级趋势；缺失或冲突时标记 `【变体广告身份映射不完整】`，报告可继续只读但不得把其他变体数据归入当前变体。Portfolio 聚合仍与 Product Total 分开，身份冲突沿共享规则路由回 6-2/6-1。
+
+6-3 使用共享 `parse_campaign_name()` 识别 Product_Code、Var_Code、AdType、Role、Target/Match、Sequence；名称只是 Parsing Hint。必须先用 Shared Advertising Identity Resolver、映射表和 SellerSpace 实际 Advertised Product/Child ASIN/SKU 确认归属。解析出的 Var_Code 与真实变体不一致时标记 `【广告命名与真实变体身份冲突】` 并路由 6-2；不得按名称前缀聚合，也不执行 Rename。旧名称若身份已验证仅记为 `【历史广告命名】`，不产生经营异常；无法确认则标记 `【广告身份无法可靠确认】`。
+
+本次同步只识别 Product_Code 后新增的独立 Var_Code 段；其余 AdType、Role、Target/Match、Sequence 规则不变。名称仍不是 Master Identity Source。
+
+## ASIN经营周期报告与日期对比（增量规则）
+
+本节只增加报告周期、对比和图表展示能力，不改变产品身份、Portfolio、SellerSpace、Root Cause、异常检测、Scaling 或路由逻辑。每次运行先解析 `Skill → Product_Code → optional Var_Code → Report Period → Comparison Mode`，在同一次运行中固定 Product Code、Var Code、ASIN、SKU、Store 和 Marketplace。
+
+### 周期解析
+
+- 支持最近 `3天`、`7天`、`14天`、`30天`，均截至昨天，默认只取完整自然日。
+- 未指定周期时默认 `最近7个完整自然日`；今天不计入。日期必须由程序化日历计算，不能硬编码示例日期。
+- 支持 `本周` 和 `上周`。自然周按周一至周日；本周只取已经完成的自然日，上周优先使用已结束的完整周，并在报告写出实际日期。
+- 支持明确日期（如 `2026-09-01到2026-09-07`、`9月1日到9月7日`）和任意合理自定义范围，模式标记为 `DATE_RANGE_CUSTOM`。用户明确包含今天时允许执行，但必须显示 `【包含未完整自然日】`。
+
+### 对比规则
+
+- 默认开启 `环比`：当前窗口之前紧邻的、连续、等长且不重叠完整窗口。
+- 可选 `同比`（前台显示“同比（同期对比）”）、`环比+同比` 或 `不对比`。3/7/14 天的同比按上个月对应日历日期；无法完整对齐时必须披露实际参考范围。30 天同比优先按去年同一日期区间；完整自然月才按去年同月。
+- 自然周环比为上一自然周；自然周同比为去年对应自然周。每个变化必须同时显示对比周期，不能只写百分比。
+- 比率指标优先显示百分点变化：CVR、ACoS 等同时可给相对变化，但不能用分子/分母简单相减替代比率重算。缺少分母时不计算变化。
+
+正式报告的《报告参数》必须记录：Product_Code、Var_Code、ASIN、Report Mode、Current Start/End、Days、Comparison Mode、Comparison Start/End、Reference Compare Start/End（如有）、Generated At、Today Included。
+
+### 图表选择
+
+只有真实时间序列才画趋势图；缺失日期标记 `[数据缺失]`，不得当作 0、插值或制造趋势。按数据形态动态选择：时间序列用折线图，当前/环比/同比用普通 2D 柱状图，Part-to-Whole 用圆环图，Top 贡献用横向柱状图，少量关键指标用 KPI Cards；数据不足则显示 `[数据不足，未生成该图表]`。LEVEL 1 首页保留 3～6 张最重要图表，LEVEL 2 可放详细图表，不引入新的大型前端框架或第二套图表库。
+
+每张图必须有中文标题、说明句、单位、日期范围、必要图例和 Tooltip。图表负责理解，表格负责查数，文字负责解释结论。颜色只表达正常/关注/明确问题/无法判断的经营语义；不能把所有下降机械标红（ACoS 下降通常属于改善）。
+
+### 首页与专业版
+
+LEVEL 1 首页固定展示《今天/这段时间怎么样？》《要不要处理？》《关键数据》KPI Cards（Orders、Sales、Ad Orders、Organic Orders、Ad Spend、ACoS、CVR、Inventory）、《走势》《订单从哪里来？》《跟上一周期比怎么样？》《现在最值得做的3件事》《这次不要动什么》《下一步怎么做》。每张 KPI Card 显示当前值、环比、同比（启用时）和一句经营解释。
+
+LEVEL 2 保留 Daily Metrics、Campaign、Keyword、Search Term、Placement、Variant、Portfolio、Organic/Ad、CTR、CPC、CVR、CPA、ACoS、ROAS、Root Cause、Scaling Evidence、Inventory、Input Version Trace、Data Source、Evidence Gaps、Confidence 和完整数字表。周期越短，结论置信度越谨慎：3 天只适合发现异常，7 天常规判断，14 天阶段趋势，30 天经营复盘。
+
+详细日期算法、对比边界、图表选择和 Mock A-T 用例见 [references/periods-and-charts.md](references/periods-and-charts.md)。

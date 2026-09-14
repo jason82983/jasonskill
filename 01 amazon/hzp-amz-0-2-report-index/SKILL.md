@@ -25,7 +25,7 @@ description: Scan a product project's formal Amazon Skill HTML reports and rebui
 [Product Root]/06_SKILL分析报告/
 ```
 
-递归发现实际存在的正式 `.html` 报告，排除 `index.html` 以及文件名或路径明确为 `test`、`temp`、`demo`、`debug` 的测试/临时输出。不得依赖上一次索引、人工清单或固定 Skill 列表；不存在的报告不显示。
+递归发现实际存在的正式 `.html` 报告，但跳过 `广告表现汇报优化日志/` 及其所有子目录；同时排除 `index.html` 以及文件名或路径明确为 `test`、`temp`、`demo`、`debug` 的测试/临时输出。日志只能作为阶段6运行证据，不是正式报告索引对象。不得依赖上一次索引、人工清单或固定 Skill 列表；不存在的报告不显示。
 
 ## 文件名解析与排序
 

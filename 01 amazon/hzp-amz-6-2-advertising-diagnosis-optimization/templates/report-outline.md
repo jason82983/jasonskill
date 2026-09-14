@@ -18,17 +18,19 @@
 10. 《放量能力诊断》
 11. 《Campaign诊断》
 12. 《Keyword / Target诊断》
-13. 《Search Term诊断表》
-14. 《Placement诊断》
-15. 《预算诊断》
-16. 《广告—页面问题路由》
-17. 《诊断证据充分性》
-18. 《优化动作清单》
-19. 《反方检查》
-20. 最终广告状态
-21. 《6-3输入交接包》（条件满足时）
-22. 数据与证据局限
-23. 《名词术语解释》
+13. 《Keyword Mother Pool 与语义簇状态》
+14. 《Keyword Expansion Proposal｜扩词提案》（触发时）
+15. 《Search Term诊断表》
+16. 《Placement诊断》
+17. 《预算诊断》
+18. 《广告—页面问题路由》
+19. 《诊断证据充分性》
+20. 《优化动作清单》
+21. 《反方检查》
+22. 最终广告状态
+23. 《6-3输入交接包》（条件满足时）
+24. 数据与证据局限
+25. 《名词术语解释》
 
 首页优先显示产品代码+中文名称、诊断窗口、6-1 来源版本、当前广告状态、最大问题层级、最大赚钱点、最大烧钱点、最大流量机会、数据不足、最优先动作、是否建议大改和是否建议保持不动。
 
@@ -36,8 +38,30 @@
 
 - Campaign：名称、原始目的、类型、窗口、Budget、Spend、Impressions、Clicks、Orders、Sales、CTR、CPC、CVR、ACoS、证据和动作。
 - Keyword/Target：对象、Match Type、原始角色/假设、真实指标、意图匹配、页面承接、充分性和动作。
+- Mother Pool/Cluster：cluster_id、Purchase Intent、成熟度、已释放词、Held Keywords、证据和 release_status。
+- Expansion Batch：批次、Cluster、AI选择词、Exact/Phrase/Broad、Bid、Current/Added/New Budget、验证目标、窗口、停止条件、批准和执行结果。
 - Search Term：词、来源 Campaign/Keyword、意图、匹配、真实指标、商业价值、充分性和动作。
 - Placement：Top of Search、Rest of Search、Product Pages（数据存在时）及真实表现。
 - 优化动作：编号、优先级、层级、问题、证据、原因、最小动作、预期目标、风险、复查时间和数据。
 
 只有真实数据适合时才使用漏斗、Spend/Sales、Campaign、Search Term 或 Placement 图表；不伪造趋势线、评分、雷达图、AI 信心分或 3D 图。
+
+
+## 增量输出要求
+
+正式报告增加：
+
+- 《今日调整状态》
+- 《Search Term生命周期》
+- 《广告优化操作卡》
+- 《人工决策记录》
+- 《调整前后验证结果（1天/3天/7天）》
+- 《运行日志证据》（仅列实际读取的运行日志）
+
+每个动作必须保留“建议但未执行”与“实际执行”的区别。
+
+
+《Keyword Expansion Proposal》至少包含：Validated Cluster、Evidence、Current Released Keywords、Mother Pool Remaining、AI Selected New Keywords、自动 Match Type、Bid、Current/Added/New Daily Budget、Expected Purpose、风险、验证窗口、Stop Condition、用户 A/B/C/D 决策。
+### Portfolio 诊断字段（新增）
+
+产品身份、Campaign 诊断、优化动作、Expansion Proposal 和 6-3 交接必须显示 `Portfolio Name`、`Portfolio ID`、验证状态、来源和读取时间。Portfolio 与映射不一致时的动作只能是只读诊断、人工核查或路由，不得写入。

@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 0-3｜Amazon经营日历与预警"
+  short_description: "维护经营日历、时间倒排和 Amazon 经营预警"
+  brand_color: "#0F6B78"
+  default_prompt: "Use $hzp-amz-0-3-amazon-business-calendar-alerts to generate an Amazon daily business forecast for the selected Products Root or product."
+
+policy:
+  allow_implicit_invocation: true

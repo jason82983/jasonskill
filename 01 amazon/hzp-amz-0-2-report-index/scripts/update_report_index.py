@@ -15,6 +15,8 @@ SKILL_LABELS = {
     "2-2": "2-2｜细分市场分析",
 }
 
+OPERATIONAL_LOG_DIR = "广告表现汇报优化日志"
+
 
 def read_first_field(path: Path, labels: tuple[str, ...]) -> str:
     if not path.is_file():
@@ -42,6 +44,9 @@ def product_identity(product_root: Path) -> tuple[str, str]:
 
 def parse_report(path: Path, report_root: Path) -> dict | None:
     if path.name.lower() == "index.html":
+        return None
+    relative_parts = path.relative_to(report_root).parts
+    if OPERATIONAL_LOG_DIR in relative_parts[:-1]:
         return None
     if any(
         token in {"test", "temp", "demo", "debug"}

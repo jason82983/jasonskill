@@ -1,0 +1,23 @@
+{
+  "event_id": "",
+  "event_name": "",
+  "event_type": "HOLIDAY|AMAZON_EVENT|SEASON|LAUNCH",
+  "marketplace": "US",
+  "event_date": "",
+  "season_start": "",
+  "peak_start": "",
+  "peak_end": "",
+  "season_end": "",
+  "product_categories": [],
+  "development_days": null,
+  "production_days": null,
+  "shipping_days": 30,
+  "fba_buffer_days": null,
+  "cold_start_days": 30,
+  "promotion_prep_days": null,
+  "source": "",
+  "source_date": "",
+  "evidence_type": "[官方日期]|[产品事实]|[历史规律参考]|[AI推断]|[待确认]",
+  "confidence": "",
+  "last_verified_at": ""
+}

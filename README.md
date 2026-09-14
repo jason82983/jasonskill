@@ -14,6 +14,9 @@
 | Skill | 所属行业 | 目标 |
 |---|---|---|
 | `hzp-amz-0-1-product-file-structure` | Amazon | 管理 Products Root 和 Product Root 的标准文件结构 |
+| `hzp-amz-0-3-amazon-business-calendar-alerts` | Amazon | 维护 Amazon 经营日历、产品时间倒排、每日预警和 Skill 路由 |
+| hzp-amz-0-4-amazon-rules-compliance-knowledge | Amazon | 查询、核验并沉淀 Amazon 平台规则、FBA 与产品合规知识 |
+| `hzp-amz-0-5-management-decision-brief` | Amazon | 发现需要上级决策的经营事项，生成决策周报并记录路由 |
 | `hzp-amz-1-1-opportunity-discovery` | Amazon | 从真实市场信号发现可验证的候选商机并交接给 1-2 |
 | `hzp-amz-1-2-product-screening` | Amazon | 基于 1-1 证据筛选值得进入 2-1 的候选商机 |
 | `hzp-amz-2-1-market-research` | Amazon | 分析单个 Amazon 产品的市场表现、证据和开发可行性 |
@@ -27,6 +30,7 @@
 | `hzp-amz-5-2-listing-copywriting` | Amazon | 生成有证据约束的 Amazon US Listing 文案 |
 | `hzp-amz-5-3-image-video-planning` | Amazon | 规划 Amazon 图片、A+ 与视频并守住产品真实性 |
 | `hzp-amz-5-4-page-audit-optimization` | Amazon | 审核页面策略、文案、视觉和真实成品并输出修改优先级 |
+| hzp-amz-5-5-live-asin-page-audit | Amazon | 审计真实线上 ASIN 页面与 5-1～5-4 策略执行并路由优化 |
 | `hzp-amz-6-1-new-product-launch-strategy` | Amazon | 设计新品首阶段流量、广告测试、预算协同与验证规则 |
 | `hzp-amz-6-2-advertising-diagnosis-optimization` | Amazon | 基于真实广告数据诊断问题并输出最小必要优化动作 |
 | `hzp-amz-6-3-product-operations-monitoring` | Amazon | 持续监控产品经营健康并将异常路由到正确 Skill |
@@ -57,6 +61,10 @@ JasonSkill/
       ├─ references/
       └─ templates/
 ```
+
+
+
+
 
 
 

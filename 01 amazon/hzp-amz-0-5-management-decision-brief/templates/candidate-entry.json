@@ -1,0 +1,20 @@
+{
+  "candidate_id": "CAN-YYYY-0001",
+  "created_at": "YYYY-MM-DDTHH:MM:SS+08:00",
+  "source_type": "USER_CONVERSATION",
+  "source_context": "",
+  "original_user_statement": "",
+  "ai_interpretation": "[AI推测的决策候选] ",
+  "potential_decision_topic": "",
+  "decision_level": "PROJECT",
+  "related_product_codes": [],
+  "related_projects": [],
+  "related_skills": [],
+  "why_it_may_matter": "",
+  "current_evidence": [],
+  "missing_evidence": [],
+  "suggested_review_time": "",
+  "status": "WATCHING",
+  "merged_into": null,
+  "policy_candidate": false
+}
