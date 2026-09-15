@@ -32,8 +32,8 @@
 | `hzp-amz-5-4-page-audit-optimization` | Amazon | 审核页面策略、文案、视觉和真实成品并输出修改优先级 |
 | hzp-amz-5-5-live-asin-page-audit | Amazon | 审计真实线上 ASIN 页面与 5-1～5-4 策略执行并路由优化 |
 | `hzp-amz-6-1-new-product-launch-strategy` | Amazon | 设计新品首阶段流量、广告测试、预算协同与验证规则 |
-| `hzp-amz-6-2-advertising-diagnosis-optimization` | Amazon | 基于真实广告数据诊断问题并输出最小必要优化动作 |
-| `hzp-amz-6-3-product-operations-monitoring` | Amazon | 持续监控产品经营健康并将异常路由到正确 Skill |
+| `hzp-amz-6-2-product-operations-monitoring` | Amazon | 产品经营监控、根因诊断与跨 Skill 路由 |
+| `hzp-amz-6-3-advertising-diagnosis-optimization` | Amazon | 广告诊断、优化与获批变更执行 |
 | `hzp-amz-7-1-replenishment-forecast` | Amazon | 基于真实库存、销售速度和 Lead Time 形成补货预测 |
 | hzp-amz-7-2-inventory-risk-management | Amazon | 持续监控库存偏差、在途、老化和资金风险 |
 

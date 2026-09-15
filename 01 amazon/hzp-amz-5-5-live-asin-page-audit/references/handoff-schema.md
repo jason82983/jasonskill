@@ -13,7 +13,7 @@
 
 仅在没有阻断性页面、产品事实或 Claim 问题，且主状态允许推广时生成：
 
-- Product Code、Var_Code、Var_Name、最终审计 ASIN、Own ASIN、SKU、Marketplace、Audit Time、变体解析状态
+- Product Code、Var_Code、Var_Name、最终审计 ASIN、Own ASIN、Mapped_SKUs[]、Marketplace、Audit Time、变体解析状态
 - Live Page Status 与证据等级
 - 页面核心卖点和购买理由
 - 关键词/意图与页面承接状态

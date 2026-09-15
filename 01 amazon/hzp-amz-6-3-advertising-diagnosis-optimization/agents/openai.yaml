@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 6-3｜广告诊断优化"
+    short_description: "基于经营目标自主诊断并执行 Amazon 广告优化"
+  brand_color: "#7C3AED"
+    default_prompt: "Use $hzp-amz-6-3-advertising-diagnosis-optimization as the senior advertising operator: re-read the current product goal, diagnose each Campaign and object independently, reconcile product economics and inventory, then autonomously execute only within the enabled policy and guardrails, read back, log, validate, and return results to 6-2."
+
+policy:
+  allow_implicit_invocation: true

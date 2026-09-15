@@ -21,7 +21,7 @@
 - 当前价格、Coupon/Promotion/Vine 状态；没有资料则标记待确认
 - Break-even ACoS（只有真实成本充分时）
 - 每个假设的成功信号、失败信号和预计需要收集的数据
-- 未来 6-2 要重点诊断的无曝光、点击贵、点击无单、ACoS、搜索词、流量质量和结构问题
+- 未来 6-3 要重点诊断的无曝光、点击贵、点击无单、ACoS、搜索词、流量质量和结构问题
 - 禁止错误解释的指标：建议 Bid≠真实 CPC，搜索量≠销量，单一 ACoS/CTR/CVR 不等于完整结论
 - SellerSpace MCP 数据摘要（如可用）：sellerId、Marketplace、查询时间、数据窗口、实际调用的 Tool/Entity、字段、返回状态和同步限制
 - 本地广告原始数据摘要（如有）：`05_分析源数据/06_广告数据下载/` 文件名、数据日期、覆盖窗口和读取字段；不复制原始文件内容
@@ -29,7 +29,7 @@
 - Keyword Mother Pool：关键词、中文理解、来源、来源 ASIN、日期、Search Volume、Rank、Bid/Range、相关性、购买意图、语义主题、成熟度和 release_status
 - Semantic Cluster / Purchase Intent Cluster：cluster_id、名称、意图、词数、代表词、证据、成熟度、已释放词、Held Keywords 和风险
 - Initial Released Keywords 与 Held Keywords；Held 状态可为 `HELD_FOR_EXPANSION`、`WAITING_CLUSTER_VALIDATION`、`LOW_PRIORITY`、`INSUFFICIENT_EVIDENCE`、`DO_NOT_LAUNCH`
-- Expansion Rules、Expansion Budget Rules、Promotion Rules、Stop Rules；明确 6-2 何时回查母词池及不得一次释放全部剩余词
+- Expansion Rules、Expansion Budget Rules、Promotion Rules、Stop Rules；明确 6-3 何时回查母词池及不得一次释放全部剩余词
 - Search Term/Target 成熟度定义与当前状态；Initial Campaign Architecture、Keyword roles、Product Target roles、关键假设和关键风险
 - 数据性质标签：`[真实运行事实]`、`[平台/工具推荐]`、`[第三方原始推荐数据]`、`[人工目标]`、`[AI策略建议]`、`[待验证]`
 
@@ -38,7 +38,7 @@
 
 ## 阶段6闭环字段
 
-交给 6-2 时补充：产品阶段、上线时间/Review/库存状态（如有）、当前目标、次要目标、允许风险、Keyword/Seed/benchmark_asin 分组、Campaign/Ad Group/Target 任务、Match Type、初始 Bid/Budget/Placement 依据、Price/Coupon、验证窗口、成功/失败信号、允许 6-2 建议的动作、必须人工批准的动作和关键未知项。分别列出 H10建议Bid、平台建议Bid、历史实际CPC、当前实际Bid和AI建议启动Bid，禁止混写。
+交给 6-2 时补充：产品阶段、上线时间/Review/库存状态（如有）、当前目标、次要目标、允许风险、Keyword/Seed/benchmark_asin 分组、Campaign/Ad Group/Target 任务、Match Type、初始 Bid/Budget/Placement 依据、Price/Coupon、验证窗口、成功/失败信号、允许 6-3 建议的动作、必须人工批准的动作和关键未知项。分别列出 H10建议Bid、平台建议Bid、历史实际CPC、当前实际Bid和AI建议启动Bid，禁止混写。
 
 6-1 运行后产生的日志字段：Product Code、ASIN、日期、Skill、目标、数据窗口、来源、Campaign、Ad Group、Keyword、Search Term、当前指标、AI判断、建议、人工决策、最终动作、执行方式、1天/3天/7天结果和最终验证结论；保存到 `06_SKILL分析报告/广告表现汇报优化日志/`。
 

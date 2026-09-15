@@ -48,7 +48,7 @@ def test_cases_a_to_o_are_read_only_and_deterministic():
     # L: Portfolio is never guessed when SellerSpace rows are unavailable.
     assert resolver.resolve_advertising_identity("B8", mapping)["portfolio_status"] == "MCP_PORTFOLIO_PENDING"
     # N: same shared resolver is consumed by all stage docs.
-    for skill in ("hzp-amz-6-1-new-product-launch-strategy", "hzp-amz-6-2-advertising-diagnosis-optimization", "hzp-amz-6-3-product-operations-monitoring"):
+    for skill in ("hzp-amz-6-1-new-product-launch-strategy", "hzp-amz-6-3-advertising-diagnosis-optimization", "hzp-amz-6-2-product-operations-monitoring"):
         text = (ROOT / skill / "SKILL.md").read_text(encoding="utf-8")
         assert "resolve_advertising_identity" in text
     # O: workbook schema check is read-only.

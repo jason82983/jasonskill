@@ -5,7 +5,8 @@
 ```text
 产品文件结构 → 产品分析 → 细分市场分析 → 人工判断与 AI 同步 → 产品机会定义
 0-1              2-1        2-2             2-3                 3-1
-页面与推广 → 5-1 → 5-2 → 5-3 → 5-4 → 6-1
+页面与推广 → 5-1 → 5-2 → 5-3 → 5-4 → 6-1 → 6-2（经营监控） → 6-0-1（精准关键词识别） → 6-0-2（精准泛词提取） → 6-3（广告诊断）
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　↘ 6-0-3（AI精准词同步 ERP，仅受限写入）
 报告型 Skill 生成正式 HTML 后，由 0-2 统一更新报告索引
 ```
 
@@ -40,8 +41,11 @@
 | 5-4 | `hzp-amz-5-4-page-audit-optimization` | 审核页面策略、文案、视觉和真实成品并输出修改优先级 | 进入 6-1 |
 | 5-5 | hzp-amz-5-5-live-asin-page-audit | 审计真实线上 ASIN 页面与策略执行，诊断根因并路由优化 | 进入 6-1/按需回路 |
 | 6-1 | `hzp-amz-6-1-new-product-launch-strategy` | 设计新品首阶段推广、广告验证、预算和继续/停止规则 | 进入 6-2 |
-| 6-2 | `hzp-amz-6-2-advertising-diagnosis-optimization` | 诊断真实广告数据并输出最小必要优化动作 | 进入 6-3 |
-| 6-3 | `hzp-amz-6-3-product-operations-monitoring` | 监控产品经营健康并将异常路由到广告、页面、产品、供应链或库存 Skill | 进入 7 阶段 |
+| 6-2 | `hzp-amz-6-2-product-operations-monitoring` | 监控产品经营健康、诊断根因并路由问题 | 广告问题进入 6-3；库存/市场等进入对应阶段 |
+| 6-0-1 | `hzp-amz-6-0-1-ai-precision-keyword-identification` | 识别 ERP 人工/AI 精准词并生成双轨 CSV 资产 | 精准词资产进入 6-0-2/6-3 |
+| 6-0-2 | `hzp-amz-6-0-2-precision-broad-extraction` | 从 6-0-1 精准词提取精准泛词并合并搜索量 | 精准泛词进入 6-3 |
+| 6-0-3 | `hzp-amz-6-0-3-ai-precision-keyword-erp-sync` | 按 6-0-1 自动编号将 AI 精准词受限追加到 ERP `PickPwK.Tags` | 仅预检后受限同步；结果回到 6-0-1/6-3 |
+| 6-3 | `hzp-amz-6-3-advertising-diagnosis-optimization` | 诊断并优化真实广告，执行获批广告变更 | 优化结果回到 6-2/6-0-1 |
 | 7-1 | `hzp-amz-7-1-replenishment-forecast` | 基于真实库存、销售速度和完整 Lead Time 形成补货预测 | 进入 7-2 |
 | 7-2 | hzp-amz-7-2-inventory-risk-management | 持续监控库存风险、补货偏差、在途、老化和资金占用 | 运营持续监控 |
 
@@ -105,10 +109,15 @@ Skill 会根据标准 Product Root 结构自动查找资料。具体数据位置
 - [5-4 页面审核优化](<hzp-amz-5-4-page-audit-optimization/README.md>)
 - [5-5 线上 ASIN 页面审计与优化](<hzp-amz-5-5-live-asin-page-audit/README.md>)
 - [6-1 新品推广方案](<hzp-amz-6-1-new-product-launch-strategy/README.md>)
-- [6-2 广告诊断优化](<hzp-amz-6-2-advertising-diagnosis-optimization/README.md>)
-- [6-3 产品运营监控](<hzp-amz-6-3-product-operations-monitoring/README.md>)
+- [6-2 产品经营监控与诊断](<hzp-amz-6-2-product-operations-monitoring/README.md>)
+- [6-0-1 精准关键词识别](<hzp-amz-6-0-1-ai-precision-keyword-identification/README.md>)
+- [6-0-2 精准泛词提取](<hzp-amz-6-0-2-precision-broad-extraction/README.md>)
+- [6-0-3 AI精准词同步 ERP](<hzp-amz-6-0-3-ai-precision-keyword-erp-sync/README.md>)
+- [6-3 广告诊断优化](<hzp-amz-6-3-advertising-diagnosis-optimization/README.md>)
 - [7-1 补货预测](<hzp-amz-7-1-replenishment-forecast/README.md>)
 - [7-2 库存风险管理](<hzp-amz-7-2-inventory-risk-management/README.md>)
+
+
 
 
 

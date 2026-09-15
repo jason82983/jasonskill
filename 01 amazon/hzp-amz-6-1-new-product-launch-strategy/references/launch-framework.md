@@ -17,7 +17,7 @@
 - 有：使用 `Pipeline Mode｜完整链路模式`，按下表继承页面状态和 P0/Claim 边界。
 - 没有：使用 `Direct Launch Mode｜直接推广模式`，不因缺少 5-4 停止，先做最低必要推广前检查，不复制完整 5-4。
 
-Direct Launch Mode 最低必要检查：Own ASIN、SKU、Marketplace、Store；Listing/可售状态；主图、标题、当前价格；可售库存或明确的启动状态；已知成本、Coupon 和广告经济边界。缺少预算或经济数据时标记待确认并继续形成小规模验证方案。只有错误身份、不可售、重大页面问题、广告资格异常或无法安全执行时才阻止启动。检查结果只能写为：`【最低推广条件满足】`、`【最低推广条件基本满足｜存在待验证项】`、`【存在关键页面问题｜建议先修复】`、`【商品不可售或广告资格异常｜暂不启动】`、`【关键事实不足｜无法安全启动】`。
+Direct Launch Mode 最低必要检查：Own ASIN、Mapped_SKUs[]/Advertised_SKUs[]、Marketplace、Store；Listing/可售状态；主图、标题、当前价格；可售库存或明确的启动状态；已知成本、Coupon 和广告经济边界。缺少预算或经济数据时标记待确认并继续形成小规模验证方案。只有错误身份、不可售、重大页面问题、广告资格异常或无法安全执行时才阻止启动。检查结果只能写为：`【最低推广条件满足】`、`【最低推广条件基本满足｜存在待验证项】`、`【存在关键页面问题｜建议先修复】`、`【商品不可售或广告资格异常｜暂不启动】`、`【关键事实不足｜无法安全启动】`。
 
 只有存在真实页面证据时，才可使用 `【上游页面状态不满足推广条件｜返回5-4】`。缺少 5-4 本身不是该状态的证据。
 
@@ -84,7 +84,7 @@ Coupon、Promotion、Vine、Deal 只有在说明要解决的阻力、实验窗�
 
 观察层次：曝光、点击、转化、商业、搜索词、关键词、商品投放、页面反馈。ACoS/ROAS/CTR/CVR 不能单独决定成败：
 
-- 无曝光：进入广告资格、索引、相关性、竞价、预算和状态诊断，属于 6-2；不无限加价。
+- 无曝光：进入广告资格、索引、相关性、竞价、预算和状态诊断，属于 6-3；不无限加价。
 - 有点击无订单：联合搜索意图、产品、页面、价格、Review 和竞争判断；不自动加价或直接判页面失败。
 - 少量订单：只是积极信号，还需稳定性、可复制性、流量规模、商业价值和库存承受能力。
 
@@ -111,7 +111,7 @@ Coupon、Promotion、Vine、Deal 只有在说明要解决的阻力、实验窗�
 
 ## 8. SellerSpace MCP 只读数据入口
 
-在进入本节查询前，先读取 Amazon 行业共享文件 `Amazon产品身份解析规则.md`，从 Products Root 的 `00_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx` 解析当前 Product Code 的唯一 ACTIVE 身份，并以 Store + Marketplace + ASIN + SKU 做 MCP 二次验证。身份缺失、重复或冲突时遵循共享规则停止或降级，不复制另一套解析逻辑。
+在进入本节查询前，先读取 Amazon 行业共享文件 `Amazon产品身份解析规则.md`，从 Products Root 的 `00_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx` 解析当前 Product Code 的唯一 ACTIVE 身份，并以 Store + Marketplace + ASIN 做 MCP 二次验证，并对变体 `Mapped_SKUs[]`/实际 `Advertised_SKUs[]` 做资格校验。身份缺失、重复或冲突时遵循共享规则停止或降级，不复制另一套解析逻辑。
 
 SellerSpace 可用时先用 `discover_capabilities` 和 `discover_fields` 核对真实实体、字段、单位、日期参数和站点，再固定 `get_stores` 返回的 sellerId 与 marketplace。6-1 允许读取：
 
@@ -119,6 +119,8 @@ SellerSpace 可用时先用 `discover_capabilities` 和 `discover_fields` 核对
 - `get_metric_history`：Campaign、Product、Keyword、Target、Search Term 的日/周/月或支持的Placement趋势；
 - `query_products`、`query_store_performance`、`query_orders`：商品、店铺和订单表现；
 - `listing`、`query_inventory`、`query_shipments`：Listing、售价、SKU、库存、在途、销售速度、可售天数和运输状态（仅使用实际返回字段）；
+
+身份解析遵循 ASIN-first / SKU-aware：同一 `Product_Code + Var_Code + ASIN` 的变体行归并为 `Mapped_SKUs[]`，不因多个 SKU 生成重复 Campaign。广告创建前必须以 SellerSpace/Amazon 实际返回的 Advertised Product 与 SKU eligibility 决定 `ADD BOTH`、`ADD ELIGIBLE SKU ONLY` 或 `ADD ONCE`；不得使用第一行 SKU 或用 Benchmark/Product Target ASIN 代替 Own ASIN。
 - `get_sp_campaign_recommendations`：建议关键词、建议竞价/区间、推荐ASIN或Product Target；
 - `export_data`：在确实需要保存原始快照时导出。
 
@@ -153,7 +155,7 @@ H10/Cerebro 词与 SellerSpace 推荐词合并时去重但不丢来源。两者�
 
 单个词 1 Click/1 Order 只能是 `FIRST_ORDER_VALIDATED`，不能释放整个 Cluster。只有多个相关 Search Terms 重复成交、CVR/CPA/ACoS、相关性、时间窗口、库存和自然排名/订单证据共同支持时，Cluster 才可从 `INITIAL_SIGNAL` 升级 `VALIDATED`。具体门槛按样本和商业边界动态判断，不使用死板固定数字。
 
-扩词由 6-2 生成分批 Expansion Batch；每批必须有原因、Cluster、关键词、Match Type、Bid、预算、目标、验证窗口和停止条件，并执行 Traffic Overlap Check。扩词与 Capital Release 联动，检查剩余预算、库存、季节窗口和经济性；验证成功也不能在库存不足时机械扩词。
+扩词由 6-3 生成分批 Expansion Batch；每批必须有原因、Cluster、关键词、Match Type、Bid、预算、目标、验证窗口和停止条件，并执行 Traffic Overlap Check。扩词与 Capital Release 联动，检查剩余预算、库存、季节窗口和经济性；验证成功也不能在库存不足时机械扩词。
 
 ## 11. 动态广告架构与Bid/Budget
 
@@ -170,7 +172,7 @@ Campaign/Ad Group按产品目标、库存和证据动态设计，可使用 Exact
 3. 报告必须列出 `Base Bid`、`Top Adjustment`、`Top Placement Adjusted Bid = Base Bid × (1 + Top Adjustment)`、`Bidding Strategy`、`Potential Maximum Effective Bid` 和 `Break-even / Economic Risk`。潜在最大有效竞价使用已确认的 `Dynamic Upward Multiplier` 计算；未获得平台上限时显示 `【动态上调上限未确认】`，不填经验倍数。
 4. `EXP-PHR`、`DIS-BRO`、`DIS-AUT`、`COM-ASI` 不继承 COR-EXA 默认，必须按各自验证任务独立设计 Bid、Placement 和策略。
 
-降低或取消 Top +50% 的触发包括：Top 已有充分点击但无订单/重复转化不足、Top CPC/CPA/ACoS 超出经济边界、CVR 明显低于可靠基准、Listing/Offer/Price/Coupon 尚未准备、库存或预算无法承受、关键词相关性/竞争判断被新证据否定，或动态上调上限无法确认且风险不可接受。6-2 必须基于真实 Top 展示、点击、CPC、订单、CVR、CPA、ACoS 及份额（如有）接管继续/提高/降低/取消判断，不能机械加 Bid。
+降低或取消 Top +50% 的触发包括：Top 已有充分点击但无订单/重复转化不足、Top CPC/CPA/ACoS 超出经济边界、CVR 明显低于可靠基准、Listing/Offer/Price/Coupon 尚未准备、库存或预算无法承受、关键词相关性/竞争判断被新证据否定，或动态上调上限无法确认且风险不可接受。6-3 必须基于真实 Top 展示、点击、CPC、订单、CVR、CPA、ACoS 及份额（如有）接管继续/提高/降低/取消判断，不能机械加 Bid。
 
 ## 12. 目标反推、经济边界与价格实验
 
@@ -182,7 +184,7 @@ Price/Coupon 只能作为明确实验变量，说明目的、窗口、经济影�
 
 7天是常见观察窗口，不是固定阈值。可按数据量缩短或延长：Day 1–2看广告资格和曝光，Day 3–4看Search Term质量、CTR和初步CVR，Day 5–7看重复成交词、无效流量、Campaign/Match Type差异和自然增长信号。不因单日波动频繁改广告。
 
-6-1只交接初始假设、结构、目标、数据需求、成功/失败信号和人工批准边界；Search Term生命周期、实际Bid调整、Negative、预算变更和运行后诊断交给6-2。6-1不能把未经真实运行证明的词写成核心成交词。
+6-1只交接初始假设、结构、目标、数据需求、成功/失败信号和人工批准边界；Search Term生命周期、实际Bid调整、Negative、预算变更和运行后诊断交给6-3。6-1不能把未经真实运行证明的词写成核心成交词。
 
 ## 14. 广告原始数据归档与降级
 

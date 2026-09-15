@@ -16,7 +16,7 @@ def audit_case(case):
     if case == "D":
         return "INSUFFICIENT_EVIDENCE", "IMAGE_UNVERIFIED"
     if case == "E":
-        return "MINOR_OPTIMIZATION", "6-2"
+        return "MINOR_OPTIMIZATION", "6-3"
     if case == "F":
         return "MINOR_OPTIMIZATION", "5-2/5-3"
     if case == "G":
@@ -57,7 +57,7 @@ def test_mock_cases_a_to_o():
         "B": ("MINOR_OPTIMIZATION", "5-3"),
         "C": ("MINOR_OPTIMIZATION", "5-2"),
         "D": ("INSUFFICIENT_EVIDENCE", "IMAGE_UNVERIFIED"),
-        "E": ("MINOR_OPTIMIZATION", "6-2"),
+        "E": ("MINOR_OPTIMIZATION", "6-3"),
         "F": ("MINOR_OPTIMIZATION", "5-2/5-3"),
         "G": ("MAJOR_OPTIMIZATION", "3-2/4"),
         "H": ("STRATEGY_MISALIGNMENT", "5-1/2-2"),

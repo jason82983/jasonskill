@@ -138,7 +138,7 @@ AI Recommendation：`【建议创建】` / `【有条件建议创建】` / `【�
 |---|---:|---:|---:|---:|---:|---|---:|---|
 |  |  | 默认参考 +50%（可按证据调整） | `Base Bid × (1 + Top Adjustment)` | 0% | 0% | Dynamic Bids - Up and Down | `Top Placement Adjusted Bid × Dynamic Upward Multiplier`；未确认则 `【动态上调上限未确认】` |  |
 
-`Base Bid` 必须来自 Suggested Bid、CPC、经济模型等证据，不得默认 `Base Bid × 1.20`。报告说明采用的 Top 调整值、证据和原因；`EXP-PHR`、`DIS-BRO`、`DIS-AUT`、`COM-ASI` 不继承该默认。6-2 根据真实 Top of Search 展示、点击、CPC、订单、CVR、CPA、ACoS 和份额（如有）接管继续、提高、降低或取消判断。
+`Base Bid` 必须来自 Suggested Bid、CPC、经济模型等证据，不得默认 `Base Bid × 1.20`。报告说明采用的 Top 调整值、证据和原因；`EXP-PHR`、`DIS-BRO`、`DIS-AUT`、`COM-ASI` 不继承该默认。6-3 根据真实 Top of Search 展示、点击、CPC、订单、CVR、CPA、ACoS 和份额（如有）接管继续、提高、降低或取消判断。
 
 ### Initial Budget Allocation
 
@@ -155,7 +155,7 @@ Initial Released Keywords：；COR Exact：；EXP Phrase：；DIS Broad：；Aut
 
 ### Creation Checklist
 
-Identity、Own ASIN、SKU、Marketplace、Store、Campaign Names、Campaign Budgets、Ad Groups、Advertised Product、Keywords、Match Types、Product Targets、Target-Level Bids、Bidding Strategies、Placements、Auto Targeting、Negatives、Launch Budget、Phase Budget、Validation Rules、6-2 Handoff：`✓` / `[数据缺失]` / `[当前执行接口不支持]`。
+Identity、Own ASIN、Mapped_SKUs[]/Advertised_SKUs[]、Marketplace、Store、Campaign Names、Campaign Budgets、Ad Groups、Advertised Product、Keywords、Match Types、Product Targets、Target-Level Bids、Bidding Strategies、Placements、Auto Targeting、Negatives、Launch Budget、Phase Budget、Validation Rules、6-2 Handoff：`✓` / `[数据缺失]` / `[当前执行接口不支持]`。
 
 Creation Readiness：`[Ready to Create]` / `[Ready with Known Limitations]` / `[Not Ready to Create]`。
 
@@ -169,7 +169,7 @@ A. 全部批准并创建　B. 部分修改　C. 重新设计　D. 查看完整�
 
 - Campaign：名称、Role、Ad Type、Status、Start/End Date、Daily Budget、Portfolio、Bidding Strategy、Top of Search、Rest of Search、Product Pages
 - Ad Group：名称、Default Bid、Status
-- Advertised Product：`[Advertised Product｜Own Product]`、Own ASIN、SKU
+- Advertised Product：`[Advertised Product｜Own Product]`、Own ASIN、Mapped_SKUs[]/Advertised_SKUs[]
 - Keyword：Keyword、中文含义、Source、Cluster、Role、Match Type、Target-Level Bid、H10 Suggested Bid、H10 Bid Range、Amazon/SellerSpace Suggested Bid、Own Historical CPC、Evidence、Reason
 - Auto：Close Match、Loose Match、Substitutes、Complements、独立 Bid（支持时）
 - Product Target：`[Product Target ASIN]`、Target ASIN、产品名/品牌/价格/Rating/Review Count（如有）、Source、Reason、Initial Bid
@@ -183,3 +183,32 @@ Read-Back Verification 必须使用同一字段结构，并记录 Campaign ID、
 `Portfolio Name（映射表“广告组合”）｜Portfolio ID（SellerSpace 只读解析）｜Status｜来源/读取时间`
 
 报告明确区分 `[Portfolio已验证]`、`[广告组合身份未验证]`、`[广告组合身份冲突｜禁止写入]`。
+
+## V2 Search Intent Decision｜购买意图决策
+
+### Launch Search Intent Map
+
+| Intent Name | Precision Keywords | Precision Broad Seed | Known Demand | Product Fit | Page Fit | Benchmark / Competition Evidence | CPC / Economic Fit | Ranking Opportunity | Evidence Quality | Launch Role |
+|---|---|---|---:|---|---|---|---|---|---|---|
+
+Launch Role 只能使用：`PRIMARY_LAUNCH_INTENT`、`SECONDARY_GROWTH_INTENT`、`PRECISION_LONGTAIL_HARVEST`、`DISCOVERY_INTENT`、`DEFER`。不得使用固定百分比加权公式代替综合判断。
+
+### Known / Unknown Demand Engine
+
+- Known Demand：6-0-1 精准词与 6-0-2 Search Intent 资产；说明本次验证的曝光、点击、转化和 Search Term 问题。
+- Unknown Demand：SP Auto、Intent-Constrained Broad、Competitor ASIN Discovery、Category Discovery 或 Amazon 推荐；说明未知需求的发现边界和风险。
+
+### Intent → Campaign 任务映射
+
+| Intent | Campaign / Role | Target / Match | Business Purpose | Why This Campaign Exists | Validation Goal | Promotion / Exit Condition |
+|---|---|---|---|---|---|---|
+
+同一 Intent 的 COR-EXA、EXP-PHR、DIS-BRO 只有在 Control、Expansion、Discovery 或 Ranking Purpose 明确不同且预算足够时才并存。
+
+### Product Target 生命周期
+
+COM-ASI 的正式名称保持不变，内部状态使用：`DISCOVERY → VALIDATION → CORE`。新 Target 从 `DISCOVERY/TESTING` 开始，一次订单不自动升级 CORE；CAT-CAT 与 COM-ASI 分开记录。
+
+### Ranking / Maturity
+
+Ranking Opportunity：`STRATEGIC_RANKING_INTENT`、`PROFITABLE_HARVEST_INTENT`、`DISCOVERY_INTENT`、`LOW_OPPORTUNITY_INTENT`。初始 Campaign/Target 原则上为 `UNTESTED` 或 `TESTING`，不得因 6-0-1 精准度直接写成 `VALIDATED`；可继续记录 `INITIAL_SIGNAL`、`VALIDATED`、`SCALING`、`MATURE`、`FAILED`、`PAUSED`。

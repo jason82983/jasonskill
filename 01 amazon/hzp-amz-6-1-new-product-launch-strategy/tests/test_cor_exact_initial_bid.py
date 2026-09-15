@@ -50,7 +50,7 @@ def test_non_cor_roles_do_not_inherit_policy():
 def test_dynamic_risk_and_6_2_takeover():
     for term in (
         "动态上调上限未确认",
-        "6-2 必须基于真实 Top",
+        "6-3 必须基于真实 Top",
         "不能机械加 Bid",
         "降低或取消 Top +50%",
     ):

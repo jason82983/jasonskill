@@ -13,9 +13,15 @@ from pathlib import Path
 SKILL_LABELS = {
     "2-1": "2-1｜产品分析",
     "2-2": "2-2｜细分市场分析",
+    "6-1": "6-1｜新品推广方案",
+    "6-2": "6-2｜产品经营监控与诊断",
+    "6-3": "6-3｜广告诊断优化",
 }
 
 OPERATIONAL_LOG_DIR = "广告表现汇报优化日志"
+
+# Stage 6 semantic labels are keyed by the new report type; historical files remain discoverable as history.
+FORMAL_STAGE6_TYPES = {"6-2": "产品经营监控与诊断", "6-3": "广告诊断优化"}
 
 
 def read_first_field(path: Path, labels: tuple[str, ...]) -> str:
@@ -82,6 +88,23 @@ def parse_report(path: Path, report_root: Path) -> dict | None:
         title = re.sub(r"_\d{8}(?:_\d{6})?$", "", title)
     file_time = datetime.fromtimestamp(path.stat().st_mtime)
     relative = Path(path).relative_to(report_root).as_posix()
+    # A historical report may keep the old Stage 6 number after the role swap.
+    # Read only the beginning of the HTML to label that semantic mismatch; keep
+    # the file discoverable, but prevent it from outranking current semantics.
+    try:
+        header_text = path.read_text(encoding="utf-8", errors="ignore")[:20000]
+    except OSError:
+        header_text = ""
+    semantic_probe = " ".join(
+        re.sub(r"<[^>]+>", " ", value)
+        for value in re.findall(r"<(?:title|h1)[^>]*>(.*?)</(?:title|h1)>", header_text, re.IGNORECASE | re.DOTALL)
+    )
+    if skill == "6-2":
+        semantic_legacy = "广告诊断优化" in semantic_probe and "产品经营监控" not in semantic_probe
+    elif skill == "6-3":
+        semantic_legacy = ("产品运营监控" in semantic_probe or "产品经营监控" in semantic_probe) and "广告诊断优化" not in semantic_probe
+    else:
+        semantic_legacy = False
     return {
         "skill": skill,
         "product": product,
@@ -92,6 +115,7 @@ def parse_report(path: Path, report_root: Path) -> dict | None:
         "path": relative,
         "filename": path.name,
         "legacy": version is None or timestamp is None,
+        "semantic_legacy": semantic_legacy,
     }
 
 
@@ -99,6 +123,7 @@ def sort_reports(reports: list[dict]) -> list[dict]:
     return sorted(
         reports,
         key=lambda item: (
+            not item.get("semantic_legacy", False),
             item["version"] is not None,
             item["version"] if item["version"] is not None else -1,
             item["timestamp"] or item["file_time"],
@@ -127,6 +152,8 @@ def build_html(product_code: str, product_name: str, reports: list[dict], genera
         for index, item in enumerate(group):
             version = f"V{item['version']}" if item["version"] is not None else "历史报告"
             legacy = " <span class=\"legacy\">历史报告</span>" if item["legacy"] else ""
+            if item.get("semantic_legacy"):
+                legacy += " <span class=\"legacy\">历史语义</span>"
             newest = " <span class=\"latest\">最新</span>" if index == 0 else ""
             rows.append(
                 "<tr>"

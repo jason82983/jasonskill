@@ -23,11 +23,13 @@ metadata:
 
 ## 产品身份与输入
 
-1. 使用本次确认的 Products Root / Product Root，读取 01_产品档案.md 和公司级 Amazon产品店铺映射表.xlsx。通过公共产品身份解析逻辑确认 Product Code、产品中文名称、Store、Marketplace、Parent ASIN、Own Child ASIN、SKU、Var_Code 和 Variation Family；优先用映射表与真实页面/SellerSpace 对照。
+1. 使用本次确认的 Products Root / Product Root，读取 01_产品档案.md 和公司级 Amazon产品店铺映射表.xlsx。通过公共产品身份解析逻辑确认 Product Code、产品中文名称、Store、Marketplace、Parent ASIN、Own Child ASIN、Mapped_SKUs[]、Var_Code 和 Variation Family；优先用映射表与真实页面/SellerSpace 对照。
 2. 严格区分 Own ASIN ≠ Parent ASIN ≠ Child ASIN ≠ Benchmark ASIN ≠ Product Target ASIN。身份冲突输出 [线上ASIN身份无法确认] 或 [产品身份冲突]，不得猜测或继续把错误 ASIN 当自有产品。
 3. 只从同一 Product Root 的 06_SKILL分析报告/ 选择 5-1、5-2、5-3、5-4 最新有效正式报告：按 Product Code + Skill 编号匹配，最高 V 优先，同 V 按文件名中的 YYYYMMDD_HHMMSS 取最新。排除 index、失败、Incomplete、Deprecated、Invalid、Test、Temp、Preview、Draft、Demo、Debug 等文件；无法确认时标记 [上游报告有效性无法确认]。
 4. 只记录实际读取的上游版本。5-1～5-4 是核心输入；其他阶段仅在判断产品、市场或流量根因时辅助回查，不机械读取全部历史报告。
 5. 按需读取 07_产品资料/ 的 Listing 成品、截图、主图/副图/A+、视频和版本记录；真实消费者页面优先于设计稿。没有成品时标记 【策划阶段页面审核】，不能声称已完成 Live Page 审计。
+
+5-5 始终以 ASIN 页面为唯一审计主轴。同一 ASIN 对应多个 SKU 时不生成重复页面报告；只有可靠获取的 Offer、价格、可售、履约或资格差异才作为 SKU-level Backend Evidence/Exception 补充，并保留 `Mapped_SKUs[]`，不得把 SKU 当成新的页面身份。
 
 ### Variant-aware 短命令与身份解析
 
@@ -89,7 +91,7 @@ metadata:
 
 每项清单必须有编号、模块、当前问题、证据、业务影响、修改方向、责任 Skill 和验证方法。允许结论为【建议保持当前页面】；不要为了证明价值强行制造问题。
 
-路由：策略 → 5-1；文案 → 5-2；图片/视频/A+ → 5-3；页面成品 QA → 5-4；产品差异化 → 3-2；产品方案 → 3-3；样品/量产 → 4-1/4-2；广告流量/Target → 6-2；经营异常 → 6-3；市场结构变化 → 2-2。5-5 不直接改页面或广告。
+路由：策略 → 5-1；文案 → 5-2；图片/视频/A+ → 5-3；页面成品 QA → 5-4；产品差异化 → 3-2；产品方案 → 3-3；样品/量产 → 4-1/4-2；广告流量/Target → 6-3；经营异常 → 6-2；市场结构变化 → 2-2。5-5 不直接改页面或广告。
 
 主状态只能使用：HEALTHY、MINOR_OPTIMIZATION、MAJOR_OPTIMIZATION、STRATEGY_MISALIGNMENT、LIVE_PAGE_ANOMALY、INSUFFICIENT_EVIDENCE，并附 HIGH、MEDIUM 或 LOW 证据置信度。
 
@@ -134,3 +136,7 @@ metadata:
 - Listing 章节使用《文案有没有把产品说清楚？》，按标题、Item Highlights、Bullet、Description、A+说明现在怎么样、问题、影响和是否要改。
 - Offer 章节使用《客户现在能不能顺利买？》。价格、Coupon、库存、Buy Box、配送、购买按钮无法确认时，直接写“这次没有可靠确认购买环境，暂不下结论”，只有有直接证据才标红。
 - 竞争章节使用《跟现在的竞品比，还够不够强？》，回答主图、价格、Review、核心卖点和差异化是否吃亏，并给出保持/有所减弱/明显落后/数据不足。
+
+## MCP Provider Boundary / Canonical Business Model
+
+5-5 仍以 ASIN 为页面审计主轴。Provider 的 Offer、可售、履约和价格字段必须先由 Adapter 归一为 Canonical 语义，再作为 Backend Evidence/SKU Exception 使用；原始 Tool Name、Field Name、JSON 结构不进入页面审计判断。能力缺失标记 `[CAPABILITY_NOT_AVAILABLE]`，不猜测页面事实；未来新增 Provider 只需新增真实适配器，不改变 ASIN-first 审计逻辑。

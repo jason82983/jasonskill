@@ -16,7 +16,7 @@ description: 发现 Amazon 经营链路中真正需要上级方向、资本、�
 4. 只升级战略方向、资本分配、重大风险接受、资源/优先级、重大产品决定、时间临界、跨系统冲突、继续/停止事项。普通 Bid、Keyword、图片文案、否词和已有 SOP 可解决事项不问老板。
 5. 先按 Decision Topic 和已有 `decision_id` 去重。未回答事项更新证据与紧迫度；已回答事项只有 Material New Evidence 才 `REOPENED` 并说明原因。
 6. 每个问题生成 Question、Why Now、Facts、What Changed Since Last Brief、A/B/C/D 选项、AI Recommendation、Reason、Expected Upside、Main Downside、Cost/Capital Impact、Deadline、If No Decision、Affected Product/Project、Affected Skills、Evidence Confidence。主周报默认 ≤5 项，所有 P0 必须显示，其余进入 Secondary Queue。
-7. 生成中文《HZP Amazon 上级决策周报》HTML。成功写入后才推进 checkpoint；失败不得推进。老板回答原意写入 Decision Register，并路由给 6-1/6-2、3-2/3-3、5 阶段或 7-1/7-2，0-5 不越权执行。
+7. 生成中文《HZP Amazon 上级决策周报》HTML。成功写入后才推进 checkpoint；失败不得推进。老板回答原意写入 Decision Register，并路由给 6-1/6-3、3-2/3-3、5 阶段或 7-1/7-2，0-5 不越权执行。
 
 ## Decision Inbox｜日常决策候选收件箱
 

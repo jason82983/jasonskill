@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 6-0-1｜精准关键词识别"
+  short_description: "ERP人工/AI精准词识别与六列双轨CSV资产生成"
+  brand_color: "#2563EB"
+  default_prompt: "Use $hzp-amz-6-0-1-ai-precision-keyword-identification to identify the current product's manual and AI-blind precision keywords from ERP evidence, generate two auditable CSV assets, and compare them without executing ad writes."
+
+policy:
+  allow_implicit_invocation: true

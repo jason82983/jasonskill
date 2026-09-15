@@ -27,7 +27,7 @@ description: Provide Amazon US business-calendar reminders, product seasonal and
 
 公式：`Latest Development Start = Target Selling Start - Cold Start Days - FBA Receiving Buffer Days - Shipping Days - Production Days - Development/Sample Days`。
 
-所有参数可配置。默认国际运输 30 天、新品 Cold Start 30 天，均须标 `[系统默认规划参数]`；生产、开发、FBA 缓冲无证据时也只能用可配置默认值并标注。真实产品参数优先于公司默认值。若产品档案缺少季节性字段，标 `[季节性规划数据缺失]`，不自动改写 `01_产品档案.md`。新品 Launch 还要倒排 Listing Ready、Inventory Ready、FBA Available、Advertising Start、Review/Conversion Observation、6-1 Initial Plan 和 6-2 Optimization。
+所有参数可配置。默认国际运输 30 天、新品 Cold Start 30 天，均须标 `[系统默认规划参数]`；生产、开发、FBA 缓冲无证据时也只能用可配置默认值并标注。真实产品参数优先于公司默认值。若产品档案缺少季节性字段，标 `[季节性规划数据缺失]`，不自动改写 `01_产品档案.md`。新品 Launch 还要倒排 Listing Ready、Inventory Ready、FBA Available、Advertising Start、Review/Conversion Observation、6-1 Initial Plan、6-2 Operating Diagnosis 和 6-3 Advertising Optimization。
 
 若剩余时间不足，标 `[计划时间不足]`，列出可验证的压缩或放弃本季方案：现货/已有产品、空运、缩短开发、减少变体、沿用包装、缩短 Cold Start、降低库存目标、放弃本季；这些标 `[经营方案建议]`，不可把不可控时效当成可压缩事实。
 
@@ -39,7 +39,7 @@ description: Provide Amazon US business-calendar reminders, product seasonal and
 
 ## 路由与安全边界
 
-只输出 `[建议调用Skill]` 和理由：产品分析→2-1/2-2；开发→3-1/3-2；样品→4-1；量产前→4-2；页面→5-1/5-2/5-3/5-4；Launch→6-1；广告异常→6-2；经营异常→6-3；补货→7-1；库存风险→7-2。0-3 不复制这些 Skill 的算法和完整结论。
+只输出 `[建议调用Skill]` 和理由：产品分析→2-1/2-2；开发→3-1/3-2；样品→4-1；量产前→4-2；页面→5-1/5-2/5-3/5-4；Launch→6-1；广告异常→6-3；经营异常→6-2；补货→7-1；库存风险→7-2。0-3 不复制这些 Skill 的算法和完整结论。
 
 未来可接 SellerSpace MCP、Amazon、库存、订单、广告、Listing、Review、Coupon、Promotion 和 FBA Shipment，但 V1 默认 READ ONLY。禁止 `apply_change_plan`，禁止修改 Campaign、Bid、Budget、Listing、Inventory、Promotion。需要留存的广告原始快照应保存到 `05_分析源数据\06_广告数据下载\`，而不是预报或日志目录。
 

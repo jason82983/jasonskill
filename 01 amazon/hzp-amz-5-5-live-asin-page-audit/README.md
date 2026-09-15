@@ -73,3 +73,9 @@ Live Page Snapshot、页面完整性、策略到线上执行、文案—视觉�
 - **LEVEL 2｜专业版**：保留 Live Page Snapshot、输入版本追溯、策略矩阵、证据、根因和机器状态码，供团队复核。
 
 首页使用中文经营语言；机器状态码只放详细证据区。图片按“这张图要完成什么任务 → 现在怎么样 → 建议 → 交给谁”逐张点评，Offer 无法确认时直接说明暂不下结论。
+
+5-5 以 ASIN 页面为核心审计对象；同一 ASIN 的多个 SKU 不生成重复页面报告，只有可靠的 Offer/库存/履约差异才作为 SKU 后端异常补充。
+
+### Provider Boundary
+
+核心判断使用 HZP Canonical 业务语义；SellerSpace/优麦云等 Provider 的原始字段先由 Adapter 映射。能力缺失显示 `[CAPABILITY_NOT_AVAILABLE]`，语义不明不猜；未来接入其他 Provider 只新增真实适配器，不改本 Skill 核心流程。

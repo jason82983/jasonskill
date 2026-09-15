@@ -10,8 +10,8 @@ DOC_TEXT = "\n".join(
     (ROOT / name / file).read_text(encoding="utf-8")
     for name, file in (
         ("hzp-amz-6-1-new-product-launch-strategy", "SKILL.md"),
-        ("hzp-amz-6-2-advertising-diagnosis-optimization", "SKILL.md"),
-        ("hzp-amz-6-3-product-operations-monitoring", "SKILL.md"),
+        ("hzp-amz-6-3-advertising-diagnosis-optimization", "SKILL.md"),
+        ("hzp-amz-6-2-product-operations-monitoring", "SKILL.md"),
     )
 )
 SHARED_TEXT = (ROOT / "Amazon广告身份解析规则.md").read_text(encoding="utf-8")
@@ -40,7 +40,8 @@ def test_cases_a_to_n():
     for term in (
         "字段级比对", "Read-Back Verification", "Expansion Batch", "继承 6-1",
         "Portfolio Identity Anomaly", "Portfolio Ad Sales", "Product Total Sales",
-        "Legacy overlap", "禁止写入",
+        "Legacy overlap", "禁止写入", "Mapped_SKUs[]", "MULTI_SKU_SAME_ASIN",
+        "ASIN_AGGREGATION_UNCERTAIN",
     ):
         assert term in DOC_TEXT
     for term in ("[广告组合身份验证通过]", "[广告组合不存在]", "[广告组合数据源冲突]", "[存在多个有效广告组合映射｜需要人工确认]"):
