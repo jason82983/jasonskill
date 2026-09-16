@@ -62,3 +62,7 @@ description: Provide Amazon US business-calendar reminders, product seasonal and
 - [references/test-cases.md](references/test-cases.md)：V1运行前后的 CASE A-N 行为核对。
 
 0-3 不修改真实产品档案、原始数据、Amazon 账户或历史报告。
+
+## 全局正式报告目录与命名规则
+
+只要本次任务针对一个确定的 Product Root 并生成正式分析报告/结构化分析结果，就保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名为 `{Skill编号}_{报表名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套文件共用时间戳。跨产品通用的知识库、提醒状态和决策登记簿属于持续维护的业务数据，不作为产品分析报告迁入报告目录。历史报告不自动搬迁或删除。

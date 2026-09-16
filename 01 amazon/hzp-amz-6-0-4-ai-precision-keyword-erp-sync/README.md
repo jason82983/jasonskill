@@ -1,0 +1,4 @@
+# 6-0-4
+
+The current 6-0-2 unified asset uses eleven columns and `Id=KwId` (stable Keyword Entity), not the writable `PickPwK.Id` row key. 6-0-4 detects it and blocks with `ERP_KEYWORD_ENTITY_ID_NOT_WRITABLE_AS_PICKPWK_ID`; it must not guess or select a Benchmark row. The legacy seven-column full-judgment asset remains blocked by `PRECISION_THRESHOLD_UNRESOLVED`; historical six-column input remains compatible. Real ERP writes require the restricted JSON capability, preflight, transaction, and read-back.
+6-0-4 resolves the latest-valid 6-0-2 `AI_PRECISION_KEYWORDS` asset inside the current Product Root using the shared Stage 6 resolver, then applies the existing schema and fail-closed selection checks unchanged. Per-run operational MD logs append the current run timestamp and have lineage sidecars; they are excluded from the formal 0-2 index. See `../references/stage6-artifact-contract.md`.

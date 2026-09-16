@@ -108,3 +108,7 @@ Lead Time 尽量拆为生产前准备、生产、验货/出货、国内运输、
 正式报告写入并确认文件存在、命名正确后，调用 `hzp-amz-0-2-report-index`，原样传递 Product Code、Products Root、Product Root。7-1 不扫描、生成、排序、维护或备用更新 `index.html`；报告成功但索引失败时保留报告并分别报告两种状态。
 
 详细规则见 [references/replenishment-framework.md](references/replenishment-framework.md)，7-2 交接见 [references/handoff-schema.md](references/handoff-schema.md)，HTML 结构见 [templates/report-outline.md](templates/report-outline.md)。
+
+## 全局正式报告目录与命名规则
+
+本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。HTML 必须使用同批 CSV 回读快照渲染。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。

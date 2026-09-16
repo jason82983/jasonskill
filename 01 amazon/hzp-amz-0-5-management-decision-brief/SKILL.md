@@ -39,3 +39,6 @@ Candidate 至少保存：`candidate_id`、`created_at`、`source_type`、`source
 
 详见 references/decision-schema.md、references/integration-routing.md、references/test-cases.md、references/candidate-inbox.md 和 templates/weekly-brief-outline.md。
 
+## 全局正式报告目录与命名规则
+
+只要本次任务针对一个确定的 Product Root 并生成正式分析报告/结构化分析结果，就保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名为 `{Skill编号}_{报表名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套文件共用时间戳。跨产品通用的知识库、提醒状态和决策登记簿属于持续维护的业务数据，不作为产品分析报告迁入报告目录。历史报告不自动搬迁或删除。

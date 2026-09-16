@@ -140,3 +140,7 @@ metadata:
 ## MCP Provider Boundary / Canonical Business Model
 
 5-5 仍以 ASIN 为页面审计主轴。Provider 的 Offer、可售、履约和价格字段必须先由 Adapter 归一为 Canonical 语义，再作为 Backend Evidence/SKU Exception 使用；原始 Tool Name、Field Name、JSON 结构不进入页面审计判断。能力缺失标记 `[CAPABILITY_NOT_AVAILABLE]`，不猜测页面事实；未来新增 Provider 只需新增真实适配器，不改变 ASIN-first 审计逻辑。
+
+## 全局正式报告目录与命名规则
+
+本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。HTML 必须使用同批 CSV 回读快照渲染。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。

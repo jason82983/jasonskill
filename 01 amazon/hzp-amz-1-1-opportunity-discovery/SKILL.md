@@ -76,7 +76,7 @@ metadata:
 总体状态只能用：`【发现高优先级候选商机】`、`【发现可继续初筛的候选商机】`、`【仅发现观察型机会】`、`【当前未发现值得进入1-2的明确机会】`、`【关键数据不足｜暂无法完成可靠商机发现】`。缺普通数据时继续完成可支持的部分；只有身份冲突、市场对象无法确认或关键证据缺失导致无法安全分析时才停止并说明补数要求。
 
 有 Product Root 时报告文件名为：
-`[Product Root]/06_SKILL分析报告/1-1_[产品编号]_商机发现_V[版本号]_[YYYYMMDD]_[HHMMSS].html`。
+`[Product Root]/06_SKILL分析报告/1-1_商机发现/1-1_商机发现_[YYYYMMDD_HHMMSS].html`。
 版本号读取当前同产品同 Skill 的最大 V 后递增，历史文件保留。确认 HTML 成功落盘后，只调用 `hzp-amz-0-2-report-index`，原样传递本次已确认的 Product Code、Products Root、Product Root；2-1 自身不生成或维护 `index.html`。索引失败不删除报告，明确报告成功、索引失败及原因。
 
 纯市场扫描没有 Product Code/Product Root 时，不得臆造编号或调用 0-2；保留在当前扫描目录，并标记 `[市场扫描正式归档规则待确认]`。
@@ -92,3 +92,7 @@ metadata:
 - `references/opportunity-discovery-framework.md`
 - `references/handoff-schema.md`
 - `templates/report-outline.md`
+
+## 全局正式报告目录与命名规则
+
+本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。HTML 必须使用同批 CSV 回读快照渲染。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。

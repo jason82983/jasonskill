@@ -63,6 +63,7 @@ DOCUMENTED_FIELDS = {
     "IsGoodCvt": "是否高转化标记（原文档定义）",
     "IsSold": "是否产生销售标记（原文档定义）",
     "SearchVolume30": "30天搜索量字段（原文档定义）",
+    "AsinQuantity": "竞争产品数（阶段 6-0-1 正式映射；PickPwKView 原字段）",
     "SearchVolumeDaily": "日搜索量字段（原文档定义）",
     "SearchGrowthRate30": "30天搜索增长率（原文档定义）",
     "IQScore": "关键词IQ评分（原文档定义）",
@@ -279,10 +280,14 @@ class ERPKeywordAdapter:
             "freshness": "由 UpdateTime/RecordDate 的文档语义与实际值共同判断；未推断",
             "aggregation_method": "NONE",
             "evidence_role": evidence_role,
-            # Id/KwId are present in the view, but the maintained schema does
-            # not confirm either as a stable record identity.  Do not guess.
+            # PickPwKView.Id remains a view-row identity whose mapping to a
+            # writable PickPwK.Id is separately governed by the restricted
+            # writer capability. The user confirmed KwId is stable/unique for
+            # a keyword across ProIds, so expose it as entity identity only.
             "record_id_field": None,
             "record_id_status": KEYWORD_RECORD_ID_UNCONFIRMED,
+            "keyword_entity_id_field": "KwId",
+            "keyword_entity_id_status": "USER_CONFIRMED_STABLE_ACROSS_PROID",
         }
         if identity["status"] in {MISSING_PROID, CONFLICT_PROID}:
             base.update(status=identity["status"], conflicts=identity.get("conflicts", []))
@@ -312,6 +317,8 @@ class ERPKeywordAdapter:
                     "keyword_cn": raw.get("KeywordCn"),
                     "erp_pro_id": identity["erp_pro_id"],
                     "raw_fields": raw,
+                    "keyword_entity_id": raw.get("KwId"),
+                    "keyword_entity_id_status": "USER_CONFIRMED_STABLE_ACROSS_PROID",
                     "field_semantics": field_defs["fields"],
                     "record_id": None,
                     "record_id_status": KEYWORD_RECORD_ID_UNCONFIRMED,

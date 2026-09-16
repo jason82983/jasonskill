@@ -1,16 +1,12 @@
-"""Static mock-contract checks for the two-level creation blueprint."""
+"""Static mock-contract checks for the execution reconciliation report."""
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TEXT = "\n".join(p.read_text(encoding="utf-8") for p in ROOT.rglob("*") if p.is_file() and p.suffix in {".md", ".yaml", ".py"})
 
-def test_executive_approval_view():
-    for term in ("Executive Approval View", "6-1 新品广告创建决策", "Initial Budget Allocation", "Initial Keyword Allocation", "Campaign 总览", "Planned Campaign Count", "AI Recommendation"):
+def test_execution_summary_and_diff():
+    for term in ("Execution Summary", "Desired-vs-Actual Diff", "605 RUN_ID", "Approved Battle Unit Count", "BUILD/RECONCILE", "CREATE/UPDATE/NO_CHANGE/PAUSE_CANDIDATE", "Logical ID", "Amazon ID"):
         assert term in TEXT
 
-def test_detailed_blueprint_fields():
-    for term in ("Detailed Creation Blueprint", "Target-Level Bid", "Advertised Product｜Own Product", "Close Match", "Loose Match", "Substitutes", "Complements", "Product Target ASIN", "暂不预设大规模否词", "当前执行接口不支持"):
-        assert term in TEXT
-
-def test_checklist_and_field_diff():
-    for term in ("Creation Checklist", "Ready with Known Limitations", "Approved Creation Blueprint", "Prepared Creation Plan", "Field-Level Diff", "Read-Back", "D. 查看完整广告明细"):
+def test_exact_approval_and_provider_readback():
+    for term in ("complete diff", "exact CREATE/UPDATE", "prepare_change_plan", "apply_change_plan", "Read-Back", "TECHNICAL_EXECUTION_CONFLICT", "仅报告"):
         assert term in TEXT

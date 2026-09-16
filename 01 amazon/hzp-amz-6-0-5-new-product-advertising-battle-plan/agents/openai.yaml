@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 6-0-5｜新品广告作战规划"
+  short_description: "规划新品首攻市场、关键词阶段和广告架构"
+  brand_color: "#1D4ED8"
+  default_prompt: "Use $hzp-amz-6-0-5-new-product-advertising-battle-plan to create a traceable, approval-ready new-product advertising battle plan from the latest valid 6-0-3 assets."
+
+policy:
+  allow_implicit_invocation: true

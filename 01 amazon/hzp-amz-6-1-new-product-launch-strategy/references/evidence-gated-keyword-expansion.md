@@ -1,3 +1,5 @@
+> **Legacy strategic reference:** 6-0-5 is the sole PLAN authority and 6-1 only applies its latest approved plan. This file may retain historical planning examples; those examples do not authorize 6-1 to choose or expand Intent, Target, lifecycle, Launch Goal, or budget strategy. Follow `approved-battle-plan.md` and `execution-reconciliation.md` for current behavior.
+
 # Evidence-Gated Keyword Expansion｜证据驱动扩词
 
 ## 共同原则

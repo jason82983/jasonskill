@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 6-0-2｜AI精准关键词识别"
+  short_description: "基于当前产品识别文本和6-0-1唯一关键词母池逐词判断精准度"
+  brand_color: "#2563EB"
+  default_prompt: "Use $hzp-amz-6-0-2-ai-precision-keyword-identification and execute references/precision-judgment-kernel.md. Read the complete current-product text at 05_分析源数据/01_产品数据/本产品/产品识别 - 文本文案.txt and the latest valid 6-0-1 nine-column unique-keyword pool. Id is the user-confirmed cross-ProId KwId, not a writable PickPwK.Id. Independently reconstruct each Amazon shopper Searcher Intent, identify PRODUCT-LED/GIFT-LED/BROAD-GIFT/RELATIONSHIP-ONLY/HARD-SPECIFIED mode, distinguish CORE FIT from CAN SERVE, check every Hard Modifier (product type, material, quantity/representation, personalization, compatibility, size, function and theme), then directly judge 高度精准/精准/弱精准/不精准. Gift-led relationship intent may be highly precise without a figurine token; product-type explicitness alone never earns precision; do not use string matching, fixed formulas, word count, numeric scoring or score mapping. Run the counterfactual test and make each reason keyword-specific. Benchmark ranks are reality evidence only. Preserve the first nine source fields unchanged and write both eleven-column CSVs: all judgments and the filtered AI高度精准词 asset containing only 高度精准 rows, with coverage and pass-through validation; do not generate a manual-precision CSV. If either formal input is missing, empty or unreadable, return its explicit status. Do not query or write ERP/Amazon."
+
+policy:
+  allow_implicit_invocation: true

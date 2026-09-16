@@ -12,7 +12,7 @@ def test_cases_a_to_q():
     # A/B/D: formal code and independent variant are visible and parseable.
     assert resolver.format_campaign_name("B8", "SP", "COR", "EXA", 1, "M") == "B8.M.SP-COR-EXA-01"
     assert resolver.format_campaign_name("B8", "SP", "COR", "EXA", 1, "S") == "B8.S.SP-COR-EXA-01"
-    assert ".M." in resolver.format_campaign_name("B8", "SP", "COR", "EXA", 1, "M")
+    assert ".M.SP-" in resolver.format_campaign_name("B8", "SP", "COR", "EXA", 1, "M")
     # C/H/I/J/K/L/O/P/Q: research code, portfolio, store, ASIN/SKU and mutable
     # operating parameters stay outside the stable name (or are represented in
     # the blueprint, not this helper).

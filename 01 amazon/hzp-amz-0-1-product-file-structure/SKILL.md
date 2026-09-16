@@ -33,7 +33,7 @@ The role recorded in `01_产品档案.md` is a known research context, not a per
 Keep these levels separate:
 
 1. **Products Root** — the common container for products and shared data;
-2. **Shared Data** — `00_产品公用数据/`, one copy of reusable platform definitions, company standards, and non-sensitive system configuration;
+2. **Shared Data** — runtime `01_公共资料/` (legacy `00_产品公用数据/` is accepted when present), one copy of reusable platform definitions, company standards, and non-sensitive system configuration;
 3. **Product Root** — one product's identity, evidence, human input, and Skill outputs.
 
 The governing rule is:
@@ -42,11 +42,41 @@ The governing rule is:
 
 Do not copy Shared Data into each Product Root merely to make a later Skill easier to run.
 
+## Runtime Products Root and product areas
+
+For HZP Amazon runtime work, the default Products Root is:
+
+`E:\\【所有产品目录专用】\\`
+
+Unless the user supplies another root explicitly, resolve a `Product_Code` only
+within these three product areas:
+
+```text
+E:\\【所有产品目录专用】\\
+├─ 03_已上架产品\\    # products already listed
+├─ 02_新品待开发\\    # new products pending development
+└─ 00_OtherSPro\\     # other products outside the first two areas
+```
+
+Each product folder immediately below one of these areas is a candidate Product
+Root. Locate it by reading `01_产品档案.md` and matching its authoritative
+`产品编号` / `Product_Code`; never use a folder name or area name as a
+substitute for the identity field. If more than one candidate matches, report
+the conflict and stop rather than guessing. A product's current area is
+reported as a storage classification; 0-1 must not infer or rewrite business
+status solely from the path, and must not move a product between the three
+areas without an explicit instruction or an authoritative mapping decision.
+
+`01_公共资料\\` at this root is shared company/platform material, not a fourth
+product area. Existing legacy shared-data names such as `00_产品公用数据\\` or
+`00_公共资料\\` remain compatibility candidates when actually present; do
+not rename or duplicate them merely to match this runtime layout.
+
 ## Scope and product identity
 
-Work on one Product Root at a time. Use a directory explicitly supplied by the user first. Otherwise, start from the current working directory and search upward for `01_产品档案.md`. Do not scan unrelated drives or assume a fixed depth under a Products Root.
+Work on one Product Root at a time. Use a directory explicitly supplied by the user first. Otherwise, start from the runtime Products Root above and search only its three product areas for `01_产品档案.md`; do not scan unrelated drives.
 
-From a selected Product Root, search upward for a directory containing `00_产品公用数据/` and treat it as a Products Root candidate. A product may be directly under that directory or under an intermediate permissions/category folder. If there are multiple candidates, none, or an otherwise abnormal structure, report the candidates and ask the user to confirm; do not guess.
+From a selected Product Root, search upward for the runtime Products Root or an explicitly supplied shared-data root. A product may be directly under one of the three areas. If there are multiple candidates, none, or an otherwise abnormal structure, report the candidates and ask the user to confirm; do not guess.
 
 The primary product identity is the `产品编号` field in `01_产品档案.md`. The folder name, product name, ASIN, alias, and previous path are supporting clues only. If the identity cannot be established, stop and ask the user to choose or create the Product Root.
 
@@ -79,21 +109,24 @@ Fill only fields supported by the user or an existing authoritative file. Leave 
 
 ## Products Root and Shared Data V1
 
-When a Products Root is explicitly selected or safely identified, its shared-data structure is:
+When a Products Root is explicitly selected or safely identified, its current runtime shared-data structure is:
 
 ```text
 [Products Root]/
-├─ 00_产品公用数据/
+├─ 01_公共资料/                 # current runtime shared-data name
 │  ├─ 01_Amazon平台资料/
 │  ├─ 02_公司标准/
 │  └─ 03_系统配置/
-└─ ... product directories ...
+└─ ... product areas ...
 ```
+
+An existing `00_产品公用数据/` or `00_公共资料/` is a legacy compatibility
+candidate; do not create it when `01_公共资料/` is the selected runtime area.
 
 When the user requests Shared Data initialization, create the three folders and these blank guidance files if they do not already exist:
 
 ```text
-00_产品公用数据/
+01_公共资料/
 ├─ README.md
 ├─ 01_Amazon平台资料/平台资料模板.md
 ├─ 02_公司标准/公司标准模板.md
@@ -139,6 +172,48 @@ The standard structure is:
 ```
 
 For a Product Root whose identity is confirmed, create the six top-level source-data folders and the five `07_产品资料` folders automatically when creating or repairing the standard structure. During an explicitly requested automatic organization, missing standard directories may be created before any file move. Create niche, ASIN, report, and other deeper subfolders only when actual files or a requested output need them. Do not create a large collection of empty Skill-number folders in advance.
+
+### Current Product Attribute Source
+
+Every Product Root's `05_分析源数据/01_产品数据/本产品/` is also a container for the confirmed current-product attribute source. During `CREATE`, and during `CHECK`, `ORGANIZE`, or `MIGRATE` when the standard structure is being completed, ensure this path exists and create the file `产品属性信息.txt` only when it is missing. The minimum local structure is:
+
+```text
+05_分析源数据/01_产品数据/本产品/
+├─ 主图/
+├─ 产品识别 - 文本文案.txt
+└─ 产品属性信息.txt
+```
+
+The file is the `CURRENT_PRODUCT_ATTRIBUTE_SOURCE`: a human- or source-confirmed record of objective product facts for later Skills. Its initial contents are intentionally lightweight:
+
+```text
+【产品属性信息】
+
+产品编码：
+产品名称：
+
+【基础属性】
+
+【尺寸/规格】
+
+【材质】
+
+【数量/套装】
+
+【结构/配件】
+
+【安装/使用】
+
+【兼容性】
+
+【其他已确认属性】
+
+【数据备注】
+```
+
+`产品识别 - 文本文案.txt` answers “这个产品是什么？” and carries identification text, description, functions, usage and product semantics. `产品属性信息.txt` answers “这个产品有哪些已经确认的客观属性？” and carries material, dimensions, weight, color, size, quantity, included components, structure, installation, compatibility, power and other confirmed attributes. They are separate sources; the attribute file is not Listing copy, marketing language, an analysis report, competitor evidence, or an AI guess. 0-1 creates the container and template only. It does not research or decide attributes. Later Skills may read or supplement it only from user, supplier/factory, specification, packaging, physical inspection, or other reliable confirmed evidence; unknown values remain blank or `待确认`.
+
+This is a non-destructive rule: `Missing → Create`; `Existing → Preserve`. Never overwrite, clear, normalize, or replace an existing `产品属性信息.txt`, and do not alter `主图/`, `产品识别 - 文本文案.txt`, or other existing files merely because this container is being repaired. `CHECK` reports the file as missing without changing the product. `ORGANIZE` and `MIGRATE` may create the missing file/template as part of an explicitly requested structure completion, but must not move or classify historical product facts into it and must not fill any attribute. 5-0-1 may use `CURRENT_PRODUCT_ATTRIBUTE_SOURCE` as current-product factual evidence; 6-0-2 continues to consume the unified 5-0-1 evidence and does not create a second attribute source.
 
 ## Human input files
 
@@ -192,7 +267,7 @@ Always distinguish **Definition from Evidence**:
 - A file answering “这个指标是什么意思？” is a platform or company definition and is a `SHARED-DATA-CANDIDATE` when found inside a Product Root.
 - A file answering “这个产品或市场的指标是多少？” records product-specific evidence and stays in that Product Root.
 
-For example, a general Opportunity Explorer metric glossary belongs in `00_产品公用数据/01_Amazon平台资料/商机探测/指标术语表/`. A Niche share screenshot for one product belongs in that product's `05_分析源数据/02_细分市场数据/[Niche]/`, even if it uses the same public metric.
+For example, a general Opportunity Explorer metric glossary belongs in `01_公共资料/01_Amazon平台资料/商机探测/指标术语表/`. A Niche share screenshot for one product belongs in that product's `05_分析源数据/02_细分市场数据/[Niche]/`, even if it uses the same public metric.
 
 ### `01_产品数据`
 
@@ -261,17 +336,17 @@ If one ASIN is also a growth example, append that role to the same entry. If the
 
 ### Shared-data candidates found in a Product Root
 
-In `CHECK`, `ORGANIZE`, and `MIGRATE`, flag an apparently reusable platform glossary, official explanation, company-wide standard, or common ERP field mapping as `SHARED-DATA-CANDIDATE`. Do not copy it. If its shared scope is clear and the Products Root is confirmed, propose moving one copy to the appropriate `00_产品公用数据/` category. If its scope is uncertain, leave it in place and ask the user to confirm.
+In `CHECK`, `ORGANIZE`, and `MIGRATE`, flag an apparently reusable platform glossary, official explanation, company-wide standard, or common ERP field mapping as `SHARED-DATA-CANDIDATE`. Do not copy it. If its shared scope is clear and the Products Root is confirmed, propose moving one copy to the appropriate `01_公共资料/` category. If its scope is uncertain, leave it in place and ask the user to confirm.
 
 ## Shared data outside the Product Root
 
-The environment may provide a company-level shared-data directory outside the Product Root, such as `00_产品公用数据/`. It can contain reusable platform definitions, company standards, field mappings, or other common material. This Skill may identify that such a directory exists, but must not copy shared data into every product or hardcode its path. Use it only when the user or runtime supplies the location.
+The environment may provide a company-level shared-data directory outside the Product Root, normally `01_公共资料/` in the current runtime (or a legacy `00_产品公用数据/` / `00_公共资料/`). It can contain reusable platform definitions, company standards, field mappings, or other common material. This Skill may identify that such a directory exists, but must not copy shared data into every product or hardcode its path. Use it only when the user or runtime supplies the location.
 
 ### Amazon product/store identity mapping
 
-When the supplied Products Root contains `00_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx`, register it as the read-only **Amazon 产品与 SellerSpace 店铺身份映射主表**. The workbook's required sheets are `产品店铺映射`, `填写说明`, `产品对应变体`, and `店铺产品代码前缀`. Key fields include `Product_Code`, `Product_NewCode`, `Product_Name`, `广告组合`, `SellerSpace_Store`, `Marketplace`, `ASIN`, `SKU`, `Status`, `Var_Code`, `Var_Name`, and `Product_Code_Prefix`. Do not copy it into Product Roots or modify its rows, fields, or status values. 0-1 only defines the location and performs a read-only schema/existence check; it does not derive a formal code from a prefix or make a store decision. Missing sheets/fields are reported as `[Amazon经营身份映射结构不完整]`; multiple ACTIVE rows are reported for human confirmation. The shared resolution and SellerSpace secondary-verification contract is in the Amazon industry shared file `Amazon广告身份解析规则.md`.
+When the supplied Products Root contains `01_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx`, register it as the read-only **Amazon 产品与 SellerSpace 店铺身份映射主表**. The workbook's required sheets are `产品店铺映射`, `填写说明`, `产品对应变体`, and `店铺产品代码前缀`. Key fields include `Product_Code`, `Product_NewCode`, `Product_Name`, `广告组合`, `SellerSpace_Store`, `Marketplace`, `ASIN`, `SKU`, `Status`, `Var_Code`, `Var_Name`, and `Product_Code_Prefix`. Do not copy it into Product Roots or modify its rows, fields, or status values. 0-1 only defines the location and performs a read-only schema/existence check; it does not derive a formal code from a prefix or make a store decision. Missing sheets/fields are reported as `[Amazon经营身份映射结构不完整]`; multiple ACTIVE rows are reported for human confirmation. The shared resolution and SellerSpace secondary-verification contract is in the Amazon industry shared file `Amazon广告身份解析规则.md`.
 
-`00_公共资料/` is an accepted runtime name for this supplied public-data area; do not rename it to `00_产品公用数据/` or move the workbook merely to match the Product Directory V1 label. When the Products Root is explicitly supplied, CHECK must inspect this exact relative path even if the Products Root's other shared-data folders use a different legacy name.
+`00_公共资料/` and `00_产品公用数据/` remain accepted legacy names when actually present; do not rename them or move the workbook merely to match the current runtime label. When the Products Root is explicitly supplied, CHECK must inspect `01_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx` first, then report any legacy path separately.
 
 ## Formal Skill outputs
 
@@ -309,10 +384,10 @@ Use the stable product number in the filename; include an ASIN or other analysis
 
 Support four explicit modes at either the Products Root or one Product Root:
 
-1. **CREATE** — create a requested Products Root Shared Data skeleton or a Product Directory V1. For a Product Root, create the standard 01–07 structure, the six `05_分析源数据` subfolders including `06_广告数据下载/`, the five `07_产品资料` subfolders, and `06_SKILL分析报告/广告表现汇报优化日志/`; leave unknown product fields blank.
-2. **CHECK** — read-only inspection. Report Products Root candidates, Product Root identity evidence, missing or extra paths, including missing `05_分析源数据/06_广告数据下载/` or `广告表现汇报优化日志/`, misplaced-looking files, `SHARED-DATA-CANDIDATE` files, duplicate names, and possible historical files. A legacy Product Root missing this new directory is a reported compatibility gap, not a destructive error. Do not modify anything.
-3. **ORGANIZE** — scan an existing Products Root or Product Root and produce a migration plan. Include the current tree, target tree, proposed new folders, every planned move or rename, uncertain classifications, shared-data candidates, and collision/overwrite risks. If the user explicitly requests automatic structure creation, create missing standard directories, including `05_分析源数据/06_广告数据下载/` and `广告表现汇报优化日志/`, for a confirmed Product Root. Do not modify, overwrite, delete, or casually rename an existing raw advertising file; do not move an uncertain historical file. Moving a file into either destination requires reliable evidence of its raw-advertising or stage-6 operational-log purpose.
-4. **MIGRATE** — apply a reviewed or explicitly requested plan after a fresh scan. Create missing `05_分析源数据/06_广告数据下载/` and operational-log directories. Move a historical file into the raw-advertising directory only when it is reliably an original advertising download/export; move a file into the operational-log directory only when its stage-6 log purpose is reliable. Check the destination and do not overwrite or risk data loss. If its purpose is unclear, leave it in place, mark it `【需人工确认】`, and report it. Never copy Shared Data into a Product Root.
+1. **CREATE** — create a requested Products Root Shared Data skeleton or a Product Directory V1 inside one of the three product areas. For a Product Root, create the standard 01–07 structure, the six `05_分析源数据` subfolders including `06_广告数据下载/`, the five `07_产品资料` subfolders, and `06_SKILL分析报告/广告表现汇报优化日志/`; leave unknown product fields blank.
+2. **CHECK** — read-only inspection. Search the three product areas under `E:\【所有产品目录专用】\`, report each Product Root's identity and current area (`03_已上架产品`, `02_新品待开发`, or `00_OtherSPro`), then report missing or extra paths, including missing `05_分析源数据/06_广告数据下载/` or `广告表现汇报优化日志/`, misplaced-looking files, `SHARED-DATA-CANDIDATE` files, duplicate names, and possible historical files. A legacy Product Root missing this new directory is a reported compatibility gap, not a destructive error. Do not modify anything.
+3. **ORGANIZE** — scan an existing Product Root in one of the three areas and produce a migration plan. Include the current area, current tree, target tree, proposed new folders, every planned move or rename, uncertain classifications, shared-data candidates, and collision/overwrite risks. If the user explicitly requests automatic structure creation, create missing standard directories, including `05_分析源数据/06_广告数据下载/` and `广告表现汇报优化日志/`, for a confirmed Product Root. Preserve its current area unless the user explicitly requests a category move; do not modify, overwrite, delete, or casually rename an existing raw advertising file; do not move an uncertain historical file.
+4. **MIGRATE** — apply a reviewed or explicitly requested plan after a fresh scan. Create missing `05_分析源数据/06_广告数据下载/` and operational-log directories within the Product Root's current area. Move a historical file into the raw-advertising directory only when it is reliably an original advertising download/export; move a file into the operational-log directory only when its stage-6 log purpose is reliable. Do not move the Product Root between the three areas without explicit instruction or authoritative mapping. Check the destination and do not overwrite or risk data loss. If a file's purpose is unclear, leave it in place, mark it `【需人工确认】`, and report it. Never copy Shared Data into a Product Root.
 
 If the user's intent is ambiguous, prefer `CHECK` or `ORGANIZE`. Do not start a large migration merely because the directory looks old.
 
@@ -322,8 +397,8 @@ If the user's intent is ambiguous, prefer `CHECK` or `ORGANIZE`. Do not start a 
 
 Before any change:
 
-- verify the selected Product Root and `产品编号` evidence;
-- identify and verify the Products Root candidate from `00_产品公用数据/`, when Shared Data management is in scope;
+- verify the selected Product Root, its current one of three product areas, and `产品编号` evidence;
+- identify and verify the runtime Products Root and its shared-data area (`01_公共资料/`; accept an existing legacy shared-data name when explicitly supplied), when Shared Data management is in scope;
 - enumerate all files and folders recursively, including hidden items where available;
 - read lightweight text metadata when needed to determine purpose; do not alter source files;
 - distinguish human input, original evidence, formal reports, product assets, generated media, and legacy report folders or index files;
@@ -404,3 +479,7 @@ For `MIGRATE`, return:
 5. confirmation that no original evidence file was deleted or overwritten.
 
 Use precise paths and distinguish facts from classification judgments. Do not report a guessed business fact as if it came from the file structure.
+
+## 全局正式报告目录与命名规则
+
+本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。HTML 必须使用同批 CSV 回读快照渲染。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。

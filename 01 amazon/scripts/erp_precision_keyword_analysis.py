@@ -1,8 +1,8 @@
 """Shared deterministic helpers for Stage 6 keyword assets.
 
 This module consumes rows returned by ``erp_keyword_adapter``.  It never opens
-SQL, guesses column semantics, or writes Amazon data.  6-0-1 uses the precision
-selector; 6-0-2 may reuse the candidate helper for review-gated phrase
+SQL, guesses column semantics, or writes Amazon data.  6-0-2 uses the precision
+selector; 6-0-3 may reuse the candidate helper for review-gated phrase
 candidates.  A token overlap alone is not permission to launch advertising.
 """
 from __future__ import annotations

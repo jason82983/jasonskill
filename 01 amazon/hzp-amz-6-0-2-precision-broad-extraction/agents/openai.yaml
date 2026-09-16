@@ -1,7 +1,0 @@
-interface:
-  display_name: "HZP Amazon 6-0-2｜精准泛词提取"
-  short_description: "从6-0-1 AI精准词提取最小精准泛词"
-  default_prompt: "Use $hzp-amz-6-0-2-precision-broad-extraction to read the current product 6-0-1 AI precision CSV, merge equivalent purchase intents, sum known search volume once, and write the three-column broad-seed CSV without executing ad writes."
-
-policy:
-  allow_implicit_invocation: true

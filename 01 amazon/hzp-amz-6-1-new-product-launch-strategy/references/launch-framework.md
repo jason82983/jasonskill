@@ -1,3 +1,5 @@
+> **Legacy strategic reference:** 6-0-5 is the sole PLAN authority and 6-1 only applies its latest approved plan. This file may retain historical planning examples; those examples do not authorize 6-1 to choose or expand Intent, Target, lifecycle, Launch Goal, or budget strategy. Follow `approved-battle-plan.md` and `execution-reconciliation.md` for current behavior.
+
 # 6-1 运行框架与证据规则
 
 ## 1. 产品与报告选择
@@ -5,8 +7,8 @@
 - 先由用户提供或当前会话确认 Products Root 和产品代码；在该根目录中定位唯一 Product Root。
 - 读取 `01_产品档案.md`，确认产品代码、产品名称、站点和当前研究对象。身份冲突必须停止。运行上下文必须分开记录 `own_asin`（自有 ASIN）和 `benchmark_asin`（对标 ASIN）。
 - `04_产品推广思路.md` 是人工输入，不是自动正确策略。空缺时标记 `[推广思路待确认]`。
-- 版本化 HTML 只按 `Product Code + Skill 编号` 匹配；最大 V 优先，同 V 按文件名中的 `YYYYMMDD_HHMMSS` 最新。不得按 filesystem 时间、目录顺序或 first found 选择。
-- 排除 `index.html`、Draft、Preview、Test、Temp、Demo、Debug、failure、incomplete、invalid、deprecated 等文件。最新有效性不确定时输出 `[上游报告有效性无法确认]`，不要静默回退旧版。
+- 版本化 HTML 通过共享 Latest Valid Resolver 限定当前 Product Root、Product Code、Skill ID、Report Identity、Schema/状态和完整性；先筛选有效报告，再按 metadata `Generated_At` 选最新。只有历史报告无 metadata 时才回退文件名 `YYYYMMDD_HHMMSS`。V 仍作为报告版本标签显示，但不覆盖真实生成时间。不得按 filesystem 时间、目录顺序或 first found 选择。
+- 排除 `index.html`、Draft、Preview、Test、Temp、Demo、Debug、failure、incomplete、invalid、deprecated 等文件以及广告运行日志目录。最新候选无效时回退下一个有效版本并记录 `LATEST_INVALID_FALLBACK_USED`；无有效版本返回 `NO_VALID_UPSTREAM_REPORT`。共享规则见 `../../references/stage6-artifact-contract.md`。
 
 身份规则：从 Amazon 产品店铺映射表解析并验证 `own_asin`、Store、Marketplace、SKU；`benchmark_asin` 仅用于市场研究、Cerebro、Niche、页面对标、关键词挖掘和 Product Targeting 候选。禁止使用 `benchmark_asin` 查询 SellerSpace 商品、库存、广告、订单、Listing 或经营数据；禁止用一个泛化 `asin` 字段同时承载两种身份。
 
@@ -184,7 +186,7 @@ Price/Coupon 只能作为明确实验变量，说明目的、窗口、经济影�
 
 7天是常见观察窗口，不是固定阈值。可按数据量缩短或延长：Day 1–2看广告资格和曝光，Day 3–4看Search Term质量、CTR和初步CVR，Day 5–7看重复成交词、无效流量、Campaign/Match Type差异和自然增长信号。不因单日波动频繁改广告。
 
-6-1只交接初始假设、结构、目标、数据需求、成功/失败信号和人工批准边界；Search Term生命周期、实际Bid调整、Negative、预算变更和运行后诊断交给6-3。6-1不能把未经真实运行证明的词写成核心成交词。
+6-1只交接初始假设、结构、目标、数据需求、成功/失败信号和人工批准边界；Search Term生命周期、实际Bid调整、Negative与预算变更由6-3决策、经人工批准后交6-4执行；运行后诊断由6-3负责。6-1不能把未经真实运行证明的词写成核心成交词。
 
 ## 14. 广告原始数据归档与降级
 

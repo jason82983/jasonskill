@@ -138,3 +138,7 @@ metadata:
 禁止没有真实样品证据就完成正式评审；禁止 AI 视觉观察冒充测试、AI 推断冒充人工体验、图片判断冒充材料确认、供应商描述冒充测试结果；禁止重新完整执行前序 Skills、重新设计产品、把局部问题自动升级为方案失败、把方案问题简单推给工厂、无限机械重打、把未知写成失败、把待验证写成已通过、编造成本/工程/IP/合规/供应链事实、直接批准量产、修改历史报告/人工资料/原始样品证据或自行维护 `index.html`。
 
 详细字段见 [references/sample-review-framework.md](references/sample-review-framework.md) 和 [references/handoff-schema.md](references/handoff-schema.md)；报告结构见 [templates/report-outline.md](templates/report-outline.md)。
+
+## 全局正式报告目录与命名规则
+
+本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。HTML 必须使用同批 CSV 回读快照渲染。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。

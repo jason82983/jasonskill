@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +14,7 @@ import sys
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.modules[spec.name] = provider
 spec.loader.exec_module(provider)
+import erp_keyword_adapter
 
 
 def test_provider_raw_keys_are_mapped_without_core_provider_names():
@@ -34,6 +36,18 @@ def test_capability_missing_is_explicit_and_never_guessed():
     result = provider.normalize_capabilities({"query_ads": "supported", "apply_change_plan": "not_supported"}, ["query_ads", "search_terms", "apply_change_plan"])
     assert result == {"query_ads": provider.SUPPORTED, "search_terms": provider.CAPABILITY_NOT_AVAILABLE, "apply_change_plan": provider.NOT_SUPPORTED}
     assert provider.normalize_capabilities({"query_ads": "mystery"}, ["query_ads"])["query_ads"] == provider.CAPABILITY_NOT_AVAILABLE
+
+
+def test_erp_read_query_includes_documented_asin_quantity_without_connecting():
+    query = erp_keyword_adapter.ERPKeywordAdapter._query()
+    assert "[AsinQuantity]" in query
+    assert "[ProId] = ?" in query
+    assert erp_keyword_adapter.DOCUMENTED_FIELDS["AsinQuantity"].startswith("竞争产品数")
+    with tempfile.TemporaryDirectory() as directory:
+        schema = Path(directory) / erp_keyword_adapter.DEFAULT_SCHEMA_NAME
+        schema.write_text("`AsinQuantity` is the competing product count.\n", encoding="utf-8")
+        definitions = erp_keyword_adapter.load_field_definitions(directory)
+        assert definitions["fields"]["AsinQuantity"]["status"] == "DOCUMENTED"
 
 
 def test_metric_provenance_prevents_semantic_conflation():

@@ -1,0 +1,5 @@
+# HTML report contract
+
+Reports are UTF-8, static and directly parseable. Layer 1 is Raw Amazon Evidence with source and retrieval time. Layer 2 is an explicitly labelled AI Semantic Interpretation. Missing modules remain visible with status markers. Reports live in `06_SKILL分析报告/5-0-1_产品线上信息获取/` and use `5-0-1_产品线上信息获取_{timestamp}.html`. 5-0-1 reports are formal reports; they are not advertising logs.
+
+Layer 0 is `Retrieval Coverage & Data Quality`. It contains a dashboard (required/retrieved/partial/not present/failed/blocked/not checked/overall) and a matrix with `section_name`, discovery status, attempted flag, retrieval status, evidence count, source, retrieval time, failure reason, retry count and notes. `NOT_PRESENT` is allowed only after that module was checked and no Amazon evidence was found; an unattempted module remains `NOT_CHECKED` and forces `INCOMPLETE_EXECUTION`. Parsed evidence lower than discovered evidence is `PARTIAL`. Image and A+ counts are tracked separately. `6-0-2` must consume the overall status and matrix before interpreting product evidence.

@@ -1,72 +1,31 @@
-# 6-2 正式 HTML 报告结构
+# 广告运行数据报告
 
-按以下顺序生成中文 HTML，图表只使用真实数据：
+> 本报告为CSV事实数据的人类阅读快照，不作经营判断或优化建议。
 
-1. 产品身份 +《产品运营总览》
-2. 《输入版本追溯》
-3. 数据范围与完整性
-4. 当前产品阶段
-5. 《报告参数》
-6. 《今天/这段时间怎么样？》
-7. 《要不要处理？》
-8. 《关键数据》
-9. 《走势》
-10. 《订单从哪里来？》
-11. 《跟上一周期比怎么样？》
-12. 《现在最值得做的3件事》
-13. 《这次不要动什么》
-14. 《下一步怎么做》
-15. 《流量健康检查》
-16. 《转化健康检查》
-17. 《销量结构》
-18. 《广告整体影响》
-19. 《自然排名健康》
-20. 《价格与Offer状态》
-21. 《Review风险趋势》
-22. 《库存健康检查》
-23. 《竞争变化》
-24. 《运营异常清单》
-25. 《运营变化根因判断》
-26. 《异常—责任Skill路由》
-27. 《运营优先事项》
-28. 《运营动作清单》
-29. 《反方检查》
-30. 最终运营状态
-31. 《7-1输入交接包》
-32. 数据与证据局限
-33. 《名词术语解释》
+## Executive Data Summary
 
-## 展示规则
+显示Product Code、Marketplace、实际Source Range/Grain、稳定截止日、Query Time、Run ID，以及Spend、Sales、Orders、Impressions、Clicks、CTR、CPC、CVR、ACoS、ROAS的实际值。分母为零/缺失时显示NULL。
 
-- 首页第一屏显示产品代码+产品中文名、Marketplace、窗口、阶段、整体状态、销量/流量/转化/广告/自然排名/Review/库存状态、最大异常/机会/风险、今日动作和人工介入。
-- 每张表都显示数据日期/窗口、来源和证据标签；原始值与推算值分开。
-- 量化数据可用 JS 图表辅助理解，表格保留精确值；缺数据显示 `[数据不足，未生成该图表]`，不补日期、不插值、不制造趋势。
-- 不生成综合健康分、运营得分或 AI 信心分。最终状态只能使用 SKILL.md 规定的五种状态。
-- HTML 文件名固定为 `6-2_[产品编号]_产品经营监控与诊断_[周期标识]_Vx_YYYYMMDD_HHMMSS.html`；历史不带周期标识的文件兼容，成功后由 0-2 负责索引。
-- 《报告参数》必须显示 Product_Code、Var_Code、ASIN、Report Mode、当前起止日期、Days、Comparison Mode、对比起止日期、同比参考日期（如有）、Generated At 和 Today Included。
-- KPI Cards 显示 Current、环比、同比（启用时）及一句解释；CVR/ACoS 优先显示百分点变化。
-- 趋势图、对比柱状图、组成圆环图只在真实数据满足条件时生成；否则显示 `[数据不足，未生成该图表]`。
+## Campaign Data
 
+展示同Run Campaign事实、Status、Budget和Provider实际返回的广告指标。共享Campaign只出现其源事实粒度，不按Intent复制。
 
-## 增量输出要求
+## Intent Data
 
-正式报告增加：
+按经Target/Battle Unit/605 Plan确认的Intent显示聚合事实；包含UNMAPPED bucket，不做意图价值评价。
 
-- 《今日产品运营结论》
-- 《当前增长阶段》
-- 《放量资格判断》
-- 《是否过度依赖广告》
-- 《是否过度依赖Coupon》
-- 《核心关键词资产形成情况》
-- 《自然增长是否形成》
-- 《下一步最重要动作》
-- 《运行日志证据》（只列实际读取的日志）
-### Portfolio 监控字段（新增）
+## Target Data
 
-首页身份卡、广告整体影响、销量结构、异常清单和 7-1 交接显示 Portfolio Name/ID/Status；图表和表格分开展示 Portfolio Ad Sales 与 Product Total Sales，并在异常时显示 `Portfolio Identity Anomaly`。
+展示真实Target ID/Type/Value、Bid、Status、父级和运行指标。
 
-## 周期与图表显示
+## Search Term Data
 
-报告顶部必须明确显示：报告类型（最近 3/7/14/30 天、本周、上周或自定义）、当前报告周期 `YYYY-MM-DD ～ YYYY-MM-DD`、完整自然日数量、数据截止日期、是否包含今天，以及对比方式和实际对比周期。
+展示消费者实际Search Term及其真实Target ID/匹配方式和源指标。Target和Search Term保留为不同层级。
 
-LEVEL 1 首页保留 3～6 张最重要的真实图表：每日订单/销售额走势、广告订单与自然订单结构、当前与环比/同比对比等。每张图必须有中文标题、说明句、单位、日期范围、图例和 Tooltip；没有真实时间序列不画趋势图。
+## Data Coverage
+
+列出日期范围、Source Grain、四层记录数、Mapped/UNMAPPED数量、数据质量Issue和Today Partial状态。
+
+## Data Source / Lineage
+
+列出实际只读Provider、实体、已确认字段映射、Query Time、Current Product身份、6-1身份清单、605计划Run、6-2 Run ID、来源窗口、Attribution Refresh Days或UNRESOLVED。

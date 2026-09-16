@@ -1,0 +1,3 @@
+display_name: "HZP Amazon 5-0-1｜产品线上信息获取"
+description: "根据产品编码解析当前产品身份，实际读取 Amazon 当前商品页，分层保存原始线上证据与 AI 语义画像，并生成正式 HTML。"
+default_prompt: "运行 5-0-1，输入仅为 Product Code；先解析官方产品档案中的 Marketplace 与 Current/Child ASIN，再通过 Amazon 读取线上信息，校验身份并生成正式报告。"

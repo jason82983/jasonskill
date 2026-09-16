@@ -1,3 +1,0 @@
-display_name: "HZP Amazon 6-0-3｜AI精准词同步ERP"
-short_description: "按自动编号将6-0-1 AI精准词安全追加到ERP Tags"
-default_prompt: "使用 $hzp-amz-6-0-3-ai-precision-keyword-erp-sync 执行或预检指定产品的 6-0-1 AI 精准词同步。"

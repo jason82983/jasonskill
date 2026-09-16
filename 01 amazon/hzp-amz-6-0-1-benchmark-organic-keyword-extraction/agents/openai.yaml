@@ -1,0 +1,6 @@
+interface:
+  display_name: "HZP Amazon 6-0-1｜对标自然排名关键词提取"
+  short_description: "提取对标自然排名明细、关键词母池、逐ASIN原始表和汇总表"
+  default_prompt: "Use $hzp-amz-6-0-1-benchmark-organic-keyword-extraction to extract all qualifying organic-rank keywords for the specified Benchmark ASIN from the read-only ERP source."
+policy:
+  allow_implicit_invocation: true

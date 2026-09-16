@@ -39,7 +39,7 @@ variant_status, identity_status, conflicts
 
 - `Own ASIN`、`Benchmark ASIN`、`Product Target ASIN` 永远分开；Benchmark/Product Target 不能作为 Advertised Product 或 SellerSpace 自有查询身份。
 - “产品对应变体”表的 `Var_Code` 不能自动改名。只有可靠的 `Var_Code → Child ASIN → Mapped_SKUs[]` 关系才能生成变体广告；关系缺失时标记 `【变体广告身份映射不完整】`、停止写入。
-- 6-1 有变体时使用 `[Product_Code].[Var_Code].[AdType]-[Role]-[Target/Match]-[Sequence]`；无变体时保留 `[Product_Code].[AdType]-[Role]-[Target/Match]-[Sequence]`。
+- 6-1 当前命名标准为 `[Product_Code].[Var_Code]-[AdType]-[Role]-[Target/Match]-[Sequence]`；无变体时省略 Var_Code，使用 `[Product_Code]-[AdType]-[Role]-[Target/Match]-[Sequence]`。旧的点分隔变体名称保持可解析的历史兼容状态，不自动重命名。
 - 6-2 扩词/竞品 Product Target 和 6-2 经营监控都沿 `Product_NewCode → Product_Code → Portfolio → Var_Code → Campaign` 层级继承，不能跨变体或跨组合静默聚合。
 
 ## 统一冲突状态与写入闸门

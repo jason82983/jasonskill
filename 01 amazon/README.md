@@ -5,12 +5,14 @@
 ```text
 产品文件结构 → 产品分析 → 细分市场分析 → 人工判断与 AI 同步 → 产品机会定义
 0-1              2-1        2-2             2-3                 3-1
-页面与推广 → 5-1 → 5-2 → 5-3 → 5-4 → 6-1 → 6-2（经营监控） → 6-0-1（精准关键词识别） → 6-0-2（精准泛词提取） → 6-3（广告诊断）
-　　　　　　　　　　　　　　　　　　　　　　　　　　　　　↘ 6-0-3（AI精准词同步 ERP，仅受限写入）
+  页面与推广 → 5-1 → 5-2 → 5-3 → 5-4 → 6-0-1（对标自然排名关键词） → 6-0-2（精准关键词识别） → 6-0-3（当前产品 Intent Tree） → 6-0-6（对标自然占领 Reality Evidence，待6-0-5接入） → 6-0-5（新品作战规划｜PLAN） → 人工审批 → 6-1（新品广告初始架构｜BUILD） → 6-2（广告运行事实｜DATA） → 6-3（广告经营 AI 决策｜DECIDE，不写广告） → 人工批准 → 6-4（获批日常优化动作｜APPLY） → 下一轮 6-2
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　↘ 6-0-4（AI精准词同步 ERP，仅受限写入）
 报告型 Skill 生成正式 HTML 后，由 0-2 统一更新报告索引
 ```
 
 每个 Skill 的详细使用说明，见对应目录中的 `README.md`；本文件只说明 Amazon 行业的基本分工和入口。
+
+Stage 6 正式报告的最新有效输入选择、运行时间戳、不覆盖与输入血缘，统一遵守 [共享资产契约](references/stage6-artifact-contract.md)。
 
 ## 公共产品身份接口
 
@@ -35,17 +37,22 @@
 | 3-3 | `hzp-amz-3-3-product-plan-review` | 评审产品方案是否具备打样验证条件 | 进入 4-1 |
 | 4-1 | `hzp-amz-4-1-sample-review` | 基于真实样品证据评审样品并决定下一步 | 进入 4-2 |
 | 4-2 | `hzp-amz-4-2-preproduction-check` | 核查量产冻结、供应链、质量与合规条件 | 进入页面阶段 |
+| 5-0-1 | `hzp-amz-5-0-1-product-online-information-retrieval` | 根据产品编码获取当前 Amazon 线上商品证据并生成正式 HTML | 供 6-0-2 使用 |
 | 5-1 | `hzp-amz-5-1-listing-page-strategy` | 制定页面销售战略并交接给文案和视觉阶段 | 进入 5-2 |
 | 5-2 | `hzp-amz-5-2-listing-copywriting` | 生成有证据约束的 Amazon US Listing 文案 | 进入 5-3/5-4 |
 | 5-3 | `hzp-amz-5-3-image-video-planning` | 规划 Amazon 图片、A+ 与视频并守住产品真实性 | 进入 5-4 |
 | 5-4 | `hzp-amz-5-4-page-audit-optimization` | 审核页面策略、文案、视觉和真实成品并输出修改优先级 | 进入 6-1 |
 | 5-5 | hzp-amz-5-5-live-asin-page-audit | 审计真实线上 ASIN 页面与策略执行，诊断根因并路由优化 | 进入 6-1/按需回路 |
-| 6-1 | `hzp-amz-6-1-new-product-launch-strategy` | 设计新品首阶段推广、广告验证、预算和继续/停止规则 | 进入 6-2 |
-| 6-2 | `hzp-amz-6-2-product-operations-monitoring` | 监控产品经营健康、诊断根因并路由问题 | 广告问题进入 6-3；库存/市场等进入对应阶段 |
-| 6-0-1 | `hzp-amz-6-0-1-ai-precision-keyword-identification` | 识别 ERP 人工/AI 精准词并生成双轨 CSV 资产 | 精准词资产进入 6-0-2/6-3 |
-| 6-0-2 | `hzp-amz-6-0-2-precision-broad-extraction` | 从 6-0-1 精准词提取精准泛词并合并搜索量 | 精准泛词进入 6-3 |
-| 6-0-3 | `hzp-amz-6-0-3-ai-precision-keyword-erp-sync` | 按 6-0-1 自动编号将 AI 精准词受限追加到 ERP `PickPwK.Tags` | 仅预检后受限同步；结果回到 6-0-1/6-3 |
-| 6-3 | `hzp-amz-6-3-advertising-diagnosis-optimization` | 诊断并优化真实广告，执行获批广告变更 | 优化结果回到 6-2/6-0-1 |
+| 6-0-1 | `hzp-amz-6-0-1-benchmark-organic-keyword-extraction` | 提取对标 ASIN 自然排名与市场容量关键词原始 CSV | 作为 Benchmark Organic Keyword 原始证据，由上层按需消费 |
+| 6-0-2 | `hzp-amz-6-0-2-ai-precision-keyword-identification` | 识别 ERP 人工/AI 精准词并生成双轨 CSV 资产 | 精准词资产进入 6-0-3 |
+| 6-0-3 | `hzp-amz-6-0-3-precision-broad-extraction` | 从 6-0-2 高度精准词构建 Search Intent 层级并递归汇总搜索量 | 新品作战规划进入 6-0-5 |
+| 6-0-4 | `hzp-amz-6-0-4-ai-precision-keyword-erp-sync` | 按 6-0-2 自动编号将 AI 精准词受限追加到 ERP `PickPwK.Tags` | 仅预检后受限同步；结果回到 6-0-2 |
+| 6-0-5 | `hzp-amz-6-0-5-new-product-advertising-battle-plan` | 读取同次有效 6-0-3 资产，规划首攻市场、全量关键词生命周期及待审批广告架构；只 PLAN | 人工审批后交 6-1 |
+| 6-0-6 | `hzp-amz-6-0-6-benchmark-intent-market-occupancy-analysis` | 将 601 Benchmark 自然排名投影到 603 Intent Tree，计算单对标自然占领深度与多对标共识；仅提供 Reality Evidence，不代表销量份额或广告决策 | 待 6-0-5 接入为辅助证据 |
+| 6-1 | `hzp-amz-6-1-new-product-launch-strategy` | 消费最新已批准 6-0-5 作战表，生成 Desired State，与实时广告状态对账；负责新品初始广告架构 BUILD 与 Read-back，不消费 6-3 日常决策 | 进入 6-2 |
+| 6-2 | `hzp-amz-6-2-product-operations-monitoring` | DATA ONLY：采集并打包 Campaign、Intent、Target、Search Term 同Run广告运行事实；不诊断或建议 | 6-3读取完整有效Run Package后独立决策 |
+| 6-3 | `hzp-amz-6-3-advertising-diagnosis-optimization` | DECIDE：读取完整 6-2 事实包和批准的 6-0-5 作战目的，对 Intent/Campaign/Target/Search Term 逐项形成证据化决策包；不写 Amazon Ads | 人工批准后由 6-4 执行 |
+| 6-4 | `hzp-amz-6-4-advertising-optimization-action-executor` | APPLY：只执行 6-3 已批准日常动作；先对比实时状态并检查精确 Prepare 预览，执行后按 Amazon ID 回读并留存审计包 | 执行后进入下一轮 6-2 |
 | 7-1 | `hzp-amz-7-1-replenishment-forecast` | 基于真实库存、销售速度和完整 Lead Time 形成补货预测 | 进入 7-2 |
 | 7-2 | hzp-amz-7-2-inventory-risk-management | 持续监控库存风险、补货偏差、在途、老化和资金占用 | 运营持续监控 |
 
@@ -104,25 +111,20 @@ Skill 会根据标准 Product Root 结构自动查找资料。具体数据位置
 - [4-1 打样评审](<hzp-amz-4-1-sample-review/README.md>)
 - [4-2 量产前检查](<hzp-amz-4-2-preproduction-check/README.md>)
 - [5-1 页面策略](<hzp-amz-5-1-listing-page-strategy/README.md>)
+- [5-0-1 产品线上信息获取](<hzp-amz-5-0-1-product-online-information-retrieval/README.md>)
 - [5-2 Listing文案](<hzp-amz-5-2-listing-copywriting/README.md>)
 - [5-3 图片视频策划](<hzp-amz-5-3-image-video-planning/README.md>)
 - [5-4 页面审核优化](<hzp-amz-5-4-page-audit-optimization/README.md>)
 - [5-5 线上 ASIN 页面审计与优化](<hzp-amz-5-5-live-asin-page-audit/README.md>)
-- [6-1 新品推广方案](<hzp-amz-6-1-new-product-launch-strategy/README.md>)
-- [6-2 产品经营监控与诊断](<hzp-amz-6-2-product-operations-monitoring/README.md>)
-- [6-0-1 精准关键词识别](<hzp-amz-6-0-1-ai-precision-keyword-identification/README.md>)
-- [6-0-2 精准泛词提取](<hzp-amz-6-0-2-precision-broad-extraction/README.md>)
-- [6-0-3 AI精准词同步 ERP](<hzp-amz-6-0-3-ai-precision-keyword-erp-sync/README.md>)
-- [6-3 广告诊断优化](<hzp-amz-6-3-advertising-diagnosis-optimization/README.md>)
+- [6-0-1 对标自然排名关键词提取](<hzp-amz-6-0-1-benchmark-organic-keyword-extraction/README.md>)
+- [6-0-2 精准关键词识别](<hzp-amz-6-0-2-ai-precision-keyword-identification/README.md>)
+- [6-0-3 精准泛词提取](<hzp-amz-6-0-3-precision-broad-extraction/README.md>)
+- [6-0-4 AI精准词同步 ERP](<hzp-amz-6-0-4-ai-precision-keyword-erp-sync/README.md>)
+- [6-0-5 新品广告作战规划](<hzp-amz-6-0-5-new-product-advertising-battle-plan/README.md>)
+- [6-0-6 对标意图市场占领分析](<hzp-amz-6-0-6-benchmark-intent-market-occupancy-analysis/README.md>)
+  - [6-1 新品推广方案](<hzp-amz-6-1-new-product-launch-strategy/README.md>)
+  - [6-2 广告运行事实数据层](<hzp-amz-6-2-product-operations-monitoring/README.md>)
+  - [6-3 广告诊断优化](<hzp-amz-6-3-advertising-diagnosis-optimization/README.md>)
+  - [6-4 广告优化动作执行](<hzp-amz-6-4-advertising-optimization-action-executor/README.md>)
 - [7-1 补货预测](<hzp-amz-7-1-replenishment-forecast/README.md>)
 - [7-2 库存风险管理](<hzp-amz-7-2-inventory-risk-management/README.md>)
-
-
-
-
-
-
-
-
-
-

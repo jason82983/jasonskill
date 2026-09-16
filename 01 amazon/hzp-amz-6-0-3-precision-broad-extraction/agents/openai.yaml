@@ -1,0 +1,7 @@
+interface:
+  display_name: "HZP Amazon 6-0-3｜精准泛词提取"
+  short_description: "从6-0-2 AI精准词提取最小精准泛词"
+  default_prompt: "Use $hzp-amz-6-0-3-precision-broad-extraction. Read only the 6-0-2 HIGH_PRECISION_KEYWORDS asset (AI高度精准词.csv), validate that every row is 高度精准, semantically map every Id-preserved keyword to one canonical primary intent and at most one direct parent, preserving independently operable purchase dimensions and avoiding fragmentation. Pass through 竞争产品数 and 供需比 unchanged as keyword-level evidence. Produce the nine-column 词对应的精准泛词.csv and nine-column 精准泛词汇总.csv. The summary intent metrics are 平均竞品数 and 意图机会比; the program calculates levels, direct and recursive volumes, unique-source-record subtree average competitor count and aggregate-volume/average-count ratio; never sum competitor counts, average keyword ratios, use weighted averages, or average child averages. Run Coverage, pass-through, subtree metric, parent existence, cycle, root consistency and CSV readback integrity checks; do not rejudge precision or execute ad/ERP writes."
+
+policy:
+  allow_implicit_invocation: true

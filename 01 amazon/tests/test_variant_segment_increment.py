@@ -10,7 +10,7 @@ def test_only_variant_segment_is_added():
     old = "B8.SP-COR-EXA-01"
     new = resolver.format_campaign_name("B8", "SP", "COR", "EXA", 1, "M")
     assert new == "B8.M.SP-COR-EXA-01"
-    assert new.replace(".M", "", 1) == old
+    assert new == "B8.M.SP-COR-EXA-01"
     parsed = resolver.parse_campaign_name(new)
     assert parsed["product_code"] == "B8"
     assert parsed["var_code"] == "M"
