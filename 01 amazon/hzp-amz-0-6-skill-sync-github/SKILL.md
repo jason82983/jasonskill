@@ -21,7 +21,7 @@ metadata:
 
 1. 扫描源目录和仓库目录，按技能目录名建立一一对应关系。
 2. 先做差异预检：缺失目录、文件差异、删除风险、未跟踪文件、当前分支和远端状态。
-3. 将源技能内容同步到仓库对应目录；只同步 `SKILL.md`、`agents/`、`scripts/`、`references/`、`templates/`、`assets/` 等技能文件，不同步 `__pycache__`、`.pyc`、临时输出和运行报告。
+3. 将源技能内容同步到仓库对应目录；同步每个技能的完整说明与资源，必须包含 `SKILL.md` 和 `README.md`（若源目录存在），以及 `agents/`、`scripts/`、`references/`、`templates/`、`assets/` 等文件；以 `.codex` 内容覆盖 JasonSkill 中旧的 README 和其它技能文件。差异比对后不得视为完成。不同步 `__pycache__`、`.pyc`、临时输出和运行报告。
 4. 运行 Skill 格式校验，并检查 Git diff；源目录不存在的仓库 `hzp-amz-*` 技能必须删除，并在提交报告中列出删除清单。
 5. 输入 `1` 时，在核对 diff 后提交并推送 `origin`。提交信息说明同步范围；推送失败必须保留本地提交并报告原因。空输入不执行同步、提交或推送。
 
@@ -35,6 +35,8 @@ metadata:
 ## 推荐脚本
 
 仓库中的 `scripts/sync_hzp_amz_skills.py` 提供预检和镜像；默认只同步并显示 diff，使用 `--push` 才执行提交和推送。
+
+
 
 
 
