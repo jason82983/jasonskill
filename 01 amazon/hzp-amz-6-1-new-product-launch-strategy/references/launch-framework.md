@@ -6,7 +6,8 @@
 
 - 先由用户提供或当前会话确认 Products Root 和产品代码；在该根目录中定位唯一 Product Root。
 - 读取 `01_产品档案.md`，确认产品代码、产品名称、站点和当前研究对象。身份冲突必须停止。运行上下文必须分开记录 `own_asin`（自有 ASIN）和 `benchmark_asin`（对标 ASIN）。
-- `04_产品推广思路.md` 是人工输入，不是自动正确策略。空缺时标记 `[推广思路待确认]`。
+- `04_产品推广思路.md` 是人工输入，不是自动正确策略。除战略内容外，必须明确当前广告 Scope：`ProductCode`、`CampaignTag`、`CampaignPrefix`（例如 `B2`、`M`、`B2.M.`）。6-1 必须读取并核对这三个值；空缺或冲突时标记 `[推广思路待确认]`，不得从 Variant、旧广告或文件名猜测。
+- `CampaignPrefix` 只是广告识别范围，不代表 Variant。6-1 只统计严格以该前缀开头的 Campaign；其它前缀广告不参与初始创建判断、对账或修改。前缀范围内无 Campaign 才是 `BUILD`，有 Campaign 才是 `RECONCILE`。
 - 版本化 HTML 通过共享 Latest Valid Resolver 限定当前 Product Root、Product Code、Skill ID、Report Identity、Schema/状态和完整性；先筛选有效报告，再按 metadata `Generated_At` 选最新。只有历史报告无 metadata 时才回退文件名 `YYYYMMDD_HHMMSS`。V 仍作为报告版本标签显示，但不覆盖真实生成时间。不得按 filesystem 时间、目录顺序或 first found 选择。
 - 排除 `index.html`、Draft、Preview、Test、Temp、Demo、Debug、failure、incomplete、invalid、deprecated 等文件以及广告运行日志目录。最新候选无效时回退下一个有效版本并记录 `LATEST_INVALID_FALLBACK_USED`；无有效版本返回 `NO_VALID_UPSTREAM_REPORT`。共享规则见 `../../references/stage6-artifact-contract.md`。
 

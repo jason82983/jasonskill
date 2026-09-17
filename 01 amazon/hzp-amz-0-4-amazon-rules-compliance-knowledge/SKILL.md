@@ -50,3 +50,7 @@ Products Root 必须由当前会话提供或由可靠配置确定，不依赖固
 ## 全局正式报告目录与命名规则
 
 只要本次任务针对一个确定的 Product Root 并生成正式分析报告/结构化分析结果，就保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名为 `{Skill编号}_{报表名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套文件共用时间戳。跨产品通用的知识库、提醒状态和决策登记簿属于持续维护的业务数据，不作为产品分析报告迁入报告目录。历史报告不自动搬迁或删除。
+
+## Shared AI Brain
+
+本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

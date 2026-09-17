@@ -5,6 +5,7 @@
 ## Required lineage
 
 - Product Code、Product Root、Store、Marketplace、Own ASIN、Var_Code、Mapped_SKUs[]/Advertised_SKUs[]
+- Scope 来源 `04_产品推广思路.md`、CampaignTag、CampaignPrefix、命中的前缀 Campaign 数量、排除的非前缀广告数量、BUILD/RECONCILE 判断
 - 605 Intent A / Keyword Lifecycle C / Battle Units B 文件、RUN_ID、批准 Battle Unit IDs
 - 6-1 RUN_ID、execution_id、BUILD/RECONCILE、实际状态查询时间、Provider
 - 完整 Logical ID ↔ Amazon ID、父子 ID、Actual/Desired 名称与历史名关联

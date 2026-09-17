@@ -41,3 +41,7 @@ The implementation is in `scripts/online_information_retrieval.py`. Pass a real 
 ## 全局正式报告目录与命名规则
 
 本 Skill 的正式报告保存在当前 Product Root 的 `06_SKILL分析报告/5-0-1_产品线上信息获取/`，正式文件名以 `5-0-1_` 开头并使用 `YYYYMMDD_HHMMSS` 时间戳；不建立时间子目录。历史报告不自动搬迁或删除。
+
+## Shared AI Brain
+
+本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

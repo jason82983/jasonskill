@@ -20,7 +20,7 @@ from scripts.resolve_amazon_ad_identity import (  # noqa: E402
     format_campaign_name,
     parse_campaign_name,
 )
-from scripts.campaign_scope_contract import build_campaign_scope, campaign_is_in_scope
+from scripts.campaign_scope_contract import build_campaign_scope, campaign_is_in_scope, load_product_campaign_scope
 
 
 ENTITY_ORDER = {"campaign": 0, "ad_group": 1, "advertised_product": 2, "target": 3}
@@ -323,6 +323,7 @@ def build_desired_state_from_605(
     *,
     product_code: str,
     campaign_tag: str,
+    product_root: str | Path | None = None,
     actual_entities: Iterable[Mapping[str, Any]] = (),
     sequence_registry: Mapping[str, str | int] | None = None,
     allowed_phases: Iterable[str] = ("PHASE_1",),
@@ -358,7 +359,13 @@ def build_desired_state_from_605(
         raise ValueError("TECHNICAL_EXECUTION_CONFLICT")
     ad_types = {str(item).upper() for item in supported_ad_types}
     scope = build_campaign_scope(product_code, campaign_tag)
+    if product_root is not None:
+        configured = load_product_campaign_scope(product_root)
+        if configured != scope:
+            raise ValueError("RUNTIME_SCOPE_MISMATCH")
+        scope = configured
     actual = [dict(row) for row in actual_entities]
+    actual = [row for row in actual if row.get("entity_type") != "campaign" or campaign_is_in_scope(row.get("name") or row.get("CampaignName"), scope["CampaignPrefix"])]
     actual_campaigns = {str(row.get("logical_id")): row for row in actual
                         if row.get("entity_type") == "campaign" and row.get("logical_id")}
     sequences = {str(key): str(value).zfill(2) for key, value in (sequence_registry or {}).items()}

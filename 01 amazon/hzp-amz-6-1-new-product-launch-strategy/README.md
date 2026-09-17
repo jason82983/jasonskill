@@ -18,7 +18,7 @@
 - **共享**：Intent Code 不进入 Campaign Name；只合并技术角色、Target 类型、阶段、Budget、Placement 等参数兼容的执行单元。
 - **不投**：不生成 Campaign、Ad Group 或 Target。
 
-Campaign 命名：`{ProductCode}.{CampaignTag}.{AdType}-{Role}-{TargetType}-[IntentCode]-{Seq}`，例如 `B2.M.SP-EXP-PHR-01`。运行必须显式指定 ProductCode + CampaignTag；Tag 不推断为 Variant。真实 Variant 继续经身份映射解析，和 CampaignTag 分开保存。当前仅执行已验证支持的 AdType；序号通过产品级追加身份清单稳定预留；已有 Campaign 不自动改名。
+Campaign 命名：`{ProductCode}.{CampaignTag}.{AdType}-{Role}-{TargetType}-[IntentCode]-{Seq}`，例如 `B2.M.SP-EXP-PHR-01`。运行先读取 `04_产品推广思路.md` 中的 `ProductCode`、`CampaignTag`、`CampaignPrefix`，并核对 `B2.M.` 这类前缀。前缀只作广告识别范围和 BUILD/RECONCILE 判断，不代表 Variant；真实 Variant 继续经身份映射解析，和 CampaignTag 分开保存。仅统计、匹配和判断该前缀开头的 Campaign，其他广告完全排除。当前仅执行已验证支持的 AdType；序号通过产品级追加身份清单稳定预留；已有 Campaign 不自动改名。
 
 共享设置不兼容时返回 605 修订，不静默改变控制方式或拆改计划。当前 605 B Schema 若未提供 Product Target/Category Target 的准确 Target Value，6-1 必须停止相关单元，不可猜测。
 

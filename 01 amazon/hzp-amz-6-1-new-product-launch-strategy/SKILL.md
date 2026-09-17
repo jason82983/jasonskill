@@ -17,9 +17,17 @@ metadata:
 
 ### Runtime Campaign Scope（必填）
 
-每次运行必须显式取得 `ProductCode` 与 `CampaignTag`，由 `scripts.campaign_scope_contract.build_campaign_scope()` 生成 `CampaignPrefix=ProductCode.CampaignTag.`。CampaignTag 是不推断语义的运行筛选标签；不得解释为真实 Variant。Desired Campaign Name 必须以该前缀开头。真实 Variant 仍独立来自共享产品身份解析，用于 Own ASIN/SKU/变体验证和 Logical Identity；Campaign Tag 不替代真实 Variant。
+每次运行先读取当前 Product Root 的 `04_产品推广思路.md`，其中必须明确配置 `ProductCode`、`CampaignTag` 和 `CampaignPrefix`。例如：
 
-通过 `scripts/new_product_battle_plan_contract.py::resolve_latest_approved_battle_plan(product_root, product_code)` 读取同一最新有效 `RUN_ID` 的：
+```text
+ProductCode = B2
+CampaignTag = M
+CampaignPrefix = B2.M.
+```
+
+程序必须用 `scripts.campaign_scope_contract.build_campaign_scope()` 重建并核对 `CampaignPrefix=ProductCode.CampaignTag.`：缺失、格式不合法或文件值与运行参数不一致时停止，返回 `CAMPAIGN_SCOPE_NOT_CONFIGURED` 或 `RUNTIME_SCOPE_MISMATCH`。`CampaignTag` / `CampaignPrefix` 只表示本次广告体系的识别范围，不代表 Variant，不得推断颜色、尺码、SKU 或 ASIN。真实 Variant 仍独立来自共享产品身份解析，用于 Own ASIN/SKU/变体验证和 Logical Identity。Desired Campaign Name 必须以该前缀开头。
+
+通过 `scripts/campaign_scope_contract.py::load_product_campaign_scope(product_root)` 从 `01_产品档案.md` 读取并核对 Scope，再通过 `scripts/new_product_battle_plan_contract.py::resolve_latest_approved_battle_plan(product_root, product_code)` 读取同一最新有效 `RUN_ID` 的：
 
 - A：`新品意图市场作战表.csv`
 - B：`新品关键词作战明细.csv`
@@ -78,7 +86,7 @@ Campaign Seq 从产品目录的追加式 `06_SKILL分析报告/广告表现汇�
 
 1. 核实 Product Root、`01_产品档案.md`、`04_产品推广思路.md`、映射表的 Own ASIN / Variant / SKU / Store / Marketplace / Portfolio；严格区分 Own ASIN、Benchmark ASIN 与 Product Target ASIN。只有已验证自有身份可作为 Advertised Product。
 2. 发现当前 SellerSpace 能力/字段后，逐站点实时查询当前 Campaign、Ad Group、Advertised Product、Keyword/Target、Bid、Budget、Placement、Status 和 Amazon IDs。历史 CSV 不代表 Actual State。
-3. 由 Approved 605 生成序列化 Desired State，确定运行模式：无当前实体为 `BUILD`，否则为 `RECONCILE`。Desired 中的缺失参数不能用旧报告默认值补造。
+3. 先在当前 Store / Marketplace 的实时 Campaign 清单中严格保留 `CampaignName STARTS_WITH CampaignPrefix` 的对象；非此前缀广告不统计、不匹配、不进入 Desired State，也不修改。仅当该前缀下没有任何有效 Campaign 时判定 `BUILD`；该前缀下已有 Campaign 时判定 `RECONCILE`。店铺中存在其它前缀或手工广告，不影响这一判断。再由 Approved 605 生成序列化 Desired State；Desired 中的缺失参数不能用旧报告默认值补造。
 4. 程序按 Logical ID 对首次架构生成 `CREATE / NO_CHANGE`；仅对同一已批准 605 架构中、已有实体的必要参数差异生成受限 `UPDATE`。不再把 6-3 运行期决策映射为 6-1 动作。迁移/暂停候选仅报告，不直接 Delete/Archive/Pause。
 5. 展示完整实体级差异和 Before/Desired/Action/Reason，取得用户对该精确 CREATE/UPDATE 清单的批准。605 批准本身不授权写入。
 6. 使用 SellerSpace `prepare_change_plan` 预览，逐字段核对命中对象与批准 diff；完全一致后才 `apply_change_plan`。任何变更为 `TECHNICAL_EXECUTION_CONFLICT`，需重新审批。
@@ -93,8 +101,12 @@ Campaign Seq 从产品目录的追加式 `06_SKILL分析报告/广告表现汇�
 
 不修改产品档案、原始数据或 Listing/价格/Coupon；不把 6-1 执行摘要当成 6-2/6-3 批准。6-2/6-3 只能消费已读回的真实对象与执行记录。Stage 6 日常链路固定为 `6-2 DATA → 6-3 DECIDE → 人工批准 → 6-4 APPLY → 下一轮 6-2`；新品初始广告链路固定为 `6-0-5 PLAN → 人工批准 → 6-1 BUILD`。
 
-至少识别：`CAMPAIGN_TAG_MISSING`、`CAMPAIGN_TAG_INVALID`、`CAMPAIGN_PREFIX_INVALID`、`NO_CAMPAIGN_MATCHED`、`RUNTIME_SCOPE_MISMATCH`、`SCOPE_CONTAMINATION`、`OUTSIDE_CAMPAIGN_SCOPE`，以及 `61_INPUT_NOT_FOUND`、`61_INPUT_RUN_MISMATCH`、`NO_APPROVED_BATTLE_PLAN`、`INVALID_APPROVAL_STATE`、`CONTROL_MODE_MISSING`、`INTENT_CODE_MISSING`、`BATTLE_UNIT_ID_MISSING`、`ROLE_TRANSLATION_AMBIGUOUS`、`SHARED_GROUP_INCOMPATIBLE`、`CAMPAIGN_IDENTITY_CONFLICT`、`ADGROUP_IDENTITY_CONFLICT`、`TARGET_IDENTITY_CONFLICT`、`DESIRED_STATE_INVALID`、`ACTUAL_STATE_QUERY_FAILED`、`CREATE_FAILED`、`UPDATE_FAILED`、`READBACK_FAILED`、`TECHNICAL_EXECUTION_CONFLICT`、`EXECUTION_NOT_READY`、`MIGRATION_REQUIRES_APPROVAL`。
+至少识别：`CAMPAIGN_SCOPE_NOT_CONFIGURED`、`CAMPAIGN_TAG_MISSING`、`CAMPAIGN_TAG_INVALID`、`CAMPAIGN_PREFIX_INVALID`、`NO_CAMPAIGN_MATCHED`、`RUNTIME_SCOPE_MISMATCH`、`SCOPE_CONTAMINATION`、`OUTSIDE_CAMPAIGN_SCOPE`，以及 `61_INPUT_NOT_FOUND`、`61_INPUT_RUN_MISMATCH`、`NO_APPROVED_BATTLE_PLAN`、`INVALID_APPROVAL_STATE`、`CONTROL_MODE_MISSING`、`INTENT_CODE_MISSING`、`BATTLE_UNIT_ID_MISSING`、`ROLE_TRANSLATION_AMBIGUOUS`、`SHARED_GROUP_INCOMPATIBLE`、`CAMPAIGN_IDENTITY_CONFLICT`、`ADGROUP_IDENTITY_CONFLICT`、`TARGET_IDENTITY_CONFLICT`、`DESIRED_STATE_INVALID`、`ACTUAL_STATE_QUERY_FAILED`、`CREATE_FAILED`、`UPDATE_FAILED`、`READBACK_FAILED`、`TECHNICAL_EXECUTION_CONFLICT`、`EXECUTION_NOT_READY`、`MIGRATION_REQUIRES_APPROVAL`。
 
 ## 全局正式报告目录与命名规则
 
 本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。若 HTML 由同批 CSV 生成，必须从文件名时间戳相同的 CSV 读取并生成不可变快照；禁止运行时另找“最新 CSV”。未由 CSV 构成输入的 HTML 报告遵循对应 Skill 的原有报告内容逻辑。此规则优先于本文档中旧的目录和文件名示例。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。
+
+## Shared AI Brain
+
+本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。
