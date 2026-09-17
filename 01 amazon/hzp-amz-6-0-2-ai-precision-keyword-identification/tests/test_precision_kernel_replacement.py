@@ -50,41 +50,34 @@ def test_purchase_driver_and_gift_mission_evidence_are_adaptive():
     assert high["GiftMissionFit"] == "HIGH"
     assert high["PurchaseMissionConvergence"] == "HIGH"
     assert high["PhysicalProductConvergence"] != "HIGH"
-    assert high["FinalPrecision"] == "高度精准"
-    assert broad["FinalPrecision"] == "弱精准"
-    assert relation_only["FinalPrecision"] == "精准"
+    # The local helper is validator/diagnostic only; it must never emit the
+    # formal FinalPrecision written by the injected external AI engine.
+    assert "FinalPrecision" not in high
+    assert "FinalPrecision" not in broad
+    assert "FinalPrecision" not in relation_only
 
 
-def test_golden_regression_detects_compression_and_broad_gift_overreach():
+def test_golden_regression_requires_real_brain_client():
     cases = [
         {"Keyword": "sister birthday gifts", "ExpectedPrecision": "高度精准", "CaseType": "GIFT_HIGH_MISSION_FIT"},
         {"Keyword": "friendship gifts for women", "ExpectedPrecision": "高度精准", "CaseType": "GIFT_HIGH_MISSION_FIT"},
         {"Keyword": "birthday gifts for women", "ExpectedPrecision": "弱精准", "CaseType": "GIFT_BROAD_INTENT"},
         {"Keyword": "sister", "ExpectedPrecision": "精准", "CaseType": "GIFT_RELATIONSHIP_ONLY"},
     ]
-    metrics = kernel.run_precision_brain_regression(b2_profile(), cases)
-    assert metrics["ExactPrecisionMatch"] == 4
-    assert metrics["MismatchCount"] == 0
-    assert metrics["HighPrecisionRecall"] == 1.0
-    assert metrics["GiftHighMissionFitRecall"] == 1.0
-    assert metrics["GradeCompression"] == []
+    try:
+        kernel.run_precision_brain_regression(b2_profile(), cases)
+    except RuntimeError as exc:
+        assert str(exc) == kernel.AI_PRECISION_ENGINE_UNAVAILABLE
+    else:
+        raise AssertionError("Golden regression must not invoke the local precision judge")
 
 
-def test_regression_resolves_product_driver_once_per_run(monkeypatch):
-    calls = []
-    original = kernel.build_product_purchase_driver
-
-    def counted(profile):
-        calls.append(profile)
-        return original(profile)
-
-    monkeypatch.setattr(kernel, "build_product_purchase_driver", counted)
-    kernel.run_precision_brain_regression(
-        b2_profile(),
-        [{"Keyword": "sister birthday gifts", "ExpectedPrecision": "高度精准", "CaseType": "GIFT_HIGH_MISSION_FIT"},
-         {"Keyword": "birthday gifts for women", "ExpectedPrecision": "弱精准", "CaseType": "GIFT_BROAD_INTENT"}],
-    )
-    assert len(calls) == 1
+def test_regression_does_not_resolve_local_driver_without_client():
+    with __import__("pytest").raises(RuntimeError, match=kernel.AI_PRECISION_ENGINE_UNAVAILABLE):
+        kernel.run_precision_brain_regression(
+            b2_profile(),
+            [{"Keyword": "sister birthday gifts", "ExpectedPrecision": "高度精准", "CaseType": "GIFT_HIGH_MISSION_FIT"}],
+        )
 
 
 def test_functional_driver_does_not_use_gift_mission_as_core_fit():
@@ -115,7 +108,7 @@ def test_hybrid_primary_match_is_not_penalized_by_unexpressed_secondary_driver()
     )
     assert result["AI_Classification"] == "PRECISION"
     assert result["GiftMissionFit"] == "NOT_SPECIFIED"
-    assert result["FinalPrecision"] != "弱精准"
+    assert "FinalPrecision" not in result
 
 
 def test_kernel_reference_and_agent_instruction_are_active():

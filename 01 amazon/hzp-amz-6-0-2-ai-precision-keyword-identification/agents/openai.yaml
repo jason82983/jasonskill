@@ -2,10 +2,14 @@ interface:
   display_name: "HZP Amazon 6-0-2｜AI精准关键词识别"
   short_description: "按唯一Keyword调用Precision Brain并输出可追溯的A/B/C/D/E五类资产"
   brand_color: "#2563EB"
-  default_prompt: "Use $hzp-amz-6-0-2-ai-precision-keyword-identification and execute references/precision-judgment-kernel.md. Read the shared precision-filter configuration at 01_公共资料/03_系统配置/生成精准词库的要求.txt (normalize 已精准 to 精准) before deriving B/C/D/E, then read the complete current-product text at 05_分析源数据/01_产品数据/本产品/产品识别 - 文本文案.txt and the newest exact 6-0-1 file 06_SKILL分析报告/6-0-1_对标自然排名关键词提取/data/6-0-1_所有对标自然排名关键词_YYYYMMDD_HHMMSS.csv by filename timestamp. Validate the header only; do not require RunPackage, manifest, sidecar or filesystem mtime. For the current Product Ground Truth, identify one PrimaryPurchaseDriver per Run (FUNCTIONAL, COMPATIBILITY, GIFT_EMOTIONAL, AESTHETIC_DECOR, OCCASION or HYBRID). For every canonical Keyword, reconstruct Amazon Searcher Intent, use the Driver-specific evidence (Gift Mission/Recipient/Relationship/Occasion for GIFT_EMOTIONAL), distinguish CORE FIT from CAN SERVE, check every Hard Modifier, run Decision Challenge, and judge precision once using the unchanged four-level kernel, then apply the same decision to all Benchmark × Keyword observation rows. Write A 6-0-2_精准判断所有词表, B 6-0-2_筛选后的对标精准词, C 6-0-2_去重_筛选后的对标精准词, D 6-0-2_去对标去重_筛选后的精准词, and E per-Benchmark 6-0-2_{所属产品编号}_筛选后的精准词 files. Keep source IDs unchanged and preserve the existing output schemas and validate all five asset classes, including config lineage and zero additional AI calls for B/C/D/E. Never query or write ERP/Amazon."
+  default_prompt: "Use $hzp-amz-6-0-2-ai-precision-keyword-identification for the supplied ProductCode and complete the full goal: judge every Unique Canonical Keyword from the latest valid 6-0-1 observations with the real four-level Precision Brain, reconstruct each Searcher Intent, distinguish CORE FIT from CAN SERVE, check every Hard Modifier and Decision Challenge, backfill all observations, derive A/B/C/D/E, validate coverage/schema/lineage/Golden/readback, and publish only a complete valid run. The current Codex/Agent is the only Precision AI Judge; never wait for or request a second AI, agent_judge callback, precision_brain_client, CLI, API, Gateway, or Local Judge. Python may prepare, validate, save, derive, and checkpoint only; it has no precision authority. Batch size, looping, and checkpoint/resume are internal implementation details: read 01_公共资料/03_系统配置/602_AI批次大小.txt only as PreferredBatchSize, never treat one batch as task completion, and continue until the business goal is complete. If the goal cannot be completed, report INCOMPLETE/PROGRESS or AI_PRECISION_JUDGMENT_UNAVAILABLE; never fabricate judgments or silently use local fallback. Preserve ProductProfileId and BrainVersion, use the shared precision-filter configuration at 01_公共资料/03_系统配置/生成精准词库的要求.txt (normalize 已精准 to 精准), and never query or write ERP/Amazon."
 
 policy:
   allow_implicit_invocation: true
+
+
+
+
 
 
 

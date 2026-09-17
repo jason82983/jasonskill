@@ -658,7 +658,6 @@ def load_6_0_2_input_package(product_root: str | Path, product_code: str) -> dic
         raise FileNotFoundError(f"{MISSING_INPUT}: {package.get('invalid_runs', [])}")
     input_file = package["files"]["deduplicated"]
     rows = _read_602_formal_csv(Path(input_file), INPUT_COLUMNS)
-    _validate_high_precision_rows(rows)
     return {**package, "rows": rows, "input_record_count": len(rows),
             "input_unique_keyword_count": len(rows), "deduplicated_file": input_file}
 
@@ -667,7 +666,7 @@ def _resolve_602_c_by_filename(product_root: str | Path, product_code: str) -> d
     """V3 simple handoff: select newest C asset by filename timestamp only."""
     directory = Path(product_root).resolve() / "06_SKILL分析报告" / INPUT_RUN_DIR / "data"
     candidates = []
-    for path in directory.glob("6-0-2_去重去对标后 筛选后的精准词表_*.csv"):
+    for path in [*directory.glob("6-0-2_去对标去重 高度精准词_*.csv"), *directory.glob("6-0-2_去对标去重_筛选后的精准词_*.csv")]:
         match = re.search(r"_(\d{8}_\d{6})\.csv$", path.name)
         if path.is_file() and match:
             candidates.append((match.group(1), path))
@@ -676,7 +675,6 @@ def _resolve_602_c_by_filename(product_root: str | Path, product_code: str) -> d
     stamp, path = max(candidates, key=lambda item: item[0])
     try:
         rows = _read_602_formal_csv(path, INPUT_COLUMNS)
-        _validate_high_precision_rows(rows)
     except (OSError, UnicodeError, csv.Error, ValueError) as exc:
         reason = str(exc)
         status = DUPLICATE_CANONICAL_KEYWORDS if "603_INPUT_DUPLICATE_KEYWORD" in reason else (
@@ -700,6 +698,30 @@ def _tokens(keyword: str) -> list[str]:
 
 def normalize_broad_keyword(value: Any) -> str:
     return " ".join(str(value or "").strip().lower().split())
+
+
+def get_603_status(state: Mapping[str, Any]) -> dict[str, Any]:
+    """Return pull-queue counters without assigning any semantic intent."""
+    return {key: state.get(key, 0) for key in (
+        "ProductProfileId", "BrainVersion", "Input602Timestamp", "TotalUnique",
+        "SemanticSuccess", "SemanticPending", "SemanticReviewRequired", "SemanticFailed",
+        "CurrentStage", "CheckpointPath", "PublishStatus")}
+
+
+def get_next_603_semantic_batch(state: dict[str, Any], batch_size: int = 50) -> list[dict[str, Any]]:
+    """Pull pending semantic units; successful units are never returned again."""
+    pending = [item for item in state.get("items", []) if item.get("JudgmentStatus", "PENDING_JUDGMENT") == "PENDING_JUDGMENT"]
+    return pending[:max(1, int(batch_size))]
+
+
+def save_603_semantic_batch(state: dict[str, Any], results: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+    """Save agent semantic judgments after schema/identity checks."""
+    by_id = {str(item.get("JudgmentItemId") or item.get("Id") or ""): item for item in results}
+    for item in state.get("items", []):
+        key = str(item.get("JudgmentItemId") or item.get("Id") or "")
+        if key in by_id:
+            item.update(dict(by_id[key]))
+    return get_603_status(state)
 
 
 def _volume(value: Any) -> float | None:
@@ -861,7 +883,7 @@ def build_intent_brain_mapping(rows: Iterable[Mapping[str, Any]], *, client: Cal
             raise ValueError("SEMANTIC_BATCH_FAILED")
         candidates = [by_id[unit["Id"]] for unit in units]
     else:
-        candidates = [default_semantic_mapper(row) for row in source]
+        raise RuntimeError("INTENT_AI_ENGINE_UNAVAILABLE")
     output = []
     for row, result in zip(source, candidates):
         broad, chinese, parent = _mapping_result(result, row)
@@ -1350,4 +1372,5 @@ def run(
 def extract_broad_rows(rows: Iterable[Mapping[str, Any]], mapper: Callable[[Mapping[str, Any]], Any] | None = None) -> list[dict[str, Any]]:
     """Compatibility helper returning the new aggregate rows."""
     return aggregate_mapping_rows(build_mapping_rows(rows, mapper=mapper))
+
 

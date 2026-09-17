@@ -23,6 +23,11 @@ from statistics import median
 from typing import Any, Callable, Iterable, Mapping
 import sys
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from codex_cli_judge import CodexCliError, codex_login_status, codex_version, run_codex_cli_judge  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -103,14 +108,32 @@ CURRENT_PRODUCT_TEXT_EVIDENCE_EMPTY = "CURRENT_PRODUCT_TEXT_EVIDENCE_EMPTY"
 CURRENT_PRODUCT_TEXT_EVIDENCE_READ_FAILED = "CURRENT_PRODUCT_TEXT_EVIDENCE_READ_FAILED"
 CURRENT_PRODUCT_TEXT_EVIDENCE_READY = "CURRENT_PRODUCT_TEXT_EVIDENCE_READY"
 CURRENT_PRODUCT_TEXT_RELATIVE = Path("05_分析源数据") / "01_产品数据" / "本产品" / "产品识别 - 文本文案.txt"
+AI_PRECISION_ENGINE_UNAVAILABLE = "AI_PRECISION_ENGINE_UNAVAILABLE"
+PRODUCT_PROFILE_INSUFFICIENT = "PRODUCT_PROFILE_INSUFFICIENT"
+PRODUCT_PROFILE_OUTPUT_INVALID = "PRODUCT_PROFILE_OUTPUT_INVALID"
+EXTERNAL_DECISIONS_NOT_ALLOWED = "EXTERNAL_DECISIONS_NOT_ALLOWED"
+AGENT_JUDGMENT_UNAVAILABLE = "AGENT_JUDGMENT_UNAVAILABLE"
+AI_PRECISION_JUDGMENT_UNAVAILABLE = "AI_PRECISION_JUDGMENT_UNAVAILABLE"
+PRODUCTION_CHECKPOINT_SCHEMA = "6-0-2_PRODUCTION_JUDGMENT_CHECKPOINT_V1"
+V4_CHECKPOINT_SCHEMA = "6-0-2_V4_INTERRUPTION_CHECKPOINT_V1"
+# Probe values are defaults for adaptive calibration, not a production limit.
+DEFAULT_SAFE_BATCH_PROBES = (32, 64, 128, 256, 512)
 RUN_MANIFEST_NAME = "run_manifest.json"
 RUN_MANIFEST_PREFIX = "6-0-2_RunPackage_"
 SEMANTIC_PROFILE_FIELDS = (
-    "Core_Product_Type", "Target_Customer", "Recipient", "Core_Functions",
+    "Core_Product_Type", "Physical_Product_Form", "Core_Purchase_Mission", "Target_Customer", "Recipient", "Core_Functions",
     "Core_Use_Cases", "Purchase_Occasions", "Relationship_Intent",
-    "Core_Attributes", "Important_Differentiators", "Compatibility",
+    "Core_Attributes", "Material", "Theme", "Style", "Important_Differentiators", "Compatibility",
     "Compatible_Search_Intents", "Incompatible_Search_Intents",
-    "Excluded_Product_Types", "Hard_Intent_Conflicts",
+    "Excluded_Product_Types", "Hard_Intent_Conflicts", "Installation_Method",
+)
+PRODUCT_PROFILE_REQUIRED_FIELDS = ("Core_Product_Type", "PrimaryPurchaseDriver", "Core_Purchase_Mission")
+PRODUCT_PROFILE_OUTPUT_FIELDS = (
+    "ProductType", "PhysicalProductForm", "CoreFunctions", "PrimaryPurchaseDriver",
+    "SecondaryPurchaseDrivers", "TargetAudience", "Recipient", "RelationshipIntent",
+    "GiftMission", "CorePurchaseMission", "PurchaseOccasions", "Material", "Theme",
+    "Style", "UseCases", "CriticalAttributes", "Compatibility", "InstallationMethod",
+    "ExplicitExclusions",
 )
 PURCHASE_DRIVERS = ("FUNCTIONAL", "COMPATIBILITY", "GIFT_EMOTIONAL", "AESTHETIC_DECOR", "OCCASION", "HYBRID")
 PURCHASE_DRIVER_EVIDENCE_FIELDS = (
@@ -633,33 +656,18 @@ def evaluate_product_search_intent_fit(
         supporting_evidence=supporting_evidence,
         purchase_driver=driver,
     )
-    if result.get("AI_Classification") == "PRECISION":
-        if gift_driver_active:
-            suggested = "高度精准" if evidence.get("GiftMissionFit") == "HIGH" else "精准"
-        else:
-            suggested = "高度精准" if evidence.get("PurchaseMissionConvergence") == "HIGH" else "精准"
-    elif result.get("AI_Classification") == "NOT_PRECISION":
-        suggested = "不精准"
-    else:
-        suggested = "弱精准"
-    challenge = _decision_challenge(driver, specificity, evidence, conflict=conflict, initial_precision=suggested)
+    # This helper is a validator/diagnostic only. It deliberately does not
+    # assign a precision level; FinalPrecision belongs exclusively to the
+    # injected model response handled by PrecisionJudgmentEngine.
+    challenge = _decision_challenge(driver, specificity, evidence, conflict=conflict, initial_precision=DATA_NOT_AVAILABLE)
     final_reason = str(result.get("AI_Reason") or "").strip()
-    if gift_driver_active and evidence.get("GiftMissionFit") == "HIGH" and not conflict:
-        final_reason = (
-            "该词明确表达礼物购买任务，Recipient/Relationship/Occasion 与当前产品核心定位高度一致；"
-            "Current Product 的核心购买驱动为 GIFT_EMOTIONAL，Gift Mission 与情感表达高度匹配，"
-            "不存在关键购买条件冲突，因此属于高度精准候选。"
-        )
     result.update({
         "PrimaryPurchaseDriver": driver.get("PrimaryPurchaseDriver", DATA_NOT_AVAILABLE),
         "SecondaryPurchaseDrivers": driver.get("SecondaryPurchaseDrivers", []),
         "PurchaseDriverReason": driver.get("PurchaseDriverReason", DATA_NOT_AVAILABLE),
         **evidence,
-        "InitialPrecision": suggested,
         "ChallengeResult": challenge["ChallengeResult"],
         "DecisionChallenge": challenge,
-        "FinalPrecision": suggested,
-        "FinalPrecisionReason": final_reason,
         "AI_Reason": final_reason,
         "Supporting_Evidence": {**dict(supporting_evidence or {}), "PurchaseDriver": driver, **evidence, "DecisionChallenge": challenge},
     })
@@ -684,6 +692,79 @@ def build_current_product_profile(evidence: Mapping[str, Any]) -> dict[str, Any]
     profile.setdefault("Product_Text_Evidence", text or DATA_NOT_AVAILABLE)
     profile.setdefault("EvidenceSource", evidence.get("text_path") or DATA_NOT_AVAILABLE)
     return profile
+
+
+def build_product_profile_prompt(product_text: str) -> str:
+    """Create the one-per-run Product Understanding request for the model."""
+    return json.dumps({
+        "phase": "PRODUCT_PROFILE",
+        "product_text": product_text,
+        "required_fields": list(PRODUCT_PROFILE_OUTPUT_FIELDS),
+        "allowed_primary_purchase_drivers": list(PURCHASE_DRIVERS),
+        "unknown_value": DATA_NOT_AVAILABLE,
+        "not_applicable_value": "NOT_APPLICABLE",
+        "instructions": "Use only confirmed facts in product_text; do not infer from future keywords.",
+    }, ensure_ascii=False)
+
+
+def validate_product_profile(raw: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate and normalize a model-produced Product Profile.
+
+    This is a schema/ground-truth validator only. It never derives a profile
+    from keyword tokens and never assigns a precision level.
+    """
+    if not isinstance(raw, Mapping):
+        raise ValueError(PRODUCT_PROFILE_OUTPUT_INVALID)
+    source = raw.get("ProductProfile") if isinstance(raw.get("ProductProfile"), Mapping) else raw
+    aliases = {
+        "ProductType": "Core_Product_Type", "PhysicalProductForm": "Physical_Product_Form",
+        "CoreFunctions": "Core_Functions", "TargetAudience": "Target_Customer",
+        "RelationshipIntent": "Relationship_Intent", "CorePurchaseMission": "Core_Purchase_Mission",
+        "PurchaseOccasions": "Purchase_Occasions", "UseCases": "Core_Use_Cases",
+        "CriticalAttributes": "Core_Attributes", "InstallationMethod": "Installation_Method",
+        "ExplicitExclusions": "Excluded_Product_Types", "GiftMission": "Gift_Mission",
+    }
+    profile: dict[str, Any] = {}
+    for key, value in source.items():
+        profile[aliases.get(key, key)] = value
+    for field in SEMANTIC_PROFILE_FIELDS:
+        value = profile.get(field)
+        if value in (None, "", [], {}):
+            profile[field] = DATA_NOT_AVAILABLE
+    driver = str(profile.get("PrimaryPurchaseDriver") or "").strip().upper()
+    if driver not in PURCHASE_DRIVERS:
+        profile["PrimaryPurchaseDriver"] = DATA_NOT_AVAILABLE
+    else:
+        profile["PrimaryPurchaseDriver"] = driver
+    secondary = profile.get("SecondaryPurchaseDrivers") or []
+    if isinstance(secondary, str):
+        secondary = [secondary]
+    profile["SecondaryPurchaseDrivers"] = [
+        str(item).strip().upper() for item in secondary
+        if str(item).strip().upper() in PURCHASE_DRIVERS and str(item).strip().upper() != driver
+    ]
+    profile["ProductType"] = profile.get("Core_Product_Type", DATA_NOT_AVAILABLE)
+    profile["CorePurchaseMission"] = profile.get("Core_Purchase_Mission", DATA_NOT_AVAILABLE)
+    if any(profile.get(field) in (None, "", DATA_NOT_AVAILABLE) for field in PRODUCT_PROFILE_REQUIRED_FIELDS):
+        raise ValueError(PRODUCT_PROFILE_INSUFFICIENT)
+    return profile
+
+
+def build_structured_product_profile(product_evidence: Mapping[str, Any], client: Callable[[str], Iterable[Mapping[str, Any]]]) -> dict[str, Any]:
+    """Call the real model exactly once to understand the current product."""
+    if client is None:
+        raise RuntimeError(AI_PRECISION_ENGINE_UNAVAILABLE)
+    text = str(product_evidence.get("product_text") or "").strip()
+    try:
+        response = client(build_product_profile_prompt(text))
+    except Exception as exc:
+        raise RuntimeError(AI_PRECISION_ENGINE_UNAVAILABLE) from exc
+    if isinstance(response, Mapping):
+        response = [response]
+    items = list(response or [])
+    if len(items) != 1:
+        raise ValueError(PRODUCT_PROFILE_OUTPUT_INVALID)
+    return validate_product_profile(items[0])
 
 
 def build_precision_brain_prompt(product_profile: Mapping[str, Any], units: Iterable[Mapping[str, Any]], *, phase: str) -> str:
@@ -722,7 +803,9 @@ def validate_structured_judgments(judgments: Iterable[Mapping[str, Any]], expect
             final = _precision_level(raw.get("FinalPrecision"))
             status = str(raw.get("JudgmentStatus") or "").strip().upper()
             challenge = str(raw.get("ChallengeResult") or "").strip()
-            if final == PRECISION_LEVEL_NOT_AVAILABLE or status not in JUDGMENT_STATUSES:
+            if status not in JUDGMENT_STATUSES:
+                raise ValueError("STRUCTURED_JUDGMENT_SCHEMA_INVALID")
+            if (status == "SUCCESS" and final == PRECISION_LEVEL_NOT_AVAILABLE) or (status in {"REVIEW_REQUIRED", "FAILED"} and final != PRECISION_LEVEL_NOT_AVAILABLE):
                 raise ValueError("STRUCTURED_JUDGMENT_SCHEMA_INVALID")
             if challenge not in {"CONFIRMED", "DOWNGRADED", "UPGRADED", "RECONSIDERED_NO_CHANGE", DATA_NOT_AVAILABLE}:
                 raise ValueError("STRUCTURED_JUDGMENT_SCHEMA_INVALID")
@@ -735,35 +818,8 @@ def validate_structured_judgments(judgments: Iterable[Mapping[str, Any]], expect
 
 
 def _local_precision_brain_judgment(unit: Mapping[str, Any], product_profile: Mapping[str, Any], driver: Mapping[str, Any]) -> dict[str, Any]:
-    """Default local Brain adapter used when the host does not inject a model client.
-
-    It uses the existing semantic evaluator and emits the same typed contract;
-    it never uses numeric scoring or Benchmark rank to choose a level.
-    """
-    keyword = str(unit.get("词") or unit.get("Keyword") or "").strip()
-    intent = {"Core_Intent": keyword}
-    evidence = evaluate_product_search_intent_fit(product_profile, intent, keyword=keyword, purchase_driver=driver)
-    level = str(evidence.get("FinalPrecision") or "弱精准")
-    if level not in PRECISION_LEVELS:
-        level = "弱精准"
-    return {
-        "JudgmentItemId": unit["JudgmentItemId"],
-        "SearcherPrimaryIntent": keyword or DATA_NOT_AVAILABLE,
-        "ShoppingIntentStrength": "不明确" if len(_query_tokens(keyword)) <= 1 else "中",
-        "PurchaseMissionConvergence": evidence.get("PurchaseMissionConvergence", DATA_NOT_AVAILABLE),
-        "PhysicalProductConvergence": evidence.get("PhysicalProductConvergence", DATA_NOT_AVAILABLE),
-        "CompatibilityConvergence": evidence.get("CompatibilityConvergence", DATA_NOT_AVAILABLE),
-        "ProductMissionFit": evidence.get("Product_Intent_Fit", DATA_NOT_AVAILABLE),
-        "HardConflictType": evidence.get("HardConflictType", DATA_NOT_AVAILABLE),
-        "HardConflictReason": evidence.get("Conflicting_Product_Attributes", DATA_NOT_AVAILABLE),
-        "InitialPrecision": evidence.get("InitialPrecision", level),
-        "BenchmarkRealityAssessment": "INSUFFICIENT",
-        "ChallengeResult": evidence.get("ChallengeResult", "RECONSIDERED_NO_CHANGE"),
-        "ChallengeReasonSummary": str((evidence.get("DecisionChallenge") or {}).get("ChallengeReasonSummary") or evidence.get("AI_Reason") or "").strip(),
-        "FinalPrecision": level,
-        "FinalPrecisionReason": evidence.get("FinalPrecisionReason") or evidence.get("AI_Reason") or "该词的搜索购买任务与当前产品事实的匹配证据不足，需要人工复核",
-        "JudgmentStatus": "SUCCESS" if level in PRECISION_LEVELS else "REVIEW_REQUIRED",
-    }
+    """Disabled: 602 requires a real AI judgment provider."""
+    raise RuntimeError(AI_PRECISION_ENGINE_UNAVAILABLE)
 
 
 class PrecisionJudgmentEngine:
@@ -773,12 +829,15 @@ class PrecisionJudgmentEngine:
         self.client = client
         self.batch_size = batch_size
         self.calls = 0
+        self.external_model_calls = 0
+        self.retry_count = 0
 
     def _call(self, prompt: str, units: list[Mapping[str, Any]], product_profile: Mapping[str, Any], driver: Mapping[str, Any], phase: str) -> list[Mapping[str, Any]]:
         self.calls += 1
         if self.client is not None:
+            self.external_model_calls += 1
             return list(self.client(prompt))
-        return [_local_precision_brain_judgment(unit, product_profile, driver) for unit in units]
+        raise RuntimeError(AI_PRECISION_ENGINE_UNAVAILABLE)
 
     def judge(self, units: list[Mapping[str, Any]], product_profile: Mapping[str, Any], driver: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
         if not units:
@@ -787,27 +846,59 @@ class PrecisionJudgmentEngine:
         output: dict[str, Mapping[str, Any]] = {}
         for start in range(0, len(units), batch_size):
             batch = units[start:start + batch_size]
-            phase_a = self._call(build_precision_brain_prompt(product_profile, batch, phase="A"), batch, product_profile, driver, "A")
             ids = [str(item["JudgmentItemId"]) for item in batch]
+            try:
+                phase_a = self._call(build_precision_brain_prompt(product_profile, batch, phase="A"), batch, product_profile, driver, "A")
+            except Exception:
+                for item_id in ids:
+                    output[item_id] = {
+                        "JudgmentItemId": item_id,
+                        "FinalPrecision": DATA_NOT_AVAILABLE,
+                        "FinalPrecisionReason": "Phase A真实AI判断失败，必须人工复核，未生成精准度",
+                        "JudgmentStatus": "FAILED",
+                        "ChallengeResult": DATA_NOT_AVAILABLE,
+                    }
+                continue
             try:
                 validated = validate_structured_judgments(phase_a, ids)
             except ValueError:
                 smaller = max(1, len(batch) // 2)
                 if len(batch) > smaller:
+                    self.retry_count += 1
                     nested = self.__class__(self.client, batch_size=smaller)
                     nested_result = nested.judge(batch, product_profile, driver)
                     self.calls += nested.calls
+                    self.external_model_calls += nested.external_model_calls
+                    self.retry_count += nested.retry_count
                     output.update(nested_result)
                     continue
                 failed_id = ids[0]
                 validated = {failed_id: {"JudgmentItemId": failed_id, "FinalPrecision": DATA_NOT_AVAILABLE,
                     "FinalPrecisionReason": "结构化AI判断重试后仍失败，必须人工复核，未生成语义等级",
                     "JudgmentStatus": "FAILED", "ChallengeResult": DATA_NOT_AVAILABLE}}
-            phase_b = self._call(build_precision_brain_prompt(product_profile, batch, phase="B"), batch, product_profile, driver, "B")
+                output[failed_id] = validated[failed_id]
+                continue
+            try:
+                phase_b = self._call(build_precision_brain_prompt(product_profile, batch, phase="B"), batch, product_profile, driver, "B")
+            except Exception:
+                phase_b = []
             try:
                 final = validate_structured_judgments(phase_b, ids, phase="B")
             except ValueError:
-                final = {item_id: {"JudgmentItemId": item_id, "BenchmarkRealityAssessment": "INSUFFICIENT"} for item_id in ids}
+                # A missing/invalid Phase B response means the two-phase
+                # judgment is incomplete; never publish the Phase A level as
+                # if the final AI decision had succeeded.
+                for item_id in ids:
+                    failed = dict(validated[item_id])
+                    failed.update({
+                        "BenchmarkRealityAssessment": "INSUFFICIENT",
+                        "JudgmentStatus": "REVIEW_REQUIRED",
+                        "FinalPrecision": DATA_NOT_AVAILABLE,
+                        "FinalPrecisionReason": "Phase B真实AI判断失败，必须人工复核，未生成精准度",
+                        "ChallengeResult": DATA_NOT_AVAILABLE,
+                    })
+                    output[item_id] = failed
+                continue
             for item_id, judgment in final.items():
                 # Phase A semantic decision is authoritative; Phase B only adds Reality Assessment.
                 merged = dict(validated[item_id])
@@ -826,7 +917,11 @@ def run_precision_brain(
     """Build unique units, call the structured Brain, and return canonical decisions."""
     rows = list(observation_rows)
     units = build_keyword_judgment_units(rows)
-    profile = build_current_product_profile(product_evidence)
+    if client is None:
+        raise RuntimeError(AI_PRECISION_ENGINE_UNAVAILABLE)
+    base_profile = build_current_product_profile(product_evidence)
+    profile = {**base_profile, **build_structured_product_profile(product_evidence, client)}
+    profile_call_count = 1
     driver = build_product_purchase_driver(profile)
     engine = PrecisionJudgmentEngine(client, batch_size=batch_size)
     judgments = engine.judge(units, profile, driver)
@@ -840,38 +935,49 @@ def run_precision_brain(
         judgment["JudgmentStatus"] = judgment.get("JudgmentStatus", "SUCCESS")
         by_canonical[unit["Canonical_Keyword"]] = judgment
     return {"decisions": by_canonical, "keyword_units": units, "judgments": judgments,
-            "purchase_driver": driver, "product_profile": profile, "ai_call_count": engine.calls}
+            "purchase_driver": driver, "product_profile": profile, "ai_call_count": engine.calls,
+            "ExecutionMode": "EXTERNAL_AGENT",
+            "ExternalModelCallCount": engine.external_model_calls,
+            "ProductProfileModelCallCount": profile_call_count,
+            "PrecisionModelCallCount": engine.external_model_calls,
+            "SuccessfulUniqueJudgmentCount": sum(1 for item in judgments.values() if item.get("JudgmentStatus") == "SUCCESS"),
+            "ReviewRequiredCount": sum(1 for item in judgments.values() if item.get("JudgmentStatus") == "REVIEW_REQUIRED"),
+            "FailedJudgmentCount": sum(1 for item in judgments.values() if item.get("JudgmentStatus") == "FAILED"),
+            "RetryCount": engine.retry_count,
+            "LocalBrainFallback": False}
 
 
 def run_precision_brain_regression(
     product_profile: Mapping[str, Any] | None,
     golden_cases: Iterable[Mapping[str, Any]],
+    *,
+    client: Callable[[str], Iterable[Mapping[str, Any]]] | None = None,
 ) -> dict[str, Any]:
-    """Run deterministic Golden Cases and report adaptive Precision metrics."""
+    """Run Golden Cases through the injected real Brain; never the local judge."""
+    if client is None:
+        raise RuntimeError(AI_PRECISION_ENGINE_UNAVAILABLE)
     cases = list(golden_cases)
-    purchase_driver = build_product_purchase_driver(product_profile)
     rows = []
-    for case in cases:
+    for index, case in enumerate(cases):
         keyword = str(case.get("Keyword") or case.get("keyword") or "").strip()
         expected = str(case.get("ExpectedPrecision") or case.get("期望等级") or "").strip()
-        result = evaluate_product_search_intent_fit(
-            product_profile, {"Core_Intent": keyword}, keyword=keyword,
-            purchase_driver=purchase_driver,
-        )
-        predicted = str(result.get("FinalPrecision") or "").strip()
+        item_id = f"GOLDEN-{index + 1}"
+        prompt = build_precision_brain_prompt({**(product_profile or {})}, [{"JudgmentItemId": item_id, "词": keyword}], phase="A")
+        raw = validate_structured_judgments(list(client(prompt)), [item_id], phase="A")[item_id]
+        predicted = str(raw.get("FinalPrecision") or "").strip()
         case_type = str(case.get("CaseType") or "").strip()
         rows.append({
             "Keyword": keyword,
             "CaseType": case_type,
-            "PrimaryPurchaseDriver": result.get("PrimaryPurchaseDriver", DATA_NOT_AVAILABLE),
+            "PrimaryPurchaseDriver": (product_profile or {}).get("PrimaryPurchaseDriver", DATA_NOT_AVAILABLE),
             "ExpectedPrecision": expected,
             "PredictedPrecision": predicted,
             "ExactMatch": predicted == expected,
-            "GiftMissionFit": result.get("GiftMissionFit", DATA_NOT_AVAILABLE),
-            "PurchaseMissionFit": result.get("PurchaseMissionFit", result.get("GiftMissionFit", DATA_NOT_AVAILABLE)),
-            "PhysicalProductConvergence": result.get("PhysicalProductConvergence", DATA_NOT_AVAILABLE),
-            "PurchaseMissionConvergence": result.get("PurchaseMissionConvergence", DATA_NOT_AVAILABLE),
-            "ChallengeResult": result.get("ChallengeResult", DATA_NOT_AVAILABLE),
+            "GiftMissionFit": raw.get("GiftMissionFit", DATA_NOT_AVAILABLE),
+            "PurchaseMissionFit": raw.get("PurchaseMissionFit", raw.get("GiftMissionFit", DATA_NOT_AVAILABLE)),
+            "PhysicalProductConvergence": raw.get("PhysicalProductConvergence", DATA_NOT_AVAILABLE),
+            "PurchaseMissionConvergence": raw.get("PurchaseMissionConvergence", DATA_NOT_AVAILABLE),
+            "ChallengeResult": raw.get("ChallengeResult", DATA_NOT_AVAILABLE),
         })
     high = {"高度精准"}
     expected_high = [row for row in rows if row["ExpectedPrecision"] in high]
@@ -2628,14 +2734,13 @@ def _decision_signature(decision):
         raise ValueError("JUDGMENT_STATUS_INVALID")
     if level == PRECISION_LEVEL_NOT_AVAILABLE:
         if status in {"REVIEW_REQUIRED", "FAILED"}:
-            return "弱精准", reason or "结构化AI判断失败，保守保留并标记人工复核"
+            return "", reason or "结构化AI判断失败，必须人工复核；未生成精准度"
         raise ValueError("AI_PRECISION_LEVEL_REQUIRED")
     return level, reason
 
 
 def _observation_judgment_row(source, decision):
     level, reason = _decision_signature(decision)
-    if level == PRECISION_LEVEL_NOT_AVAILABLE: raise ValueError("AI_PRECISION_LEVEL_REQUIRED")
     return {"所属产品编号": source.get("所属产品编号"), "对标ASIN": source.get("对标ASIN"), "Id": _full_id(source),
         "词": _full_source_value(source, "词", "Keyword"), "中文": _full_source_value(source, "中文", "KeywordCn"),
         "市场容量": _source_passthrough_value(source, "市场容量", "SearchVolume30"),
@@ -2880,6 +2985,600 @@ def _write_run_manifest(run_folder: Path, manifest: Mapping[str, Any]) -> Path:
     return target
 
 
+def prepare_602(product_root: str | Path, product_code: str) -> dict[str, Any]:
+    """PREPARE: collect and validate facts without making semantic judgments.
+
+    The returned package is the handoff to the currently running Agent.  It
+    deliberately contains no InitialPrecision, FinalPrecision, ProductMissionFit
+    or HardConflict conclusion.
+    """
+    root = Path(product_root)
+    evidence = read_current_product_text_evidence(root)
+    if evidence.get("status") != CURRENT_PRODUCT_TEXT_EVIDENCE_READY:
+        raise FileNotFoundError(str(evidence.get("status") or CURRENT_PRODUCT_TEXT_EVIDENCE_READ_FAILED))
+    resolved = resolve_latest_601_keyword_output(root, product_code=product_code)
+    if resolved.get("status") != SIX_0_1_KEYWORD_OUTPUT_READY:
+        raise FileNotFoundError(str(resolved.get("status") or SIX_0_1_KEYWORD_OUTPUT_NOT_FOUND))
+    input_rows = list(resolved.get("rows") or [])
+    metadata = resolved.get("input_metadata") or {}
+    try:
+        identities = _benchmark_identity_map(metadata)
+    except ValueError:
+        identities = {}
+        for row in input_rows:
+            code = str(row.get("所属产品编号") or "").strip()
+            asin = str(row.get("对标ASIN") or "").strip()
+            if code and asin:
+                if code in identities and identities[code].get("对标ASIN") != asin:
+                    raise ValueError("BENCHMARK_IDENTITY_DUPLICATE")
+                identities[code] = {"对标编码": code, "对标ASIN": asin}
+        if not identities:
+            raise ValueError("BENCHMARK_IDENTITY_MISSING")
+    _validate_benchmark_observation_uniqueness(input_rows)
+    if not {str(row.get("所属产品编号") or "").strip() for row in input_rows}.issubset(identities):
+        raise ValueError("BENCHMARK_IDENTITY_MISSING")
+    units = build_keyword_judgment_units(input_rows)
+    profile_chars = max(1, len(str(evidence.get("product_text") or "")))
+    average_keyword_chars = (sum(len(str(item.get("词") or "")) for item in units) / len(units)) if units else 0
+    p95_keyword_chars = sorted((len(str(item.get("词") or "")) for item in units))[max(0, int(len(units) * 0.95) - 1)] if units else 0
+    suggested_batch_size = max(1, min(32, 32000 // max(800, profile_chars + int(average_keyword_chars * 20) + int(p95_keyword_chars * 10))))
+    return {
+        "product_root": str(root),
+        "product_code": product_code,
+        "product_evidence": evidence,
+        "input_rows": input_rows,
+        "input_metadata": metadata,
+        "resolved_601": resolved,
+        "benchmark_identities": identities,
+        "keyword_units": units,
+        "product_evidence_package": {"text_path": evidence.get("text_path"), "content_sha256": evidence.get("content_sha256"), "product_text": evidence.get("product_text")},
+        "adaptive_batch_plan": {"suggested_batch_size": suggested_batch_size, "keyword_count": len(units), "average_keyword_chars": average_keyword_chars, "p95_keyword_chars": p95_keyword_chars, "product_profile_chars": profile_chars},
+    }
+
+
+def _v4_judgment_records(judgments: Mapping[Any, Mapping[str, Any]] | Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Normalize the one-shot Agent response without judging or remapping semantics."""
+    if isinstance(judgments, Mapping):
+        values = []
+        for key, value in judgments.items():
+            if not isinstance(value, Mapping):
+                raise ValueError("AI_PRECISION_JUDGMENT_SCHEMA_INVALID")
+            item = dict(value)
+            item.setdefault("JudgmentItemId", str(key).strip())
+            values.append(item)
+        return values
+    values = list(judgments or [])
+    if not all(isinstance(item, Mapping) for item in values):
+        raise ValueError("AI_PRECISION_JUDGMENT_SCHEMA_INVALID")
+    return [dict(item) for item in values]
+
+
+def audit_legacy_checkpoint(path: str | Path, *, prepared: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Audit a V3 checkpoint; never silently mix it into a V4 run."""
+    target = Path(path)
+    if not target.is_file():
+        return {"status": "NOT_FOUND", "path": str(target)}
+    try:
+        payload = json.loads(target.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return {"status": "LEGACY_CHECKPOINT_INCOMPATIBLE", "reason": "SCHEMA_INVALID", "path": str(target)}
+    if not isinstance(payload, Mapping):
+        return {"status": "LEGACY_CHECKPOINT_INCOMPATIBLE", "reason": "SCHEMA_INVALID", "path": str(target)}
+    records = payload.get("records") or {}
+    required = {"schema", "ProductProfileId", "BrainVersion", "TotalUniqueKeywordCount", "records"}
+    compatible = payload.get("schema") == V4_CHECKPOINT_SCHEMA and required.issubset(payload)
+    if prepared is not None and payload.get("TotalUniqueKeywordCount") != len(prepared.get("keyword_units") or []):
+        compatible = False
+    return {"status": "COMPATIBLE" if compatible else "LEGACY_CHECKPOINT_INCOMPATIBLE",
+            "path": str(target), "schema": payload.get("schema"),
+            "record_count": len(records), "total_unique": payload.get("TotalUniqueKeywordCount"),
+            "brain_version": payload.get("BrainVersion"), "product_profile_id": payload.get("ProductProfileId")}
+
+
+def run_602(
+    product_root: str | Path,
+    product_code: str,
+    *,
+    ai_judge: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """V4's single complete business entry: PREPARE → AI → APPLY → PUBLISH.
+
+    ``ai_judge`` is an internal current-Agent handoff.  It must return one
+    validated Product Profile and one structured judgment for every unique
+    ``JudgmentItemId``.  No local rule or partial queue is accepted here.
+    """
+    if ai_judge is None:
+        raise RuntimeError(AI_PRECISION_JUDGMENT_UNAVAILABLE)
+    prepared = prepare_602(product_root, product_code)
+    handoff = ai_judge({**prepared, "ExecutionMode": "V4_COMPLETE_602_TASK",
+                        "JudgmentContract": "ONE_JUDGMENT_PER_UNIQUE_KEYWORD"})
+    if not isinstance(handoff, Mapping):
+        raise ValueError("AI_PRECISION_JUDGMENT_SCHEMA_INVALID")
+    raw_profile = handoff.get("product_profile") or handoff.get("ProductProfile")
+    if not isinstance(raw_profile, Mapping):
+        raise ValueError("AI_PRECISION_JUDGMENT_SCHEMA_INVALID")
+    profile = validate_product_profile(raw_profile)
+    raw_judgments = handoff.get("judgments")
+    if raw_judgments is None:
+        raw_judgments = handoff.get("structured_judgments")
+    records = _v4_judgment_records(raw_judgments)
+    expected_ids = [str(item["JudgmentItemId"]) for item in prepared["keyword_units"]]
+    validated = validate_structured_judgments(records, expected_ids, phase="A")
+    allowed_reality = {"SUPPORTS", "WEAKLY_SUPPORTS", "NEUTRAL", "CONTRADICTS", "INSUFFICIENT"}
+    if any(str(item.get("BenchmarkRealityAssessment") or "").strip().upper() not in allowed_reality for item in validated.values()):
+        raise ValueError("AI_PRECISION_JUDGMENT_SCHEMA_INVALID")
+    # Phase-B evidence and challenge fields are validated as part of the same
+    # typed record; the semantic FinalPrecision remains the Agent's decision.
+    canonical_by_id = {str(item["JudgmentItemId"]): str(item["Canonical_Keyword"]) for item in prepared["keyword_units"]}
+    decisions = {canonical_by_id[item_id]: judgment for item_id, judgment in validated.items()}
+    prepared["product_profile"] = profile
+    prepared["_v4_execution"] = True
+    result = run_current_602(product_root, product_code, prepared=prepared, agent_judgments=decisions)
+    result.update({"execution_mode": "V4_COMPLETE_602_TASK",
+                   "ai_judgment_count": len(validated),
+                   "pending_judgment_count": 0,
+                   "v4_contract": "PREPARE→AI JUDGE ALL UNIQUE→APPLY→PUBLISH"})
+    return result
+
+
+def apply_602_judgments(
+    prepared: Mapping[str, Any],
+    structured_judgments: Mapping[Any, Mapping[str, Any]] | Iterable[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """APPLY handoff contract for Agent-produced structured judgments.
+
+    This function validates and projects Agent output only; it never changes a
+    FinalPrecision value and never performs semantic judgment itself.
+    """
+    rows = list(prepared.get("input_rows") or [])
+    result = finalize_observation_judgments(rows, structured_judgments, evidence_context={
+        "product_profile": prepared.get("product_profile"),
+        "product_text": (prepared.get("product_evidence") or {}).get("product_text"),
+    })
+    levels = frozenset(read_precision_filter_config(prepared["product_root"], require=True)["levels"])
+    result["high_precision_rows"] = build_high_precision_rows(result["rows"], precision_levels=levels)
+    result["deduplicated_benchmark_rows"] = build_deduplicated_benchmark_rows(result["high_precision_rows"])
+    result["deduplicated_rows"] = build_deduplicated_high_precision_rows(result["high_precision_rows"], precision_levels=levels)
+    return result
+
+
+def run_current_602_agent(
+    product_root: str | Path,
+    product_code: str,
+    *,
+    agent_judge: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+    agent_batch_judge: Callable[[Mapping[str, Any], list[Mapping[str, Any]], str], Iterable[Mapping[str, Any]]] | None = None,
+    checkpoint: str | Path | None = None,
+) -> dict[str, Any]:
+    """Deprecated V3 compatibility entry; use :func:`run_602` for production.
+
+    The callback represents the Codex/Agent performing Product Profile,
+    Phase-A, Phase-B and Challenge. It is intentionally not an HTTP/provider
+    client and is not a user-supplied precision decision shortcut.
+    """
+    if agent_judge is None:
+        raise RuntimeError(AGENT_JUDGMENT_UNAVAILABLE)
+    prepared = prepare_602(product_root, product_code)
+
+    # A complete production task may provide a profile callback plus a
+    # per-batch Agent callback.  Keep the whole drain inside this function so
+    # callers do not have to expose GET/SAVE/RESUME as user interactions.
+    if agent_batch_judge is not None:
+        profile_result = agent_judge({**prepared, "ExecutionPhase": "PRODUCT_PROFILE"})
+        if not isinstance(profile_result, Mapping):
+            raise ValueError("AGENT_JUDGMENT_SCHEMA_INVALID")
+        profile = validate_product_profile(profile_result.get("product_profile") or profile_result.get("ProductProfile") or {})
+        return run_current_602_production(
+            product_root,
+            product_code,
+            product_profile=profile,
+            agent_batch_judge=agent_batch_judge,
+            checkpoint=checkpoint,
+        )
+
+    return run_602(product_root, product_code, ai_judge=agent_judge)
+
+
+def production_checkpoint_path(product_root: str | Path, product_code: str) -> Path:
+    """Return the resumable cache for expensive Agent judgments."""
+    report_root = resolve_skill_report_dir(Path(product_root), Path(__file__).resolve().parents[1])
+    target = report_root / "_system" / "checkpoints" / f"6-0-2_{product_code}_production_judgments.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    return target
+
+
+BATCH_SIZE_CONFIG_PATH = Path("E:/") / "\u3010\u6240\u6709\u4ea7\u54c1\u76ee\u5f55\u4e13\u7528\u3011" / "01_\u516c\u5171\u8d44\u6599" / "03_\u7cfb\u7edf\u914d\u7f6e" / "602_AI\u6279\u6b21\u5927\u5c0f.txt"
+
+
+def read_602_batch_size(path: str | Path = BATCH_SIZE_CONFIG_PATH) -> dict[str, Any]:
+    """Read the operator throughput setting without making it a business rule."""
+    target = Path(path)
+    if not target.is_file():
+        return {"RequestedBatchSize": None,
+                "ConfigStatus": "602_BATCH_SIZE_CONFIG_MISSING",
+                "ConfigPath": str(target)}
+    try:
+        raw = target.read_text(encoding="utf-8-sig").strip()
+        value = int(raw)
+    except (OSError, UnicodeError, ValueError):
+        return {"RequestedBatchSize": None,
+                "ConfigStatus": "602_BATCH_SIZE_CONFIG_INVALID",
+                "ConfigPath": str(target)}
+    if value <= 0:
+        return {"RequestedBatchSize": None,
+                "ConfigStatus": "602_BATCH_SIZE_CONFIG_INVALID",
+                "ConfigPath": str(target)}
+    return {"RequestedBatchSize": value, "ConfigStatus": "OK", "ConfigPath": str(target)}
+
+
+def load_production_checkpoint(path: str | Path) -> dict[str, Any]:
+    target = Path(path)
+    if not target.is_file():
+        return {"schema": PRODUCTION_CHECKPOINT_SCHEMA, "records": {}}
+    try:
+        payload = json.loads(target.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("PRODUCTION_CHECKPOINT_INVALID") from exc
+    if not isinstance(payload, Mapping) or payload.get("schema") != PRODUCTION_CHECKPOINT_SCHEMA or not isinstance(payload.get("records"), Mapping):
+        raise ValueError("PRODUCTION_CHECKPOINT_INVALID")
+    return dict(payload)
+
+
+def save_production_checkpoint(path: str | Path, payload: Mapping[str, Any]) -> Path:
+    """Atomically persist completed Agent results for resume."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_suffix(target.suffix + ".tmp")
+    temporary.write_text(json.dumps(dict(payload), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporary, target)
+    return target
+
+
+def _production_batch_call(agent_batch_judge, profile, batch, phase):
+    response = agent_batch_judge(profile, batch, phase)
+    if isinstance(response, Mapping):
+        response = response.get("judgments") or response.get("records") or []
+    return list(response or [])
+
+
+def run_current_602_production(
+    product_root: str | Path,
+    product_code: str,
+    *,
+    product_profile: Mapping[str, Any],
+    agent_batch_judge: Callable[[Mapping[str, Any], list[Mapping[str, Any]], str], Iterable[Mapping[str, Any]]],
+    initial_judgments: Mapping[str, Mapping[str, Any]] | None = None,
+    calibration_sizes: Iterable[int] = DEFAULT_SAFE_BATCH_PROBES,
+    checkpoint: str | Path | None = None,
+    resume: bool = True,
+) -> dict[str, Any]:
+    """Compatibility/test runner; normal production orchestration belongs to the current Agent.
+
+    The Agent owns the COMPLETE_602_TASK loop. This helper keeps deterministic
+    calibration/checkpoint behavior for tests and injected adapters only.
+    """
+    prepared = prepare_602(product_root, product_code)
+    profile = validate_product_profile(product_profile)
+    units = list(prepared["keyword_units"])
+    path = Path(checkpoint) if checkpoint else production_checkpoint_path(product_root, product_code)
+    state = load_production_checkpoint(path) if resume else {"schema": PRODUCTION_CHECKPOINT_SCHEMA, "records": {}}
+    records = dict(state.get("records") or {})
+    for item_id, judgment in (initial_judgments or {}).items():
+        records[str(item_id)] = {**dict(judgment), "JudgmentItemId": str(item_id), "Status": str(judgment.get("JudgmentStatus") or "SUCCESS")}
+    state.update({"schema": PRODUCTION_CHECKPOINT_SCHEMA, "Product_Code": product_code,
+                  "ProductProfileId": profile.get("ProductProfileId", DATA_NOT_AVAILABLE),
+                  "BrainVersion": "CURRENT_FROZEN_BRAIN", "records": records})
+    save_production_checkpoint(path, state)
+    pending = [u for u in units if str(u["JudgmentItemId"]) not in records or records[str(u["JudgmentItemId"])].get("Status") in {"PENDING_JUDGMENT", "RUNNING", "FAILED"}]
+    calibration, selected_batch = [], None
+    sample_source = pending[:]
+    for candidate in calibration_sizes:
+        candidate = int(candidate)
+        if candidate <= 0 or not sample_source:
+            continue
+        sample = sample_source[:candidate]; ids = [str(u["JudgmentItemId"]) for u in sample]
+        try:
+            validate_structured_judgments(_production_batch_call(agent_batch_judge, profile, sample, "A"), ids, phase="A")
+            validate_structured_judgments(_production_batch_call(agent_batch_judge, profile, sample, "B"), ids, phase="B")
+            calibration.append({"batch_size": candidate, "status": "PASS"}); selected_batch = candidate
+        except Exception as exc:
+            calibration.append({"batch_size": candidate, "status": "FAIL", "error": str(exc)})
+    if selected_batch is None:
+        return {"status": "FAILED", "reason": "AGENT_BATCH_CALIBRATION_FAILED", "checkpoint": str(path), "calibration": calibration, "pending_count": len(pending)}
+    state["AdaptiveSafeBatchSize"] = selected_batch
+    state["Calibration"] = calibration
+    save_production_checkpoint(path, state)
+    production_batches = 0; retries = 0; index = 0
+    while index < len(pending):
+        batch = pending[index:index + selected_batch]; ids = [str(u["JudgmentItemId"]) for u in batch]
+        try:
+            phase_a = validate_structured_judgments(_production_batch_call(agent_batch_judge, profile, batch, "A"), ids, phase="A")
+            phase_b = validate_structured_judgments(_production_batch_call(agent_batch_judge, profile, batch, "B"), ids, phase="B")
+            for item_id in ids:
+                item = dict(phase_a[item_id]); item["BenchmarkRealityAssessment"] = phase_b[item_id]["BenchmarkRealityAssessment"]
+                records[item_id] = {**item, "Status": item.get("JudgmentStatus", "SUCCESS"), "CompletedAt": datetime.now().isoformat(timespec="seconds")}
+            production_batches += 1; index += len(batch); state["records"] = records; save_production_checkpoint(path, state)
+        except Exception:
+            if len(batch) > 1:
+                retries += 1; selected_batch = max(1, selected_batch // 2); continue
+            item_id = ids[0]
+            records[item_id] = {"JudgmentItemId": item_id, "FinalPrecision": DATA_NOT_AVAILABLE, "FinalPrecisionReason": "Agent执行失败且Retry后仍失败，需人工复核。", "JudgmentStatus": "FAILED", "Status": "FAILED"}
+            index += 1; state["records"] = records; save_production_checkpoint(path, state)
+    unresolved = [u for u in units if str(u["JudgmentItemId"]) not in records or records[str(u["JudgmentItemId"])].get("Status") in {"PENDING_JUDGMENT", "RUNNING"}]
+    failed = [r for r in records.values() if r.get("Status") == "FAILED"]
+    if unresolved or failed:
+        return {"status": "PENDING" if unresolved else "FAILED", "checkpoint": str(path), "calibration": calibration, "production_batch_size": selected_batch, "production_batches": production_batches, "retry_count": retries, "pending_count": len(unresolved), "failed_count": len(failed)}
+    judgments = {item_id: {k: v for k, v in record.items() if k not in {"Status", "CompletedAt"}} for item_id, record in records.items()}
+    result = run_current_602(product_root, product_code, prepared=prepared, agent_judgments=judgments)
+    result.update({"production_checkpoint": str(path), "calibration": calibration, "production_batch_size": selected_batch, "production_batches": production_batches, "retry_count": retries})
+    return result
+
+
+def get_602_production_status(product_root: str | Path, product_code: str, *, checkpoint: str | Path | None = None) -> dict[str, Any]:
+    """Deterministically report queue state; never performs an AI judgment."""
+    path = Path(checkpoint) if checkpoint else production_checkpoint_path(product_root, product_code)
+    state = load_production_checkpoint(path)
+    records = list((state.get("records") or {}).values())
+    counts = Counter(str(item.get("Status") or item.get("JudgmentStatus") or "PENDING_JUDGMENT") for item in records)
+    total = int(state.get("TotalUniqueKeywordCount") or len(records))
+    pending = max(0, total - sum(counts.values()) + counts.get("PENDING_JUDGMENT", 0))
+    return {"ProductProfileId": state.get("ProductProfileId", DATA_NOT_AVAILABLE), "BrainVersion": state.get("BrainVersion", "CURRENT_FROZEN_BRAIN"),
+            "TotalUnique": total, "SuccessCount": counts.get("SUCCESS", 0), "PendingCount": pending,
+            "PendingJudgmentCount": pending,
+            "ReviewRequiredCount": counts.get("REVIEW_REQUIRED", 0), "FailedCount": counts.get("FAILED", 0),
+            "CheckpointPath": str(path), "CurrentBatchSize": state.get("CurrentBatchSize", DATA_NOT_AVAILABLE),
+            "PublishStatus": state.get("PublishStatus", "NOT_PUBLISHED"), "Calibration": state.get("Calibration", []),
+            "NextAvailable": pending > 0}
+
+
+def get_next_602_batch(product_root: str | Path, product_code: str, *, batch_size: int | None = None, checkpoint: str | Path | None = None) -> dict[str, Any]:
+    """Return the next pending Agent task; Python does not judge it."""
+    prepared = prepare_602(product_root, product_code)
+    path = Path(checkpoint) if checkpoint else production_checkpoint_path(product_root, product_code)
+    state = load_production_checkpoint(path)
+    records = state.get("records") or {}
+    pending = [item for item in prepared["keyword_units"] if str(item["JudgmentItemId"]) not in records or records[str(item["JudgmentItemId"])].get("Status") == "PENDING_JUDGMENT"]
+    # CurrentBatchSize is a last-run observation, not a permanent limit.  A
+    # stale small value in an interrupted checkpoint must not pin every later
+    # pull to that size; prefer the current run's adaptive plan unless an
+    # explicitly calibrated AdaptiveSafeBatchSize is present.
+    configured = read_602_batch_size()
+    if configured["ConfigStatus"] != "OK":
+        raise ValueError(configured["ConfigStatus"])
+    explicit_safe_size = state.get("AdaptiveSafeBatchSize")
+    if explicit_safe_size:
+        adaptive_size = explicit_safe_size
+    else:
+        # A prepared plan may be conservative when the stored product profile
+        # is unavailable.  Preserve the last successful observed size in that
+        # case, while still allowing the current plan to grow the queue.
+        suggested_size = prepared.get("adaptive_batch_plan", {}).get("suggested_batch_size") or 0
+        observed_size = state.get("CurrentBatchSize") or 0
+        adaptive_size = int(configured["RequestedBatchSize"])
+    requested_size = int(configured["RequestedBatchSize"])
+    size = min(max(1, requested_size), len(pending)) if pending else 0
+    selected = pending[:size]
+    profile = state.get("ProductProfile") or prepared.get("product_profile") or {}
+    return {"status": "PENDING" if selected else "EMPTY", "BatchId": f"602-{product_code}-{len(records)+1:04d}",
+            "ProductCode": product_code, "ProductProfileId": state.get("ProductProfileId", DATA_NOT_AVAILABLE),
+            "BrainVersion": state.get("BrainVersion", "CURRENT_FROZEN_BRAIN"),
+            "ConfiguredBatchSize": int(configured["RequestedBatchSize"]),
+            "ActualBatchSize": size, "PendingBefore": len(pending),
+            "ProcessedCount": 0, "PendingAfter": len(pending), "BatchSize": size,
+            "ProductProfile": profile, "items": selected, "checkpoint": str(path)}
+
+
+def save_602_batch_judgments(product_root: str | Path, product_code: str, batch: Mapping[str, Any], judgments: Iterable[Mapping[str, Any]], *, checkpoint: str | Path | None = None) -> dict[str, Any]:
+    """Validate and persist one Agent-produced batch without changing labels."""
+    path = Path(checkpoint or batch.get("checkpoint") or production_checkpoint_path(product_root, product_code))
+    state = load_production_checkpoint(path); records = dict(state.get("records") or {})
+    items = list(batch.get("items") or []); ids = [str(item.get("JudgmentItemId")) for item in items]
+    incoming = validate_structured_judgments(judgments, ids)
+    expected_profile = str(state.get("ProductProfileId") or batch.get("ProductProfileId") or DATA_NOT_AVAILABLE)
+    expected_brain = str(state.get("BrainVersion") or batch.get("BrainVersion") or "CURRENT_FROZEN_BRAIN")
+    for item_id, judgment in incoming.items():
+        profile_id = str(judgment.get("ProductProfileId") or expected_profile)
+        brain_version = str(judgment.get("BrainVersion") or expected_brain)
+        if profile_id != expected_profile or brain_version != expected_brain:
+            raise ValueError("AGENT_JUDGMENT_CONTEXT_MISMATCH")
+        records[item_id] = {**dict(judgment), "JudgmentItemId": item_id, "Status": judgment.get("JudgmentStatus", "SUCCESS"),
+                            "ProductProfileId": profile_id, "BrainVersion": brain_version, "BatchId": batch.get("BatchId"),
+                            "CompletedAt": datetime.now().isoformat(timespec="seconds")}
+    state["records"] = records; state["CurrentBatchSize"] = len(items); state["LastBatchId"] = batch.get("BatchId")
+    save_production_checkpoint(path, state)
+    result = get_602_production_status(product_root, product_code, checkpoint=path)
+    result.update({"ConfiguredBatchSize": batch.get("ConfiguredBatchSize"),
+                   "ActualBatchSize": len(items), "PendingBefore": len(items),
+                   "ProcessedCount": len(incoming),
+                   "PendingAfter": result.get("PendingCount")})
+    return result
+
+
+def finalize_602(product_root: str | Path, product_code: str, *, checkpoint: str | Path | None = None) -> dict[str, Any]:
+    """Finalize only after the pull queue has no pending items."""
+    status = get_602_production_status(product_root, product_code, checkpoint=checkpoint)
+    if status["PendingCount"] != 0:
+        return {"status": "PENDING", **status}
+    if status["FailedCount"]:
+        return {"status": "FAILED", **status}
+    state = load_production_checkpoint(status["CheckpointPath"])
+    judgments = {item_id: {k: v for k, v in record.items() if k not in {"Status", "CompletedAt", "BatchId", "ProductProfileId", "BrainVersion"}}
+                 for item_id, record in (state.get("records") or {}).items()}
+    prepared = prepare_602(product_root, product_code)
+    result = run_current_602(product_root, product_code, prepared=prepared, agent_judgments=judgments)
+    state["PublishStatus"] = "PUBLISHED"; save_production_checkpoint(status["CheckpointPath"], state)
+    result["production_checkpoint"] = status["CheckpointPath"]
+    return result
+
+
+def codex_cli_schema_path() -> Path:
+    return SCRIPT_DIR / "codex_cli_production_schema.json"
+
+
+def _cli_batch_payload(prepared: Mapping[str, Any], state: Mapping[str, Any], batch: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a compact, auditable prompt payload; no hidden chain-of-thought requested."""
+    evidence = prepared.get("product_evidence") or {}
+    items = []
+    for item in batch.get("items") or []:
+        items.append({
+            "JudgmentItemId": item.get("JudgmentItemId"),
+            "Keyword": item.get("Keyword") or item.get("词"),
+            "KeywordCn": item.get("KeywordCn") or item.get("中文"),
+            "BenchmarkRealityEvidence": item.get("Benchmark_Reality_Evidence") or {},
+        })
+    return {
+        "Task": "6-0-2 Precision Judgment batch",
+        "BatchId": batch.get("BatchId"),
+        "ProductProfileId": state.get("ProductProfileId") or DATA_NOT_AVAILABLE,
+        "BrainVersion": state.get("BrainVersion") or "CURRENT_FROZEN_BRAIN",
+        "SEMANTIC_EVIDENCE": {
+            "CurrentProductText": evidence.get("product_text") or "",
+            "Rule": "First reconstruct Searcher Purchase Mission and Product-Intent Fit. Distinguish CORE FIT from CAN SERVE. Check every Hard Modifier and Decision Challenge."
+        },
+        "SECOND_STAGE_BENCHMARK_REALITY": {
+            "Rule": "Use rank only as supporting reality evidence. Rank must never directly set FinalPrecision or override a hard conflict."
+        },
+        "PrecisionLevels": list(PRECISION_LEVELS),
+        "JudgmentStatuses": sorted(JUDGMENT_STATUSES),
+        "OutputRule": "Return only concise auditable ShortReason and the required JSON fields; do not output hidden chain-of-thought.",
+        "Judgments": items,
+    }
+
+
+def _normalize_cli_judgments(response: Mapping[str, Any], batch: Mapping[str, Any], state: Mapping[str, Any]) -> list[dict[str, Any]]:
+    expected = {str(item.get("JudgmentItemId")) for item in batch.get("items") or []}
+    if str(response.get("BatchId") or "") != str(batch.get("BatchId") or ""):
+        raise ValueError("CODEX_CLI_BATCH_ID_MISMATCH")
+    if str(response.get("ProductProfileId") or "") != str(state.get("ProductProfileId") or DATA_NOT_AVAILABLE):
+        raise ValueError("AGENT_JUDGMENT_CONTEXT_MISMATCH")
+    if str(response.get("BrainVersion") or "") != str(state.get("BrainVersion") or "CURRENT_FROZEN_BRAIN"):
+        raise ValueError("AGENT_JUDGMENT_CONTEXT_MISMATCH")
+    raw = response.get("Judgments")
+    if not isinstance(raw, list):
+        raise ValueError("CODEX_CLI_RESULT_SCHEMA_INVALID")
+    output = []
+    seen = set()
+    for value in raw:
+        if not isinstance(value, Mapping):
+            raise ValueError("CODEX_CLI_RESULT_SCHEMA_INVALID")
+        item = dict(value)
+        item_id = str(item.get("JudgmentItemId") or "").strip()
+        if item_id not in expected or item_id in seen:
+            raise ValueError("STRUCTURED_JUDGMENT_ID_INVALID")
+        seen.add(item_id)
+        item["FinalPrecisionReason"] = item.get("ShortReason") or item.get("FinalPrecisionReason") or ""
+        status = str(item.get("JudgmentStatus") or "").strip().upper()
+        if status in {"REVIEW_REQUIRED", "FAILED"}:
+            item["FinalPrecision"] = DATA_NOT_AVAILABLE
+        item["ProductProfileId"] = state.get("ProductProfileId")
+        item["BrainVersion"] = state.get("BrainVersion")
+        item["JudgmentStatus"] = status
+        output.append(item)
+    if seen != expected:
+        raise ValueError("STRUCTURED_JUDGMENT_COVERAGE_FAILED")
+    validate_structured_judgments(output, expected, phase="A")
+    allowed_reality = {"SUPPORTS", "WEAKLY_SUPPORTS", "NEUTRAL", "CONTRADICTS", "INSUFFICIENT"}
+    if any(str(item.get("BenchmarkRealityAssessment") or "").upper() not in allowed_reality for item in output):
+        raise ValueError("CODEX_CLI_RESULT_SCHEMA_INVALID")
+    return output
+
+
+def _append_codex_cli_log(report_root: Path, payload: Mapping[str, Any]) -> None:
+    log_dir = governance_paths(report_root)["logs"]
+    log_dir.mkdir(parents=True, exist_ok=True)
+    path = log_dir / "6-0-2_codex_cli_runtime.jsonl"
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(dict(payload), ensure_ascii=False) + "\n")
+
+
+def run_codex_cli_production(
+    product_root: str | Path,
+    product_code: str,
+    *,
+    checkpoint: str | Path | None = None,
+    timeout: float = 900.0,
+    initial_batch_size: int | None = None,
+    max_retries: int = 2,
+) -> dict[str, Any]:
+    """Production Worker: Python pending loop → Codex CLI → checkpoint → next."""
+    prepared = prepare_602(product_root, product_code)
+    path = Path(checkpoint) if checkpoint else production_checkpoint_path(product_root, product_code)
+    state = load_production_checkpoint(path)
+    units = list(prepared.get("keyword_units") or [])
+    total = len(units)
+    if int(state.get("TotalUniqueKeywordCount") or total) != total:
+        raise ValueError("CHECKPOINT_TOTAL_UNIQUE_MISMATCH")
+    state.update({"schema": state.get("schema") or PRODUCTION_CHECKPOINT_SCHEMA,
+                  "Product_Code": product_code, "TotalUniqueKeywordCount": total,
+                  "BrainVersion": state.get("BrainVersion") or "CURRENT_FROZEN_BRAIN",
+                  "ProductProfileId": state.get("ProductProfileId") or prepared.get("product_evidence_package", {}).get("content_sha256", DATA_NOT_AVAILABLE)})
+    save_production_checkpoint(path, state)
+    report_root = resolve_skill_report_dir(Path(product_root), Path(__file__).resolve().parents[1])
+    cli_info = {"ExecutionRuntime": "CODEX_CLI", "CodexCliVersion": codex_version(),
+                "AuthMode": codex_login_status(), "Checkpoint": str(path)}
+    safe_size = int(initial_batch_size or state.get("AdaptiveSafeBatchSize") or state.get("CurrentBatchSize") or 16)
+    safe_size = max(1, safe_size)
+    retries_total = 0
+    batches = 0
+    while True:
+        status = get_602_production_status(product_root, product_code, checkpoint=path)
+        if status["PendingCount"] == 0:
+            break
+        batch = get_next_602_batch(product_root, product_code, batch_size=min(safe_size, status["PendingCount"]), checkpoint=path)
+        if not batch.get("items"):
+            raise RuntimeError("PENDING_QUEUE_STALLED")
+        attempt = 0
+        while True:
+            started = datetime.now()
+            try:
+                payload = _cli_batch_payload(prepared, state, batch)
+                response = run_codex_cli_judge(payload, schema_path=codex_cli_schema_path(), timeout=timeout, cwd=product_root)
+                judgments = _normalize_cli_judgments(response, batch, state)
+                saved = save_602_batch_judgments(product_root, product_code, batch, judgments, checkpoint=path)
+                batches += 1
+                state = load_production_checkpoint(path)
+                safe_size = min(max(1, safe_size * 2), 512)
+                state["CurrentBatchSize"] = len(batch["items"])
+                state["AdaptiveSafeBatchSize"] = safe_size
+                save_production_checkpoint(path, state)
+                _append_codex_cli_log(report_root, {"BatchId": batch.get("BatchId"), "ItemCount": len(judgments),
+                    "ExitCode": 0, "DurationSeconds": (datetime.now() - started).total_seconds(), "RetryCount": attempt,
+                    "ValidationStatus": "PASS", "CheckpointSuccess": True, "ExecutionRuntime": "CODEX_CLI"})
+                break
+            except CodexCliError as exc:
+                _append_codex_cli_log(report_root, {"BatchId": batch.get("BatchId"),
+                    "ItemCount": len(batch.get("items") or []), "ExitCode": None,
+                    "RetryCount": attempt, "ValidationStatus": "ERROR",
+                    "ErrorCode": exc.code, "Error": str(exc)[-1200:],
+                    "ExecutionRuntime": "CODEX_CLI"})
+                if exc.code == "CODEX_CLI_AUTH_REQUIRED":
+                    raise
+                attempt += 1; retries_total += 1
+                if attempt > max_retries and len(batch.get("items") or []) <= 1:
+                    # Infrastructure failure is never an item-level business FAILED.
+                    # Leave the item PENDING so the Agent Pull path can resume it.
+                    raise RuntimeError(f"CODEX_CLI_RUNTIME_RETRY_EXHAUSTED: {exc}") from exc
+                if attempt > max_retries:
+                    safe_size = max(1, len(batch["items"]) // 2)
+                    batch = get_next_602_batch(product_root, product_code, batch_size=safe_size, checkpoint=path)
+                    attempt = 0
+            except (ValueError, KeyError) as exc:
+                attempt += 1; retries_total += 1
+                if attempt > max_retries:
+                    if len(batch["items"]) == 1:
+                        raise RuntimeError(f"CODEX_CLI_VALIDATION_RETRY_EXHAUSTED: {exc}") from exc
+                    safe_size = max(1, len(batch["items"]) // 2)
+                    batch = get_next_602_batch(product_root, product_code, batch_size=safe_size, checkpoint=path)
+                    attempt = 0
+        # A successful batch returns to the Pending loop. Infrastructure or
+        # validation exhaustion raises without mutating the batch to FAILED.
+    final = finalize_602(product_root, product_code, checkpoint=path)
+    final.update({"execution_runtime": "CODEX_CLI", "codex_cli": cli_info,
+                  "production_batches": batches, "retry_count": retries_total,
+                  "checkpoint": str(path)})
+    return final
+
+
 def run_current_602(
     product_root: str | Path,
     product_code: str,
@@ -2887,49 +3586,51 @@ def run_current_602(
     *,
     precision_brain_client: Callable[[str], Iterable[Mapping[str, Any]]] | None = None,
     batch_size: int | None = None,
+    prepared: Mapping[str, Any] | None = None,
+    agent_judgments: Mapping[Any, Mapping[str, Any]] | Iterable[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Read product + 601, call Precision Brain, and create the A/B/C/D/E outputs.
+    """Apply a prepared Agent handoff or run the internal compatibility adapter.
 
-    ``decisions`` remains a compatibility hook for isolated tests. Normal
-    execution omits it and invokes ``run_precision_brain`` internally.
+    Normal Skill execution uses ``run_current_602_agent``. The public
+    ``decisions`` shortcut is rejected; only structured Agent judgments or
+    the legacy test adapter may reach the deterministic APPLY path.
     """
+    if decisions is not None:
+        raise ValueError(EXTERNAL_DECISIONS_NOT_ALLOWED)
     precision_config = read_precision_filter_config(product_root, require=True)
     precision_levels = frozenset(precision_config["levels"])
-    evidence = read_current_product_text_evidence(product_root)
-    if evidence.get("status") != CURRENT_PRODUCT_TEXT_EVIDENCE_READY:
-        raise FileNotFoundError(str(evidence.get("status") or CURRENT_PRODUCT_TEXT_EVIDENCE_READ_FAILED))
-    resolved = resolve_latest_601_keyword_output(product_root, product_code=product_code)
-    if resolved.get("status") != SIX_0_1_KEYWORD_OUTPUT_READY:
-        raise FileNotFoundError(str(resolved.get("status") or SIX_0_1_KEYWORD_OUTPUT_NOT_FOUND))
-    input_rows = list(resolved.get("rows") or [])
-    input_metadata = resolved.get("input_metadata") or {}
-    try:
-        benchmark_identities = _benchmark_identity_map(input_metadata)
-    except ValueError:
-        benchmark_identities = {}
-        for row in input_rows:
-            code = str(row.get("所属产品编号") or "").strip()
-            asin = str(row.get("对标ASIN") or "").strip()
-            if code and asin:
-                if code in benchmark_identities and benchmark_identities[code].get("对标ASIN") != asin:
-                    raise ValueError("BENCHMARK_IDENTITY_DUPLICATE")
-                benchmark_identities[code] = {"对标编码": code, "对标ASIN": asin}
-        if not benchmark_identities:
-            raise ValueError("BENCHMARK_IDENTITY_MISSING")
-    _validate_benchmark_observation_uniqueness(input_rows)
-    input_product_codes = {str(row.get("所属产品编号") or "").strip() for row in input_rows}
-    if not input_product_codes.issubset(benchmark_identities):
-        raise ValueError("BENCHMARK_IDENTITY_MISSING")
+    prepared = dict(prepared or prepare_602(product_root, product_code))
+    evidence = prepared["product_evidence"]
+    resolved = prepared["resolved_601"]
+    input_rows = list(prepared["input_rows"])
+    input_metadata = prepared.get("input_metadata") or {}
+    benchmark_identities = dict(prepared["benchmark_identities"])
     brain_result = None
+    if agent_judgments is not None:
+        decisions = agent_judgments
+        brain_result = {"decisions": decisions, "keyword_units": prepared["keyword_units"],
+                        "product_profile": prepared.get("product_profile"),
+                        "ExecutionMode": "V4_COMPLETE_602_TASK" if prepared.get("_v4_execution") else "EXTERNAL_AGENT",
+                        "AgentProductProfileJudgmentCount": 1,
+                        "AgentPhaseAJudgmentBatchCount": 0,
+                        "AgentPhaseBJudgmentBatchCount": 0,
+                        "AgentChallengeCount": 0,
+                        "LocalValidatorInvocationCount": 0,
+                        "ExternalModelCallCount": 0}
+    elif precision_brain_client is None:
+        raise RuntimeError(AGENT_JUDGMENT_UNAVAILABLE)
     if decisions is None:
         brain_result = run_precision_brain(
             input_rows, evidence, client=precision_brain_client, batch_size=batch_size,
         )
         decisions = brain_result["decisions"]
-    result = finalize_observation_judgments(input_rows, decisions, evidence_context={
-        **evidence,
-        "product_profile": (brain_result or {}).get("product_profile"),
-    })
+    if agent_judgments is not None:
+        result = apply_602_judgments({**prepared, "product_profile": (brain_result or {}).get("product_profile")}, decisions)
+    else:
+        result = finalize_observation_judgments(input_rows, decisions, evidence_context={
+            **evidence,
+            "product_profile": (brain_result or {}).get("product_profile"),
+        })
     if brain_result:
         result["precision_brain_run"] = brain_result
     # The AI judgment remains unchanged; only B/C/D/E projection follows the
@@ -3015,8 +3716,19 @@ def run_current_602(
         },
         "Precision Brain": {
             "Product Purchase Driver": result.get("purchase_driver", {}),
+            "Structured Product Profile": result.get("product_profile", {}),
+            "ExecutionMode": (result.get("precision_brain_run") or {}).get("ExecutionMode", DATA_NOT_AVAILABLE),
+            "LocalBrainFallback": (result.get("precision_brain_run") or {}).get("LocalBrainFallback", DATA_NOT_AVAILABLE),
             "Record Count": len(result.get("precision_brain_records") or result.get("trace") or []),
             "AI Call Count": (result.get("precision_brain_run") or {}).get("ai_call_count", DATA_NOT_AVAILABLE),
+            "ExternalModelCallCount": (result.get("precision_brain_run") or {}).get("ExternalModelCallCount", DATA_NOT_AVAILABLE),
+            "ProductProfileModelCallCount": (result.get("precision_brain_run") or {}).get("ProductProfileModelCallCount", DATA_NOT_AVAILABLE),
+            "PrecisionModelCallCount": (result.get("precision_brain_run") or {}).get("PrecisionModelCallCount", DATA_NOT_AVAILABLE),
+            "LocalValidatorInvocationCount": (result.get("precision_brain_run") or {}).get("LocalValidatorInvocationCount", DATA_NOT_AVAILABLE),
+            "SuccessfulUniqueJudgmentCount": (result.get("precision_brain_run") or {}).get("SuccessfulUniqueJudgmentCount", DATA_NOT_AVAILABLE),
+            "ReviewRequiredCount": (result.get("precision_brain_run") or {}).get("ReviewRequiredCount", DATA_NOT_AVAILABLE),
+            "FailedJudgmentCount": (result.get("precision_brain_run") or {}).get("FailedJudgmentCount", DATA_NOT_AVAILABLE),
+            "RetryCount": (result.get("precision_brain_run") or {}).get("RetryCount", DATA_NOT_AVAILABLE),
             "Judgment Engine": "PrecisionJudgmentEngine",
             "Unique Judgment Count": len(result.get("keyword_units") or []),
             "Internal Fields": sorted({

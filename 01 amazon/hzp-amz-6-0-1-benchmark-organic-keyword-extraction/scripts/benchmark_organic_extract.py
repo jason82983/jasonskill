@@ -712,7 +712,7 @@ def main() -> int:
         output_dir = supplied.parent
     else:
         output_dir = Path(args.output) if args.output else product_root / "06_SKILL分析报告" / "6-0-1_对标自然排名关键词提取"
-    run_folder = resolve_skill_report_dir(product_root, Path(__file__).resolve().parents[1])
+    run_folder = product_root / "06_SKILL分析报告" / "6-0-1_对标自然排名关键词提取" / "data"
     detail_path = run_folder / build_report_filename(Path(__file__).resolve().parents[1], "多对标关键词排名明细", context.run_timestamp, "csv")
     pool_path = run_folder / build_report_filename(Path(__file__).resolve().parents[1], "对标关键词母池", context.run_timestamp, "csv")
     raw_paths = {
@@ -732,7 +732,7 @@ def main() -> int:
     if report_contract_error:
         print({"status": report_contract_error})
         return 2
-    assert_new_outputs([*all_asset_paths, *(str(path) + ".meta.json" for path in all_asset_paths)])
+    assert_new_outputs(all_asset_paths)
     write_asset_csv(detail_path, detail_rows, DETAIL_COLUMNS)
     write_asset_csv(pool_path, pool_rows, POOL_COLUMNS)
     for asin, path in raw_paths.items():
@@ -764,12 +764,6 @@ def main() -> int:
     } for item in query_summaries]
     outputs = [str(path) for path in all_asset_paths]
     benchmark_codes = [item["benchmark_code"] for item in benchmarks]
-    metadata_assets = [
-        (detail_path, "BENCHMARK_KEYWORD_DETAIL", DETAIL_COLUMNS, detail_rows),
-        (pool_path, "BENCHMARK_KEYWORD_POOL", POOL_COLUMNS, pool_rows),
-        *[(raw_paths[item["benchmark_asin"]], f"BENCHMARK_KEYWORD_RAW_{item['benchmark_asin']}", DETAIL_COLUMNS, raw_rows_by_asin.get(item["benchmark_asin"], [])) for item in benchmarks],
-        (organic_summary_path, "BENCHMARK_KEYWORD_ALL_OBSERVATIONS", ORGANIC_SUMMARY_COLUMNS, summary_rows),
-    ]
     benchmark_asins = [item["benchmark_asin"] for item in benchmarks]
     common_extra = {
         "Benchmark_Count": len(benchmarks), "Benchmark_Codes": benchmark_codes,
@@ -784,28 +778,7 @@ def main() -> int:
         "PerBenchmarkObservationCounts": per_benchmark_counts,
         "BenchmarkProductCodes": benchmark_product_codes,
     }
-    for path, report_identity, schema, rows in metadata_assets:
-        metadata = make_artifact_metadata(
-            context, report_identity,
-            run_status="FULL_SUCCESS" if coverage_pass else "INCOMPLETE",
-            schema=schema, record_count=len(rows), inputs=inputs,
-            output_assets=outputs,
-            extra=common_extra,
-        )
-        write_metadata_sidecar(path, metadata)
-    # Keep every timestamped CSV directly visible at the Skill report root so
-    # people can inspect historical runs without opening the canonical data
-    # layer. The canonical Run Package remains in its normal output directory.
-    visible_dir = product_root / "06_SKILL分析报告" / "6-0-1_对标自然排名关键词提取"
-    visible_dir.mkdir(parents=True, exist_ok=True)
-    visible_outputs: list[str] = []
-    for source_path in all_asset_paths:
-        visible_path = visible_dir / source_path.name
-        if visible_path.exists():
-            raise FileExistsError(f"VISIBLE_OUTPUT_ALREADY_EXISTS: {visible_path.name}")
-        shutil.copyfile(source_path, visible_path)
-        shutil.copyfile(Path(str(source_path) + ".meta.json"), Path(str(visible_path) + ".meta.json"))
-        visible_outputs.append(str(visible_path))
+    visible_outputs = []
     summary = {
         "status": "FULL_SUCCESS" if coverage_pass else "INCOMPLETE",
         "product_code": identity["product_code"],

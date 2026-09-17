@@ -18,6 +18,22 @@ Use the complete current-product text evidence and the formal 6-0-1 all-observat
 
 `05_分析源数据/01_产品数据/本产品/产品识别 - 文本文案.txt`（`CURRENT_PRODUCT_TEXT_EVIDENCE`） + 6-0-1 `BENCHMARK_KEYWORD_ALL_OBSERVATIONS` → one AI judgment per canonical Keyword → A 全量观察、B 配置筛选、C 对标内去重、D 去对标去重、E 按对标拆分。
 
+## Goal-Driven Production Contract (V4)
+
+用户调用 `6-0-2 {ProductCode}` 表示完成该产品的完整602目标，不表示处理一个Batch。唯一业务目标是：读取当前产品正式资料与最新601全部对标自然排名Observation，对全部Unique Canonical Keyword完成真实四级Precision Judgment，回填全部Observation，程序派生A/B/C/D/E，完成Schema、血缘、数量对账、Golden、回读和Publish。
+
+完成条件只有全部Completion Criteria成立：Product Profile有效；601输入有效；所有Unique Keyword都有合法处理状态；所有SUCCESS都有合法FinalPrecision；全部Observation回填；配置和Alias正确；A/B/C/D/E完整；Unique/Observation对账通过；Golden PASS；正式文件回读通过；Publish成功。否则只能报告 `INCOMPLETE` 或 `PROGRESS`，不得把单个Batch完成报告为602完成。
+
+当前执行本 Skill 的 Codex/Agent就是唯一Precision AI Judge。它直接读取Prepared Evidence，自主选择内部处理方法，完成 Searcher Purchase Mission、Purchase Mission Fit、Hard Conflict、Semantic Precision、Benchmark Reality、Decision Challenge 和FinalPrecision，再调用确定性Validation/Apply工具。正常入口不要求任何 `agent_judge`、`agent_batch_judge`、`precision_brain_client`、`external_ai_client`、第二阶段AI、CLI或Gateway。Python只有文件定位、Canonical/Observation处理、Schema、配置、派生、数量对账、保存和发布职责，没有Precision裁判权。
+
+Batch、循环、Checkpoint、Resume只是内部实现细节。外部配置 `E:\【所有产品目录专用】\01_公共资料\03_系统配置\602_AI批次大小.txt` 只表示PreferredBatchSize；Agent可以因上下文、完整性或质量风险自主缩小。Checkpoint只用于防中断、避免重复和恢复有效结果，不是业务边界。只有真实宿主/Context/Tool Hard Limit才允许暂时中断；下一次同一Skill调用继续原Goal。
+
+真实AI不可用时必须Fail Closed为 `INCOMPLETE` / `AI_PRECISION_JUDGMENT_UNAVAILABLE`，不得用Regex、Token Match、固定Score、Local Heuristic或Fallback生成四级Precision。
+
+### Deprecated experimental paths
+
+`run_codex_cli_production()`、`codex_cli_judge.py`、CLI Schema、Callback Push、Shared Gateway、Continuous Drain、复杂Production Queue，以及把 `agent_batch_judge` / `precision_brain_client`作为正常入口的路径，均为 `DEPRECATED_FOR_602_PRODUCTION` 或测试兼容层，不得进入正式主链。不得因保留兼容代码而改变唯一正式业务入口。
+
 ## Formal inputs
 
 **Input A — Current Product Text Evidence**
@@ -44,21 +60,21 @@ Before precision judgment, construct the model input from `build_dual_views_from
 
 Precision Brain 在同一 Run 先从 Current Product Ground Truth 识别一次 `PrimaryPurchaseDriver`（`FUNCTIONAL`、`COMPATIBILITY`、`GIFT_EMOTIONAL`、`AESTHETIC_DECOR`、`OCCASION`、`HYBRID`），再按 Driver 选择主要证据。内部记录 Gift Mission Evidence、Physical/Purchase Mission/Compatibility Convergence 和 Decision Challenge；这些字段属于审计证据，不改变 A/B/C/D/E 的正式 CSV Schema。
 
-Build `CURRENT_PRODUCT_UNDERSTANDING` once from the complete product text, then independently reconstruct each Amazon US searcher's intent before comparing it with the product. Distinguish `PRODUCT-LED`, `GIFT-LED`, `BROAD-GIFT`, `RELATIONSHIP-ONLY` and `HARD-SPECIFIED`; a Gift-led query does not need to contain figurine/statue/decor. Decide `CORE FIT` versus `CAN SERVE`, then check every explicit hard modifier (product type, material, quantity/representation, personalization, compatibility, size, function and theme). A hard conflict vetoes `高度精准`; a product-type conflict is normally `不精准`.
+Build `CURRENT_PRODUCT_UNDERSTANDING` once from the complete product text through the current Codex/Agent's `PRODUCT_PROFILE_JUDGMENT` phase. Validate a Structured Product Profile before any keyword judgment; core fields such as Product Type, Primary Purchase Driver and Core Purchase Mission cannot remain `DATA_NOT_AVAILABLE`. If the current Agent cannot judge, stop with `AI_PRECISION_JUDGMENT_UNAVAILABLE`; if the profile is insufficient, stop with `PRODUCT_PROFILE_INSUFFICIENT` and do not publish A/B/C/D/E.
+
+Then independently reconstruct each Amazon US searcher's intent before comparing it with the product. Distinguish `PRODUCT-LED`, `GIFT-LED`, `BROAD-GIFT`, `RELATIONSHIP-ONLY` and `HARD-SPECIFIED`; a Gift-led query does not need to contain figurine/statue/decor. Decide `CORE FIT` versus `CAN SERVE`, then check every explicit hard modifier (product type, material, quantity/representation, personalization, compatibility, size, function and theme). A hard conflict vetoes `高度精准`; a product-type conflict is normally `不精准`.
 
 **Hard Modifier** 必须逐项核对。`gift`、`sister`、泛礼物、泛对象和泛场景必须按完整短语的 Search Intent 判断；搜索量、Benchmark 排名和词面重合都不能代替语义判断。
 
 Do not use string matches, product-type explicitness, a fixed formula, word count or numeric scoring as the final decision; never calculate or map a 0–100 score. The semantic check is **Product–Search Intent Fit** plus Query Specificity, but product-type explicitness is not a proxy for either. Gift/relationship intent can be `高度精准` when it is the product's core reason to buy; broad demographic/occasion queries are usually `弱精准` because the product is only one possible answer. Benchmark Organic Rank is Market Reality Evidence only and never promotes or demotes the semantic level. Apply the counterfactual test (“would a shopper naturally see this as the kind of item they intended to buy, or merely something that could also be a gift?”), then AI直接裁决 and directly choose `高度精准`, `精准`, `弱精准` or `不精准`.
 
-Every reason must be keyword-specific and state what the shopper wants plus why the product is CORE FIT, CAN SERVE or in conflict. Do not batch-apply one reason or one level to a keyword class; 不得复制通用理由. Use `REVIEW_REQUIRED` internally when evidence is insufficient; the formal CSV contract remains unchanged. Calibration examples are in `references/calibration-cases.md` and are not executable keyword mappings.
+Every reason must be keyword-specific and state what the shopper wants plus why the product is CORE FIT, CAN SERVE or in conflict. Do not batch-apply one reason or one level to a keyword class; 不得复制通用理由. Use `REVIEW_REQUIRED` internally when evidence is insufficient; its `FinalPrecision` is blank/NULL and it is excluded from B/C/D/E, never converted to `弱精准`. The formal CSV contract remains unchanged. Calibration examples are in `references/calibration-cases.md` and are not executable keyword mappings.
 
-## Runner and Precision Brain V3
+## Execution method is internal
 
-The normal entry point is `run_current_602(product_root, product_code)`; it must not require caller-supplied precision decisions. It reads the product evidence and 6-0-1 rows, canonicalizes and deduplicates keywords, then invokes the repository's `PrecisionJudgmentEngine`. A host model adapter may be injected through `precision_brain_client`; without one, the local semantic adapter remains a deterministic fallback and never uses numeric scoring, market facts, or rank to manufacture precision.
+Agent may use `get_next_602_batch()`、`save_602_batch_judgments()` and the existing Checkpoint internally, but these are implementation helpers only. They must never become a user-visible Batch/Resume contract or a fixed stopping rule. `ConfiguredBatchSize` does not change the Precision Brain, FinalPrecision, Product Profile, Benchmark Reality or Decision Challenge. A runtime failure leaves work incomplete/PENDING and never fabricates FAILED business judgments.
 
-The engine emits typed records keyed by stable `JudgmentItemId`, plans batches from profile/token/output size, retries invalid batches at smaller size, and uses two evidence phases. Phase A receives product and keyword semantics with benchmark rank hidden and decides the semantic fields and `InitialPrecision`. Phase B receives benchmark coverage/rank only to produce `BenchmarkRealityAssessment`; it cannot alter the Phase A semantic level. The decision challenge runs before `FinalPrecision`.
-
-`FinalPrecision` is limited to `高度精准`、`精准`、`弱精准`、`不精准`; `JudgmentStatus` remains separate and is limited to `SUCCESS`、`REVIEW_REQUIRED`、`FAILED`. `REVIEW_REQUIRED` is never a fifth precision level. The shared configuration selects which of the four levels enter B/C/D/E; it never changes the AI judgment. The legacy `PRECISION`/`NOT_PRECISION` labels are compatibility-only input fields and are never accepted as the structured FinalPrecision enum.
+Before reporting COMPLETE, the Agent must audit InputUnique, valid processed count, remaining unprocessed records, Observation backfill, configuration, A/B/C/D/E existence, Unique/Observation reconciliation, Golden PASS and Publish status.
 
 ## Output and trace
 

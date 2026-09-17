@@ -11,18 +11,18 @@ metadata:
 
 Formal identity: 6-0-3 | 精准泛词 | Precision Broad Extraction | hzp-amz-6-0-3-precision-broad-extraction.
 
-Read only the 6-0-2 C asset `去重去对标后 筛选后的精准词表` from the 602 `data/` directory, selecting the greatest filename timestamp and validating the minimum C schema. RunPackage, Manifest, sidecar and mtime are not prerequisites. C remains the sole semantic Intent input; never use A/B/D as Intent inputs. Do not rejudge precision, read 6-0-1, query ERP, edit 6-0-2, or execute Amazon Ads writes.
+Read only the 6-0-2 D asset `去对标去重 高度精准词` (the configured 602 precision library output) from the 602 `data/` directory, selecting the greatest filename timestamp and validating the minimum C schema. RunPackage, Manifest, sidecar and mtime are not prerequisites. C remains the sole semantic Intent input; never use A/B/D as Intent inputs. Do not rejudge precision, read 6-0-1, query ERP, edit 6-0-2, or execute Amazon Ads writes.
 
 ## Formal input
 
 Invocation: `6-0-3, Product_Code`. Resolve the Product Root, scan the 602 `data/` directory for the exact C filename, choose the greatest `YYYYMMDD_HHMMSS`, and validate its schema and Product identity. Historical folders are not selected.
 
-The B/C selection is controlled by the shared configuration `E:\【所有产品目录专用】\01_公共资料\03_系统配置\生成精准词库的要求.txt` (relative path `01_公共资料/03_系统配置/生成精准词库的要求.txt`) under the unified product root. 603 reads that configuration while validating the selected 602 package and rejects a package whose recorded normalized levels do not match the current file. The business label `已精准` is normalized to the existing AI label `精准`.
+The 602 D selection is controlled by the shared configuration `E:\【所有产品目录专用】\01_公共资料\03_系统配置\生成精准词库的要求.txt` (relative path `01_公共资料/03_系统配置/生成精准词库的要求.txt`) under the unified product root. 603 reads that configuration while validating the selected 602 package and rejects a package whose recorded normalized levels do not match the current file. The business label `已精准` is normalized to the existing AI label `精准`.
 
 The 602 handoff passes only C to Intent extraction. A, B and D are never semantically extracted.
 历史迁移兼容：若旧批次目录中残留旧名 B/C CSV，且新命名资产齐全，校验仅忽略这两个同时间戳旧别名，不读取其内容；所有必需的新命名资产仍须完整且通过校验。
 
-Report Identity is `去重去对标后 筛选后的精准词表`; `Report_Key` is `UNIQUE_SELECTED_PRECISION_KEYWORDS`. Required columns are `Id,词,中文,市场容量,竞争产品数,供需比,对标覆盖数,最佳自然排名,自然排名中位数,精准度,精准原因`; benchmark identity fields including `所属产品编号` are not accepted in this unique-keyword schema. Every row must have `精准度` in the normalized levels loaded from the shared precision-filter configuration, and `normalize_broad_keyword(词)` must be unique. Duplicate canonical keywords fail with `603_INPUT_DUPLICATE_KEYWORD`; any other precision level fails with `603_INPUT_NOT_ALL_HIGH_PRECISION`. Preserve each unique Id. `竞争产品数` and `供需比` are copied unchanged into the mapping CSV. The mapping column `自然排名` is sourced from `最佳自然排名`; the summary uses source `竞争产品数` only for the defined subtree arithmetic mean and does not aggregate keyword-level `供需比`.
+Report Identity is `去重去对标后 筛选后的精准词表`; `Report_Key` is `UNIQUE_SELECTED_PRECISION_KEYWORDS`. Required columns are `Id,词,中文,市场容量,竞争产品数,供需比,对标覆盖数,最佳自然排名,自然排名中位数,精准度,精准原因`; benchmark identity fields including `所属产品编号` are not accepted in this unique-keyword schema. Every row is accepted from 602 D without a second precision filter; `normalize_broad_keyword(词)` must be unique. Duplicate canonical keywords fail with `603_INPUT_DUPLICATE_KEYWORD`. Preserve each unique Id. `竞争产品数` and `供需比` are copied unchanged into the mapping CSV. The mapping column `自然排名` is sourced from `最佳自然排名`; the summary uses source `竞争产品数` only for the defined subtree arithmetic mean and does not aggregate keyword-level `供需比`.
 
 Invalid input statuses include `NON_HIGH_PRECISION_RECORD_IN_603_INPUT`, `MISSING_RECORD_IDS`, and `DUPLICATE_RECORD_IDS`.
 
@@ -90,3 +90,9 @@ See `scripts/broad_seed_cluster.py` and `references/broad-seed-cluster-v1.md`.
 ## 全局报告文件治理（适用本 Skill）
 
 本 Skill 遵循公共 `scripts/hzp_amz_report_contract.py`、[human-report-publishing.md](../references/human-report-publishing.md) 与 [report-governance.md](../references/report-governance.md)：正式机器业务数据只进入当前 Skill 报告目录的 `data/`，`data/` 只保留完整 `LATEST VALID` Batch；旧 VALID Batch 整包进入 `历史数据/<RUN_TIMESTAMP>/`。RunPackage/Manifest、metadata、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`。新 Batch 必须先 Staging、验证完整性后再原子发布；失败不得替换旧 data。根目录只保留最新人类 HTML（如有）及正式子目录，机器数据不得写根目录。下游通过指定 Report Identity 扫描 `data/` 并按文件名 `YYYYMMDD_HHMMSS` 取最新，不得按 HTML、根目录或文件修改时间选数。已有成熟时间戳 Run Package 的持续 Skill 可保留其内部运行包，但仍遵守根目录清洁和系统资产分层。
+
+## V3 Intent Contract
+603 不重新筛选 Precision，不使用本地 token、字符串或规则生成最终 Intent。必须由真实 AI Intent Engine 负责 Primary Intent、语义合并及父子关系；AI 不可用时返回 INTENT_AI_ENGINE_UNAVAILABLE，不得本地降级。失败项保留 PrimaryIntent=NULL 并标记 REVIEW_REQUIRED/FAILED。RunPackage、Manifest、meta、mtime 均不是输入前提；按 602 D 正式文件名时间戳读取。
+
+## V3 Agent Pull Queue 执行锁定
+603 通过 get_603_status、get_next_603_semantic_batch、save_603_semantic_batch 采用 Agent Pull Queue；禁止 Python Callback Push。602 D 是唯一输入，接受 D 中全部配置筛选后的关键词，不在 603 二次筛选 Precision。PrimaryIntent、PurchaseMission、Intent 合并及 Parent/Child 必须由真实 AI Agent 判断；本地 token、字符串、规则只能做候选或校验，AI 不可用时返回 INTENT_AI_ENGINE_UNAVAILABLE，不得生成正式 Intent。
