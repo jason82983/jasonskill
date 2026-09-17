@@ -9,7 +9,7 @@ metadata:
 
 ## 触发
 
-调用本 Skill 且没有附加参数时，默认立即执行两端同步：先校验 `.codex` 与 JasonSkill 两边，再将 `.codex` 中全部 `hzp-amz-*` 技能镜像到 JasonSkill，确保两边内容一致。本 Skill 只处理名称以 `hzp-amz-` 开头的技能；用户明确说“同步git”时，再继续提交并推送 GitHub。
+调用本 Skill 且没有附加参数时，默认立即执行完整流程：校验 `.codex` 与 JasonSkill 两边，将 `.codex` 中全部 `hzp-amz-*` 技能镜像到 JasonSkill，提交并推送 GitHub，确保两边与远端一致。本 Skill 只处理名称以 `hzp-amz-` 开头的技能。
 
 ## 固定路径
 
@@ -23,7 +23,7 @@ metadata:
 2. 先做差异预检：缺失目录、文件差异、删除风险、未跟踪文件、当前分支和远端状态。
 3. 将源技能内容同步到仓库对应目录；只同步 `SKILL.md`、`agents/`、`scripts/`、`references/`、`templates/`、`assets/` 等技能文件，不同步 `__pycache__`、`.pyc`、临时输出和运行报告。
 4. 运行 Skill 格式校验，并检查 Git diff；源目录不存在的仓库技能不得静默删除。
-5. 只有用户明确要求“同步git”时，才在核对 diff 后提交并推送 `origin`。提交信息说明同步范围；推送失败必须保留本地提交并报告原因。
+5. 默认在核对 diff 后提交并推送 `origin`。提交信息说明同步范围；推送失败必须保留本地提交并报告原因。仅在用户明确要求“只预检”时跳过提交和推送。
 
 ## 约束
 
@@ -35,5 +35,6 @@ metadata:
 ## 推荐脚本
 
 仓库中的 `scripts/sync_hzp_amz_skills.py` 提供预检和镜像；默认只同步并显示 diff，使用 `--push` 才执行提交和推送。
+
 
 

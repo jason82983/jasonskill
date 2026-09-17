@@ -3,7 +3,6 @@ name: hzp-amz-5-0-1-product-online-information-retrieval
 description: Product-code-only retrieval of the current Amazon detail page, preserving raw online evidence and a clearly labelled AI semantic profile in a formal HTML report.
 ---
 
-正式报告输出遵守共享 [报告目录与归档契约](../references/report-layout-contract.md)：HTML 根目录只保留当前 Report Identity 的 `最新`，旧 HTML 进入 `历史HTML/`；机器资产进入 `data/`，系统元数据进入 `_system/`。底层 RUN_TIMESTAMP 只生成一次。
 # HZP Amazon 5-0-1｜产品线上信息获取
 
 ## Contract

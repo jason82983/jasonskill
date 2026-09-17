@@ -5,7 +5,6 @@ metadata:
   short-description: 对标意图市场占领分析
 ---
 
-正式输出遵守共享 [报告目录与归档契约](../references/report-layout-contract.md)：CSV 进入 `data/`，HTML 根目录每个 Report Identity 只保留一个 `最新`，旧 HTML 进入 `历史HTML/`，metadata/manifest 进入 `_system/`；Latest Valid Data 不通过 HTML 文件名选择。
 # HZP Amazon 6-0-6｜对标意图市场占领分析
 
 正式身份：`6-0-6 | Benchmark Intent Market Occupancy Analysis | hzp-amz-6-0-6-benchmark-intent-market-occupancy-analysis`。
