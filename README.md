@@ -19,7 +19,7 @@
 | `hzp-amz-0-5-management-decision-brief` | Amazon | 发现需要上级决策的经营事项，生成决策周报并记录路由 |
 | `hzp-amz-1-1-opportunity-discovery` | Amazon | 从真实市场信号发现可验证的候选商机并交接给 1-2 |
 | `hzp-amz-1-2-product-screening` | Amazon | 基于 1-1 证据筛选值得进入 2-1 的候选商机 |
-| `hzp-amz-2-1-market-research` | Amazon | 分析单个 Amazon 产品的市场表现、证据和开发可行性 |
+| `hzp-amz-2-1-product-analysis` | Amazon | 分析单个 Amazon 产品的市场表现、证据和开发可行性 |
 | `hzp-amz-2-2-market-analysis` | Amazon | 判断细分市场范围、市场进入机会和改良开发价值 |
 | `hzp-amz-3-1-product-opportunity-definition` | Amazon | 从前序市场证据和人工判断中收敛可验证的产品机会 |
 | `hzp-amz-3-2-differentiated-product-development` | Amazon | 将产品机会转化为可评审、可打样的差异化产品方案 |
@@ -31,9 +31,9 @@
 | `hzp-amz-5-3-image-video-planning` | Amazon | 规划 Amazon 图片、A+ 与视频并守住产品真实性 |
 | `hzp-amz-5-4-page-audit-optimization` | Amazon | 审核页面策略、文案、视觉和真实成品并输出修改优先级 |
 | hzp-amz-5-5-live-asin-page-audit | Amazon | 审计真实线上 ASIN 页面与 5-1～5-4 策略执行并路由优化 |
-| `hzp-amz-6-1-new-product-launch-strategy` | Amazon | 设计新品首阶段流量、广告测试、预算协同与验证规则 |
-| `hzp-amz-6-2-product-operations-monitoring` | Amazon | 产品经营监控、根因诊断与跨 Skill 路由 |
-| `hzp-amz-6-3-advertising-diagnosis-optimization` | Amazon | 广告诊断、优化与获批变更执行 |
+| `hzp-amz-6-1-new-product-advertising-battle-plan` | Amazon | 设计新品首阶段流量、广告测试、预算协同与验证规则 |
+| `hzp-amz-6-3-advertising-data-report` | Amazon | 产品经营监控、根因诊断与跨 Skill 路由 |
+| `hzp-amz-6-4-advertising-decision` | Amazon | 广告诊断、优化与获批变更执行 |
 | `hzp-amz-7-1-replenishment-forecast` | Amazon | 基于真实库存、销售速度和 Lead Time 形成补货预测 |
 | hzp-amz-7-2-inventory-risk-management | Amazon | 持续监控库存偏差、在途、老化和资金风险 |
 
@@ -61,6 +61,7 @@ JasonSkill/
       ├─ references/
       └─ templates/
 ```
+
 
 
 
