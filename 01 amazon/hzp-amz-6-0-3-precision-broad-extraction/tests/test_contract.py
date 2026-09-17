@@ -64,25 +64,25 @@ def write_602_package(root, stamp="20260916_184400"):
 
 def test_identity_and_input_boundary():
     assert "hzp-amz-6-0-3-precision-broad-extraction" in SKILL
-    assert "UNIQUE_HIGH_PRECISION_KEYWORDS" in SKILL
+    assert "UNIQUE_SELECTED_PRECISION_KEYWORDS" in SKILL
     assert "Report Identity" in SKILL
     assert "603_INPUT_NOT_ALL_HIGH_PRECISION" in SKILL
     assert "603_INPUT_DUPLICATE_KEYWORD" in SKILL
-    assert "falls back over failed/incomplete runs" in README
-    assert "精准判断所有词表" in README and "高度精准词表" in README
-    assert "去对标去重 高度精准词" in README
+    assert "文件名时间戳" in README
+    assert "精准判断所有词表" in README and "筛选后的精准词表" in README
+    assert "去重去对标后 筛选后的精准词表" in README
     assert module.DEDUPLICATED_NAME.endswith(".csv")
-    assert module.INPUT_REPORT_IDENTITY == "去对标去重 高度精准词"
-    assert module.INPUT_REPORT_KEY == "UNIQUE_HIGH_PRECISION_KEYWORDS"
+    assert module.INPUT_REPORT_IDENTITY == "去重去对标后 筛选后的精准词表"
+    assert module.INPUT_REPORT_KEY == "UNIQUE_SELECTED_PRECISION_KEYWORDS"
     assert "所属产品编号" not in module.INPUT_COLUMNS
     assert module.INPUT_RUN_DIR == "6-0-2_AI精准关键词识别"
     assert callable(module.resolve_latest_valid_602_run_package)
 
 
 def test_two_output_contract():
-    assert "Nine columns" in SKILL
-    assert len(module.MAPPING_COLUMNS) == 9
-    assert len(module.SUMMARY_COLUMNS) == 9
+    assert "Fixed schema" in SKILL
+    assert len(module.MAPPING_COLUMNS) == 18
+    assert len(module.SUMMARY_COLUMNS) == 15
     assert module.MAPPING_COLUMNS[4:6] == ("竞争产品数", "供需比")
     assert module.SUMMARY_COLUMNS[6:8] == ("平均竞品数", "意图机会比")
     assert "意图机会比" in SKILL
@@ -100,19 +100,19 @@ def test_timestamped_run_packages_latest_valid_and_preserved_history(tmp_path):
     mapper = lambda record: {"精准泛词": "sister gifts", "精准泛词中文": "姐妹礼物"}
     older = module.run(tmp_path, "B2", mapper, generated_at="20260916_160000")
     newer = module.run(tmp_path, "B2", mapper, generated_at="20260916_160000")
-    assert Path(older["run_folder"]) == module.output_root(tmp_path)
-    assert Path(newer["run_folder"]) == module.output_root(tmp_path)
-    assert Path(older["mapping"]).name == "6-0-3_B2_词对应的精准泛词_20260916_160000.csv"
-    assert Path(older["summary"]).name == "6-0-3_B2_精准泛词汇总_20260916_160000.csv"
+    assert Path(older["run_folder"]) == module.output_root(tmp_path) / "data"
+    assert Path(newer["run_folder"]) == module.output_root(tmp_path) / "data"
+    assert Path(older["mapping"]).name == "6-0-3_词对应的精准泛词_20260916_160000.csv"
+    assert Path(older["summary"]).name == "6-0-3_精准泛词汇总_20260916_160000.csv"
     for result in (older, newer):
         folder = Path(result["run_folder"])
         paths = [Path(result["summary"]), Path(result["mapping"])]
         assert all(path.parent == folder for path in paths)
         assert all(path.stem.endswith(f"_{result['run_timestamp']}") for path in paths)
         assert Path(result["run_manifest"]).is_file()
-    assert Path(older["mapping"]).is_file() and Path(older["summary"]).is_file()
-    assert len(list(module.output_root(tmp_path).glob("*20260916_160000.csv"))) == 2
-    assert len(list(module.output_root(tmp_path).glob("*20260916_160001.csv"))) == 2
+    assert not Path(older["mapping"]).is_file() and not Path(older["summary"]).is_file()
+    assert list((module.output_root(tmp_path) / "历史数据").rglob("*20260916_160000.csv"))
+    assert len(list((module.output_root(tmp_path) / "data").glob("*.csv"))) == 2
     latest = module.resolve_latest_valid_603_run_package(tmp_path, "B2")
     assert latest["status"] == "LATEST_VALID_603_RUN_PACKAGE_READY"
     assert latest["run_timestamp"] == "20260916_160001"

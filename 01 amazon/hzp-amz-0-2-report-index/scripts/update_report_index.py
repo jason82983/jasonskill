@@ -22,6 +22,9 @@ SKILL_LABELS = {
 }
 
 OPERATIONAL_LOG_DIR = "广告表现汇报优化日志"
+HUMAN_HISTORY_DIR = "历史HTML"
+MACHINE_DATA_DIRS = {"data", "历史数据", "_system"}
+TIMESTAMP_FOLDER_RE = re.compile(r"^\d{8}_\d{6}$")
 
 # Stage 6 semantic labels are keyed by the new report type; historical files remain discoverable as history.
 FORMAL_STAGE6_TYPES = {"6-1": "新品广告作战规划", "6-3": "广告运行事实数据报告", "6-4": "广告经营决策", "6-6": "产品经营监控与诊断"}
@@ -55,7 +58,18 @@ def parse_report(path: Path, report_root: Path) -> dict | None:
     if path.name.lower() == "index.html":
         return None
     relative_parts = path.relative_to(report_root).parts
+    # Machine data, manifests and metadata are consumed through their formal
+    # resolvers and never indexed as human HTML links.
+    if any(part in MACHINE_DATA_DIRS for part in relative_parts[:-1]):
+        return None
     if OPERATIONAL_LOG_DIR in relative_parts[:-1]:
+        return None
+    # Run-package HTML is machine-facing and remains inside its immutable
+    # timestamp folder. The human index shows only the published root report
+    # plus explicitly archived history under 历史HTML.
+    if HUMAN_HISTORY_DIR not in relative_parts[:-1] and any(
+        TIMESTAMP_FOLDER_RE.fullmatch(part) for part in relative_parts[:-1]
+    ):
         return None
     if any(
         token in {"test", "temp", "demo", "debug"}
@@ -67,8 +81,8 @@ def parse_report(path: Path, report_root: Path) -> dict | None:
     ):
         return None
     stem = path.stem
-    match = re.match(r"^(?P<skill>\d+-\d+)[-_](?P<product>[^_]+)(?:_(?P<title>.+))?$", stem)
-    parent_match = re.match(r"^(?P<skill>\d+-\d+(?:-\d+)?)(?:[_-].*)?$", path.parent.name)
+    match = re.match(r"^(?P<skill>\d+(?:-\d+)+)[-_](?P<product>[^_]+)(?:_(?P<title>.+))?$", stem)
+    parent_match = re.match(r"^(?P<skill>\d+(?:-\d+)+)(?:[_-].*)?$", path.parent.name)
     if not match and not parent_match:
         return None
 
@@ -128,6 +142,7 @@ def parse_report(path: Path, report_root: Path) -> dict | None:
         "path": relative,
         "filename": path.name,
         "legacy": version is None or timestamp is None,
+        "history": HUMAN_HISTORY_DIR in relative_parts[:-1],
         "semantic_legacy": semantic_legacy,
     }
 
@@ -137,6 +152,7 @@ def sort_reports(reports: list[dict]) -> list[dict]:
         reports,
         key=lambda item: (
             not item.get("semantic_legacy", False),
+            not item.get("history", False),
             item["version"] is not None,
             item["version"] if item["version"] is not None else -1,
             item["timestamp"] or item["file_time"],
@@ -166,7 +182,9 @@ def build_html(product_code: str, product_name: str, reports: list[dict], genera
         rows: list[str] = []
         for index, item in enumerate(group):
             version = f"V{item['version']}" if item["version"] is not None else "历史报告"
-            legacy = " <span class=\"legacy\">历史报告</span>" if item["legacy"] else ""
+            legacy = " <span class=\"legacy\">历史报告</span>" if (
+                (item["legacy"] or item.get("history")) and item["version"] is not None
+            ) else ""
             if item.get("semantic_legacy"):
                 legacy += " <span class=\"legacy\">历史语义</span>"
             newest = " <span class=\"latest\">最新</span>" if index == 0 else ""

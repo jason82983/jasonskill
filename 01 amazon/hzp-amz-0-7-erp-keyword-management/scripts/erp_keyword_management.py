@@ -4,12 +4,17 @@ No database connection or credentials are embedded here. A real provider must
 implement the small interface and explicitly opt in before writes.
 """
 from __future__ import annotations
-import csv, html, json, re
+import csv, html, json, re, sys
 from collections import Counter
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterable, Mapping, Any
+
+SKILLS_ROOT = Path(__file__).resolve().parents[2]
+if str(SKILLS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SKILLS_ROOT))
+from scripts.hzp_amz_report_contract import governance_paths, publish_latest_valid_batch, publish_latest_html
 
 STATUSES = {
     "UPDATED_VERIFIED", "SKIP_ALREADY_TRANSLATED", "SKIP_CONCURRENTLY_FILLED",
@@ -148,9 +153,16 @@ def process(provider: PickKwProvider, translator: Callable[[str], str],
             estimated_rows: int | None = None) -> dict[str, Any]:
     if not scope:
         raise ValueError("UPDATE_SCOPE_REQUIRED")
+    try:
+        limit = int(scope.get("Limit", 0))
+    except (TypeError, ValueError):
+        limit = 0
+    if limit <= 0:
+        raise ValueError("UPDATE_LIMIT_REQUIRED")
     run_id = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     cache = TranslationCache(translator)
     rows: list[ResultRow] = []
+    eligible = 0
     page_size = choose_page_size(estimated_rows)
     for src in provider.scan_missing(page_size=page_size):
         rid = str(src.get(ID_FIELD, ""))
@@ -164,33 +176,46 @@ def process(provider: PickKwProvider, translator: Callable[[str], str],
             rows.append(ResultRow(rid, keyword, original_cn, "", original_cn,
                                   "NONE", "SOURCE_KEYWORD_EMPTY", "Keyword为空"))
             continue
+        eligible += 1
         proposed = cache.translate(keyword)
         ok, reason = validate_translation(keyword, proposed, max_length)
         if not ok:
             rows.append(ResultRow(rid, keyword, original_cn, str(proposed or ""),
                                   original_cn, "NONE", "TRANSLATION_VALIDATION_FAILED", reason))
+            if eligible >= limit:
+                break
             continue
         if not dry_run and not provider.writer_verified:
             rows.append(ResultRow(rid, keyword, original_cn, proposed, original_cn,
                                   "NONE", "WRITE_BLOCKED", "PickKw.KeywordCn Writer未验证"))
+            if eligible >= limit:
+                break
             continue
         if dry_run:
             rows.append(ResultRow(rid, keyword, original_cn, proposed, original_cn,
                                   "PROPOSE", "DRY_RUN_PROPOSED", ""))
+            if eligible >= limit:
+                break
             continue
         live = provider.read(rid)
         if live.get("Keyword") != keyword:
             rows.append(ResultRow(rid, keyword, original_cn, proposed, str(live.get("KeywordCn") or ""),
                                   "NONE", "SOURCE_KEYWORD_CHANGED", "Keyword在写入前变化"))
+            if eligible >= limit:
+                break
             continue
         if not is_missing_cn(live.get("KeywordCn")):
             rows.append(ResultRow(rid, keyword, original_cn, proposed, str(live.get("KeywordCn")),
                                   "NONE", "SKIP_CONCURRENTLY_FILLED", "KeywordCn已被填充"))
+            if eligible >= limit:
+                break
             continue
         result = provider.compare_and_apply(rid, keyword, True, proposed)
         if result != "APPLIED":
             rows.append(ResultRow(rid, keyword, original_cn, proposed, str(live.get("KeywordCn") or ""),
                                   "NONE", result if result in STATUSES else "ERP_WRITE_FAILED", result))
+            if eligible >= limit:
+                break
             continue
         final = provider.readback(rid)
         final_cn = str(final.get("KeywordCn") or "")
@@ -198,13 +223,16 @@ def process(provider: PickKwProvider, translator: Callable[[str], str],
         rows.append(ResultRow(rid, keyword, original_cn, proposed, final_cn,
                               "UPDATE" if status == "UPDATED_VERIFIED" else "NONE", status,
                               "" if status == "UPDATED_VERIFIED" else "读回值不一致"))
+        if eligible >= limit:
+            break
     stats = Counter(r.ResultStatus for r in rows)
     stats.update({"scanned": len(rows), "translation_requests": cache.calls,
                   "translation_cache_hits": max(0, sum(1 for r in rows if r.ProposedKeywordCn) - cache.calls)})
     if not dry_run and not provider.writer_verified:
         stats["write_blocked"] = sum(1 for r in rows if r.ResultStatus == "WRITE_BLOCKED")
     return {"RunId": run_id, "Rows": rows, "Stats": dict(stats), "DryRun": dry_run,
-            "Scope": dict(scope), "PageSize": page_size}
+            "Scope": {**dict(scope), "DataSource": "PickKw", "Limit": limit},
+            "PageSize": page_size}
 
 def write_csv(path: str | Path, rows: Iterable[ResultRow]) -> None:
     p = Path(path); p.parent.mkdir(parents=True, exist_ok=True)
@@ -224,16 +252,32 @@ def write_report(product_root: str | Path, product_code: str, result: Mapping[st
                  generated_at: datetime | None = None) -> dict[str, Path]:
     dt = generated_at or datetime.now()
     stamp = dt.strftime("%Y%m%d_%H%M%S"); human = dt.strftime("%Y-%m-%d_%H%M%S")
-    base = Path(product_root) / "06_SKILL分析报告" / "0-7_ERP关键词管理"
-    for d in ("历史HTML", "data", "_system"): (base / d).mkdir(parents=True, exist_ok=True)
-    csv_path = base / "data" / f"0-7_关键词翻译更新结果_{stamp}.csv"
-    hist_path = base / "历史HTML" / f"0-7_ERP关键词管理报告_{human}.html"
-    latest_path = base / f"0-7_ERP关键词管理报告_最新_{human}.html"
+    base = (Path(product_root) / "01_公共资料" / "0-7_ERP关键词管理"
+            if product_code == "ALL_PICKKW"
+            else Path(product_root) / "06_SKILL分析报告" / "0-7_ERP关键词管理")
+    dirs = governance_paths(base)
+    build_dir = dirs["staging"] / f"{stamp}_build"
+    build_dir.mkdir(parents=True, exist_ok=False)
+    csv_path = build_dir / f"0-7_关键词翻译更新结果_{stamp}.csv"
+    latest_path = build_dir / f"0-7_ERP关键词管理报告_最新_{human}.html"
     write_csv(csv_path, result["Rows"])
     content = render_html(product_code, result)
-    hist_path.write_text(content, encoding="utf-8"); latest_path.write_text(content, encoding="utf-8")
-    (base / "_system" / f"run_{stamp}.json").write_text(json.dumps(
+    latest_path.write_text(content, encoding="utf-8")
+    manifest_path = build_dir / f"0-7_RunPackage_{stamp}.json"
+    manifest_path.write_text(json.dumps(
         {"RunId": result["RunId"], "ProductCode": product_code, "GeneratedAt": dt.isoformat(),
          "DryRun": result["DryRun"], "Scope": result["Scope"],
-         "PageSize": result["PageSize"], "Stats": result["Stats"]}, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"csv": csv_path, "history_html": hist_path, "latest_html": latest_path}
+         "PageSize": result["PageSize"], "Stats": result["Stats"], "RUN_TIMESTAMP": stamp,
+         "Run_Status": "VALID", "Output_Assets": [csv_path.name, latest_path.name]}, ensure_ascii=False, indent=2), encoding="utf-8")
+    published = publish_latest_valid_batch(
+        base, stamp, [csv_path], manifest_files=[manifest_path],
+        registry_payload={"Skill_ID": "hzp-amz-0-7-erp-keyword-management", "Product_Code": product_code,
+                          "RUN_ID": result["RunId"], "RUN_TIMESTAMP": stamp, "Files": [csv_path.name]},
+        move_sources=True,
+    )
+    publish_latest_html(latest_path, base)
+    import shutil
+    shutil.rmtree(build_dir, ignore_errors=True)
+    return {"csv": Path(published["data_dir"]) / csv_path.name,
+            "history_html": base / "历史HTML",
+            "latest_html": base / latest_path.name}

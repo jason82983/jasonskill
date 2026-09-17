@@ -15,6 +15,7 @@ from typing import Any, Iterable, Mapping
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from stage6_artifact_contract import resolve_latest_valid_report
+from hzp_amz_report_contract import (governance_paths, publish_latest_html, publish_latest_valid_batch, resolve_latest_valid_data)
 
 SKILL_ID = "hzp-amz-6-0-6-benchmark-intent-market-occupancy-analysis"
 RUN_MANIFEST = "run_manifest.json"
@@ -169,9 +170,9 @@ def _validate_603_manifest_package(
     input_stamp = str(manifest["Input RUN_TIMESTAMP"])
     if input_file.parent.resolve() != input_folder.resolve() or not input_file.stem.endswith(f"_{input_stamp}"):
         raise ContractError("603_INPUT_RUN_PACKAGE_MISMATCH")
-    expected_prefix = f"6-0-3_{product_code}_"
+    expected_prefixes = (f"6-0-3_{product_code}_", "6-0-3_")
     declared_names = set(declared_values)
-    if len(declared_names) != 2 or any(not name.startswith(expected_prefix) or not name.endswith(f"_{stamp}.csv") for name in declared_names):
+    if len(declared_names) != 2 or any(not any(name.startswith(prefix) for prefix in expected_prefixes) or not name.endswith(f"_{stamp}.csv") for name in declared_names):
         raise ContractError("603_RUN_FILENAME_TIMESTAMP_MISMATCH")
     run_csvs = {path.name for path in folder.glob(f"*_{stamp}.csv")} if folder.name != stamp else {path.name for path in folder.glob("*.csv")}
     if run_csvs != declared_names:
@@ -219,79 +220,36 @@ def _resolve_manifest_package(
     root: Path, skill_dir: str, product_code: str, skill_id: str, required_phrases: Mapping[str, str],
 ) -> dict[str, Any]:
     directory = root / "06_SKILL分析报告" / skill_dir
-    if not directory.is_dir():
-        raise ContractError("606_INPUT_NOT_FOUND", f"{directory}")
-    manifests: list[tuple[str, Path, Path]] = []
-    for manifest_path in directory.glob(f"{RUN_MANIFEST_PREFIX}*.json"):
-        match = re.fullmatch(rf"{re.escape(RUN_MANIFEST_PREFIX)}(\d{{8}}_\d{{6}})\.json", manifest_path.name)
-        if match:
-            manifests.append((match.group(1), directory, manifest_path))
-    for legacy in directory.iterdir():
-        if legacy.is_dir() and _valid_timestamp(legacy.name):
-            manifests.append((legacy.name, legacy, legacy / RUN_MANIFEST))
-    manifests.sort(key=lambda item: item[0], reverse=True)
-    candidates: list[tuple[str, Path, dict[str, Any], dict[str, Path]]] = []
-    invalid: list[str] = []
-    timestamp_mismatch = False
-    for stamp, folder, manifest_path in manifests:
-        manifest = _read_manifest(manifest_path)
-        if not manifest:
-            invalid.append(f"{stamp}:manifest")
-            continue
-        if str(manifest.get("SkillId") or "") != skill_id:
-            continue
-        if str(manifest.get("Run Status") or "").upper() != "VALID" or str(manifest.get("RUN_TIMESTAMP") or "") != stamp:
-            invalid.append(f"{stamp}:status-or-timestamp")
-            continue
-        if str(manifest.get("Current Product") or "").strip() != product_code:
-            continue
-        declared_values = _manifest_output_values(manifest)
-        roles = {}
-        for role, phrase in required_phrases.items():
-            matches = [
-                Path(value).name for value in declared_values
-                if Path(value).name == value and value.startswith(f"6-0-3_{product_code}_")
-                and phrase in value and value.endswith(f"_{stamp}.csv")
-            ]
-            if len(matches) == 1:
-                roles[role] = matches[0]
-        if len(declared_values) != 2 or set(roles) != set(required_phrases):
-            if len(declared_values) == 2 and all(
-                any(phrase in value and value.startswith(f"6-0-3_{product_code}_") for value in declared_values)
-                for phrase in required_phrases.values()
-            ):
-                timestamp_mismatch = True
-                invalid.append(f"{stamp}:filename-timestamp-mismatch")
-                continue
-            invalid.append(f"{stamp}:declared-output-incomplete")
-            continue
-        files = {role: folder / name for role, name in roles.items()}
-        run_csvs = {path.name for path in folder.glob(f"*_{stamp}.csv")} if folder == directory else {path.name for path in folder.glob("*.csv")}
-        if run_csvs != set(roles.values()) or any(not path.is_file() for path in files.values()):
-            invalid.append(f"{stamp}:output-file-missing-or-incomplete")
-            continue
-        try:
-            _validate_603_manifest_package(folder, product_code, manifest, declared_values, files)
-        except (ContractError, OSError, ValueError) as exc:
-            invalid.append(f"{stamp}:{exc}")
-            continue
-        candidates.append((stamp, folder, manifest, files))
-    if not candidates:
-        reason = "no complete VALID upstream Run Package"
-        if invalid:
-            reason += "; rejected candidates: " + ", ".join(invalid[-5:])
-        if timestamp_mismatch:
-            raise ContractError("606_INPUT_RUN_MISMATCH", f"{skill_dir}: {reason}")
-        raise ContractError("606_INPUT_NOT_FOUND", f"{skill_dir}: {reason}")
-    stamp, folder, manifest, files = max(candidates, key=lambda row: row[0])
-    return {
-        "run_id": manifest.get("RUN_ID") or stamp,
-        "run_timestamp": stamp,
-        "folder": str(folder.resolve()),
-        "files": {role: str(path.resolve()) for role, path in files.items()},
-        "manifest": manifest,
-    }
-
+    current = resolve_latest_valid_data(directory)
+    if current.get("status") != "LATEST_VALID_DATA":
+        raise ContractError("606_INPUT_NOT_FOUND", f"{directory}: no governed current data")
+    stamp = str(current.get("run_timestamp") or "")
+    manifest_dir = directory / "_system" / "manifests"
+    manifest_path = manifest_dir / f"6-0-3_RunPackage_{stamp}.json"
+    if not manifest_path.is_file():
+        manifest_path = manifest_dir / f"run_manifest_{stamp}.json"
+    manifest = _read_manifest(manifest_path) if manifest_path.is_file() else None
+    if not manifest or str(manifest.get("SkillId") or "") != skill_id:
+        raise ContractError("606_INPUT_NOT_FOUND", f"{skill_dir}: manifest missing or identity mismatch")
+    if str(manifest.get("Run Status") or "").upper() != "VALID" or str(manifest.get("RUN_TIMESTAMP") or "") != stamp:
+        raise ContractError("606_INPUT_RUN_MISMATCH", f"{skill_dir}: current manifest invalid")
+    if str(manifest.get("Current Product") or "").strip() != product_code:
+        raise ContractError("606_INPUT_NOT_FOUND", f"{skill_dir}: product mismatch")
+    declared_values = _manifest_output_values(manifest)
+    data_dir = Path(current["data_dir"])
+    roles: dict[str, str] = {}
+    for role, phrase in required_phrases.items():
+        matches = [Path(value).name for value in declared_values
+                   if Path(value).name == value and phrase in value and value.endswith(f"_{stamp}.csv")]
+        if len(matches) == 1 and (data_dir / matches[0]).is_file():
+            roles[role] = matches[0]
+    if len(roles) != len(required_phrases):
+        raise ContractError("606_INPUT_NOT_FOUND", f"{skill_dir}: declared current outputs incomplete")
+    files = {role: data_dir / name for role, name in roles.items()}
+    _validate_603_manifest_package(data_dir, product_code, manifest, declared_values, files)
+    return {"run_id": manifest.get("RUN_ID") or stamp, "run_timestamp": stamp,
+            "folder": str(data_dir.resolve()), "files": {role: str(path.resolve()) for role, path in files.items()},
+            "manifest": manifest}
 
 def resolve_latest_valid_602(product_root: str | Path, product_code: str) -> dict[str, Any]:
     skills_root = Path(__file__).resolve().parents[2]
@@ -724,17 +682,17 @@ def _write_manifest(folder: Path, manifest: Mapping[str, Any]) -> None:
 def _create_run_folder(product_root: Path, timestamp: str) -> Path:
     if not _valid_timestamp(timestamp):
         raise ContractError("606_TIMESTAMP_MISMATCH", f"invalid RUN_TIMESTAMP {timestamp}")
-    root = product_root / "06_SKILL分析报告" / REPORT_ROOT
-    root.mkdir(parents=True, exist_ok=True)
-    manifest = root / f"{RUN_MANIFEST_PREFIX}{timestamp}.json"
-    evidence = root / f"working_evidence_{timestamp}.json"
-    outputs = [root / f"{name}_{timestamp}.{extension}" for name, extension in (
+    report_dir = product_root / "06_SKILL分析报告" / REPORT_ROOT
+    staging = governance_paths(report_dir)["staging"] / f"{timestamp}_build"
+    staging.mkdir(parents=True, exist_ok=False)
+    manifest = staging / f"{RUN_MANIFEST_PREFIX}{timestamp}.json"
+    evidence = staging / f"working_evidence_{timestamp}.json"
+    outputs = [staging / f"{name}_{timestamp}.{extension}" for name, extension in (
         ("对标意图市场占领明细", "csv"), ("意图多对标占领共识", "csv"), ("对标意图市场占领分析报告", "html"),
     )]
     if any(path.exists() for path in [manifest, evidence, *outputs]):
         raise FileExistsError("606_RUN_ALREADY_EXISTS")
-    return root
-
+    return staging
 
 def prepare_run(product_root: str | Path, product_code: str, run_timestamp: str | None = None) -> dict[str, Any]:
     """Resolve upstream packages and persist deterministic evidence for AI review."""
@@ -814,7 +772,8 @@ def finalize_run(
 ) -> dict[str, Any]:
     """Attach AI-only qualitative judgments, write and verify the complete package."""
     root = Path(product_root).resolve()
-    folder = root / "06_SKILL分析报告" / REPORT_ROOT
+    report_dir = root / "06_SKILL分析报告" / REPORT_ROOT
+    folder = governance_paths(report_dir)["staging"] / f"{run_timestamp}_build"
     manifest_path = folder / f"{RUN_MANIFEST_PREFIX}{run_timestamp}.json"
     manifest = _read_manifest(manifest_path)
     if not _valid_timestamp(run_timestamp) or not folder.is_dir() or not manifest:
@@ -908,9 +867,24 @@ def finalize_run(
         package = validate_606_package(folder, product_code, run_timestamp, manifest_path)
         if not package.get("valid"):
             raise ContractError("606_RUN_PACKAGE_INCOMPLETE", str(package.get("reason")))
+        published = publish_latest_valid_batch(
+            report_dir, run_timestamp, [detail_path, consensus_path], manifest_files=[manifest_path],
+            registry_payload={"Skill_ID": SKILL_ID, "Product_Code": product_code,
+                              "RUN_ID": run_timestamp, "RUN_TIMESTAMP": run_timestamp,
+                              "Report_Identities": ["BENCHMARK_INTENT_OCCUPANCY_DETAIL", "BENCHMARK_INTENT_OCCUPANCY_CONSENSUS"],
+                              "Files": [detail_path.name, consensus_path.name]}, move_sources=True,
+        )
+        published_manifest_path = Path(published["manifest_files"][0])
+        published_manifest = _read_manifest(published_manifest_path) or {}
+        published_manifest["Output Folder"] = str(Path(published["data_dir"]))
+        _write_json_atomic(published_manifest_path, published_manifest)
+        publish_latest_html(html_path, report_dir)
+        import shutil
+        shutil.rmtree(folder, ignore_errors=True)
+        data_dir = Path(published["data_dir"])
         return {
             "status": "FULL_SUCCESS", "run_id": run_timestamp, "run_timestamp": run_timestamp,
-            "run_folder": str(folder), "files": output_files,
+            "run_folder": str(data_dir), "files": [str(data_dir / detail_path.name), str(data_dir / consensus_path.name), str(report_dir / html_path.name)],
             "detail_rows": len(readback_detail), "consensus_rows": len(readback_consensus),
         }
     except Exception as exc:

@@ -1,16 +1,23 @@
-﻿# 6-0-2｜AI精准关键词识别
+# 6-0-2｜AI精准关键词识别
 
 Machine Name：`hzp-amz-6-0-2-ai-precision-keyword-identification`
 
-读取当前产品识别文本和 6-0-1 最新有效 Run Package 的 `BENCHMARK_KEYWORD_ALL_OBSERVATIONS`。按 Canonical Keyword 只判断一次，再将同一判断回填到各 Benchmark × Keyword observation。市场事实不进入判断；覆盖数、排名只作 Reality Evidence。
+按 Canonical Keyword 对 6-0-1 的全部 Benchmark Observation 只判断一次，直接输出四级精准度：`高度精准`、`精准`、`弱精准`、`不精准`。`JudgmentStatus` 独立为 `SUCCESS`、`REVIEW_REQUIRED`、`FAILED`，不是第五级精准度。
 
-精准度直接裁决为四级：`高度精准`、`精准`、`弱精准`、`不精准`。数据列包括市场容量、竞争产品数、供需比、对标覆盖数和自然排名证据。
+共享筛选配置固定读取：
+`E:\【所有产品目录专用】\01_公共资料\03_系统配置\生成精准词库的要求.txt`
 
-所有输出直接写入固定目录 `06_SKILL分析报告/6-0-2_AI精准关键词识别/`，不创建时间戳子文件夹；一次 Run 输出同一时间戳的三张公共表和 N 张对标表：
+配置中的 `已精准` 规范化为 `精准`。缺失、为空或包含未知级别时，真实运行分别失败为 `PRECISION_LIBRARY_CONFIG_NOT_FOUND`、`PRECISION_LIBRARY_CONFIG_EMPTY`、`CONFIG_PRECISION_LEVEL_INVALID`；不得静默使用默认等级。配置只决定筛选，不改变 AI 判断。
 
-- A `6-0-2_精准判断所有词表_{RUN_TIMESTAMP}.csv`：全量观察行，保留所属产品编号、对标 ASIN、Keyword Id、中文、市场容量、竞争产品数、供需比、自然排名、精准度和精准原因。
-- B `6-0-2_高度精准词表_{RUN_TIMESTAMP}.csv`：从 A 严格筛选 `精准度=高度精准`，仍为观察行。
-- C `6-0-2_去对标去重 高度精准词_{RUN_TIMESTAMP}.csv`：从 B 按 Canonical Keyword 输出唯一行，市场事实只保留一次且不含所属产品编号，供 6-0-3 唯一读取；Report Identity 为 `去对标去重 高度精准词`。
-- D 每个所属产品编号各生成 `6-0-2_{所属产品编号}_高度精准词_{RUN_TIMESTAMP}.csv`，严格从 B 分组筛选，用于 6-0-6。
+正式观察列：`所属产品编号`｜`对标ASIN`｜`Id`｜`词`｜`中文`｜`市场容量`｜`竞争产品数`｜`供需比`｜`自然排名`｜`精准度`｜`精准原因`。
 
-所有 CSV 使用 UTF-8 with BOM 编码，`run_manifest_{RUN_TIMESTAMP}.json` 与三张公共表和 N 张 D 表组成完整 Package。3+N 文件、Schema、观察覆盖、统一判断、筛选、去重、对标拆分和时间戳校验通过后才标记 `VALID`；历史 Run 文件保留。`KwId` 不是 6-0-4 的 PickPwK 写入行主键。
+一次 Run 生成同一时间戳的五类 UTF-8 with BOM 资产：
+
+- A `6-0-2_精准判断所有词表_{timestamp}.csv`：全部 Benchmark×Keyword Observation，保留四级精准度。
+- B `6-0-2_筛选后的对标精准词_{timestamp}.csv`：A 按配置等级筛选，保留对标维度。
+- C `6-0-2_去重_筛选后的对标精准词_{timestamp}.csv`：B 按“所属产品编号 + Canonical Keyword”去重，仍保留对标维度。
+- D `6-0-2_去对标去重_筛选后的精准词_{timestamp}.csv`：B 按 Canonical Keyword 去重并移除对标字段，唯一供 6-0-3 使用。
+- E `6-0-2_{所属产品编号}_筛选后的精准词_{timestamp}.csv`：B 按对标产品编号拆分，供 6-0-6 使用；不假设只有“高度精准”。
+
+B/C/D/E 均为程序派生，不重新调用 AI。Run Manifest 保存配置原文、规范化等级、路径和指纹，以及输入、输出、覆盖和回读校验。旧批次保留，失败批次不得发布为有效数据。602 不查询 ERP、不执行广告或 ERP 写操作。
+

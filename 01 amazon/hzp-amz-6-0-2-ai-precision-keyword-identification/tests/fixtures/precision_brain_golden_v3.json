@@ -1,0 +1,6 @@
+[
+  {"ProductProfileId": "synthetic-gift-sculpture", "Keyword": "sister birthday gifts", "ExpectedPrecision": "高度精准", "CaseType": "GIFT_HIGH_MISSION_FIT", "ConfirmedBy": "synthetic"},
+  {"ProductProfileId": "synthetic-gift-sculpture", "Keyword": "gift", "ExpectedPrecision": "不精准", "CaseType": "BROAD_GIFT", "ConfirmedBy": "synthetic"},
+  {"ProductProfileId": "synthetic-gift-sculpture", "Keyword": "personalized sister gifts", "ExpectedPrecision": "不精准", "CaseType": "PERSONALIZATION_CONFLICT", "ConfirmedBy": "synthetic"},
+  {"ProductProfileId": "synthetic-gift-sculpture", "Keyword": "sister necklace", "ExpectedPrecision": "不精准", "CaseType": "PRODUCT_TYPE_CONFLICT", "ConfirmedBy": "synthetic"}
+]

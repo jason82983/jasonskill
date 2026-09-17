@@ -92,8 +92,8 @@ def test_501_absence_does_not_block_runtime(tmp_path):
     assert paths["ai"].parent == tmp_path / "06_SKILL分析报告" / module.OUTPUT_DIR
     assert all(path.stem.endswith(f"_{stamp}") for path in paths.values())
     assert paths["ai"].name.startswith("6-0-2_精准判断所有词表_")
-    assert paths["high_precision"].name.startswith("6-0-2_高度精准词表_")
-    assert paths["deduplicated"].name.startswith("6-0-2_去对标去重 高度精准词_")
+    assert paths["high_precision"].name.startswith("6-0-2_筛选后的精准词表_")
+    assert paths["deduplicated"].name.startswith("6-0-2_去重去对标后 筛选后的精准词表_")
     assert set(result["benchmark_output_files"]) == {"BM-A"}
     assert Path(result["benchmark_output_files"]["BM-A"]).name.startswith("6-0-2_BM-A_高度精准词_")
     package_files = [*paths.values(), *(Path(path) for path in result["benchmark_output_files"].values())]
@@ -174,7 +174,7 @@ def test_null_competitor_count_and_ratio_remain_null_and_blank_in_csv(tmp_path):
     assert result["rows"][0]["竞争产品数"] is None
     assert result["rows"][0]["供需比"] is None
     written = module.write_full_ai_csv(tmp_path, "B2", result["rows"])
-    paths = {"ai": written, "high_precision": written.with_name(written.name.replace("精准判断所有词表", "高度精准词表"))}
+    paths = {"ai": written, "high_precision": written.with_name(written.name.replace("精准判断所有词表", "筛选后的精准词表"))}
     for path in paths.values():
         with path.open("r", encoding="utf-8-sig", newline="") as handle:
             row = next(csv.DictReader(handle))
@@ -270,8 +270,8 @@ def test_low_level_writer_emits_three_shared_assets_for_unscoped_rows(tmp_path):
     stamp = written.stem[-15:]
     paths = {
         "ai": written,
-        "high_precision": written.with_name(f"6-0-2_高度精准词表_{stamp}.csv"),
-        "deduplicated": written.with_name(f"6-0-2_去对标去重 高度精准词_{stamp}.csv"),
+        "high_precision": written.with_name(f"6-0-2_筛选后的精准词表_{stamp}.csv"),
+        "deduplicated": written.with_name(f"6-0-2_去重去对标后 筛选后的精准词表_{stamp}.csv"),
     }
     assert paths["ai"].parent == tmp_path / "06_SKILL分析报告" / module.OUTPUT_DIR
     assert all(path.exists() and path.parent == paths["ai"].parent and path.stem.endswith(f"_{stamp}") for path in paths.values())

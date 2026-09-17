@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import importlib.util
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = (ROOT / "SKILL.md").read_text(encoding="utf-8-sig")
@@ -33,7 +33,7 @@ def test_full_output_contract():
     assert module.FILE_B_RECORD_COVERAGE_MISMATCH == "FILE_B_RECORD_COVERAGE_MISMATCH"
     assert "INPUT_RECORD_COUNT" in SKILL and "OUTPUT_RECORD_COUNT" in SKILL
     assert "Coverage" in SKILL
-    assert "3+N" in SKILL
+    assert "A+B+C+D+N(E)" in SKILL
     assert "UTF-8 with BOM" in README
     for level in ("高度精准", "精准", "弱精准", "不精准"):
         assert level in SKILL and level in README
@@ -43,9 +43,10 @@ def test_full_output_contract():
     assert "CURRENT_PRODUCT_UNDERSTANDING" in SKILL
     assert "calibration-cases.md" in SKILL
     assert "6-0-2_精准判断所有词表_{RUN_TIMESTAMP}.csv" in SKILL
-    assert "6-0-2_高度精准词表_{RUN_TIMESTAMP}.csv" in SKILL
-    assert "6-0-2_去对标去重 高度精准词_{RUN_TIMESTAMP}.csv" in SKILL
-    assert "6-0-2_{所属产品编号}_高度精准词_{RUN_TIMESTAMP}.csv" in SKILL
+    assert "6-0-2_筛选后的对标精准词_{RUN_TIMESTAMP}.csv" in SKILL
+    assert "6-0-2_去重_筛选后的对标精准词_{RUN_TIMESTAMP}.csv" in SKILL
+    assert "6-0-2_去对标去重_筛选后的精准词_{RUN_TIMESTAMP}.csv" in SKILL
+    assert "6-0-2_{所属产品编号}_筛选后的精准词_{RUN_TIMESTAMP}.csv" in SKILL
     assert "No manual-precision CSV is generated" in SKILL
 def test_semantic_guardrails():
     for term in ("gift", "sister", "\u6cdb\u793c\u7269", "\u6cdb\u5bf9\u8c61", "\u641c\u7d22\u91cf", "Benchmark"):
@@ -66,3 +67,7 @@ def test_api_symbols():
     assert "discover_current_product_evidence" not in source
 if __name__ == "__main__":
     test_identity_and_scope_contract(); test_full_output_contract(); test_semantic_guardrails(); test_no_strategy_ownership(); test_api_symbols(); print("PASS")
+
+
+
+

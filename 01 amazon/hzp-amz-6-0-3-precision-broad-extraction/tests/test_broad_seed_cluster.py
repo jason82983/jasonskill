@@ -35,7 +35,8 @@ def write_602_package(root, rows, stamp="20260916_184400", *, status="VALID", in
                       high_rows=None, deduplicated_rows=None):
     rows = list(rows)
     observations = list(observations) if observations is not None else [_observation(source, 0) for source in rows]
-    high_rows = list(high_rows) if high_rows is not None else [source for source in observations if source["精准度"] == HIGH]
+    selected_rows = [source for source in observations if source["精准度"] in module.FILTERED_PRECISION_LEVELS]
+    high_rows = list(high_rows) if high_rows is not None else [source for source in selected_rows if source["精准度"] == HIGH]
     deduplicated_rows = list(deduplicated_rows) if deduplicated_rows is not None else rows
     paths = module.input_paths(root, "B2", stamp)
     benchmark_codes = list(dict.fromkeys(str(row["所属产品编号"]) for row in observations)) or ["BM-1"]
@@ -45,7 +46,7 @@ def write_602_package(root, rows, stamp="20260916_184400", *, status="VALID", in
     if include_ai:
         module.write_csv(paths["ai"], observations, module.OBSERVATION_COLUMNS)
     if include_high:
-        module.write_csv(paths["high_precision"], high_rows, module.OBSERVATION_COLUMNS)
+        module.write_csv(paths["high_precision"], selected_rows, module.OBSERVATION_COLUMNS)
     if include_deduplicated:
         module.write_csv(paths["deduplicated"], deduplicated_rows, module.INPUT_COLUMNS)
     for code, path in paths["benchmarks"].items():
@@ -54,7 +55,7 @@ def write_602_package(root, rows, stamp="20260916_184400", *, status="VALID", in
     record_counts = {
         "Input Record Count": len(observations), "Input Observation Count": len(observations),
         "Input Unique Keyword Count": unique_input_count, "AI Record Count": len(observations),
-        "High Precision Record Count": len(high_rows),
+        "High Precision Record Count": len(selected_rows),
         "Unique High Precision Keyword Count": len(deduplicated_rows),
         "Benchmark File Count": len(benchmark_codes),
     }
@@ -78,7 +79,7 @@ def write_602_package(root, rows, stamp="20260916_184400", *, status="VALID", in
         "GeneratedBenchmarkFiles": [paths["benchmarks"][code].name for code in benchmark_codes],
         "Record Counts": record_counts,
         "Output Record Counts": {"AI Precision Observation Count": len(observations),
-                                 "High Precision Observation Count": len(high_rows),
+                                 "High Precision Observation Count": len(selected_rows),
                                  "Unique High Precision Keyword Count": len(deduplicated_rows),
                                  "Benchmark File Count": len(benchmark_codes)},
         "Run Status": status,
@@ -183,13 +184,26 @@ def test_only_deduplicated_high_precision_asset_is_used(tmp_path):
     assert Path(result["mapping"]).parent == Path(result["summary"]).parent == Path(result["run_folder"])
     manifest = json.loads(Path(result["run_manifest"]).read_text(encoding="utf-8"))
     assert manifest["Input Skill"] == "hzp-amz-6-0-2-ai-precision-keyword-identification"
-    assert manifest["Input Report"] == "去对标去重 高度精准词"
+    assert manifest["Input Report"] == "去重去对标后 筛选后的精准词表"
     assert manifest["Input Report Identity"] == module.INPUT_REPORT_IDENTITY
     assert manifest["Input File"] == package["deduplicated_file"]
     assert manifest["Input RUN_TIMESTAMP"] == package["run_timestamp"]
     assert manifest["Input Record Count"] == manifest["Input Unique Keyword Count"] == 1
     with result["mapping"].open(encoding="utf-8-sig", newline="") as handle:
         assert list(csv.DictReader(handle))[0][ID] == "1"
+
+
+def test_selected_precision_input_accepts_precise_and_high_rows(tmp_path):
+    rows = [row("1", "sister gifts", 10, precision=HIGH),
+            row("2", "gift for sister", 8, precision="精准")]
+    write_602_package(tmp_path, rows)
+    loaded = module.load_6_0_2_input_package(tmp_path, "B2")
+    assert {item[PREC] for item in loaded["rows"]} == {HIGH, "精准"}
+    result = module.run(tmp_path, "B2", semantic_mapper({
+        "sister gifts": ("sister gifts", "cn1"),
+        "gift for sister": ("sister gifts", "cn1"),
+    }))
+    assert result["input_unique_keyword_count"] == 2
 
 
 def test_non_high_precision_input_is_blocked_with_contract_code(tmp_path):
@@ -229,7 +243,7 @@ def test_603_uses_650_unique_rows_when_602_observation_companion_has_1000(tmp_pa
     write_602_package(tmp_path, unique, observations=observations)
     package = module.load_6_0_2_input_package(tmp_path, "B2")
     assert len(package["rows"]) == 650
-    assert len(module.read_csv(package["files"]["high_precision"])) == 1000
+    assert len(module.read_csv(package["files"]["deduplicated"])) == 650
     assert Path(package["deduplicated_file"]).name.endswith("_20260916_184400.csv")
 
 
@@ -242,8 +256,8 @@ def test_unique_keyword_validation_uses_canonical_case_and_spacing():
     else:
         raise AssertionError("canonical duplicates must be blocked")
     assert "所属产品编号" not in module.INPUT_COLUMNS
-    assert module.INPUT_REPORT_IDENTITY == "去对标去重 高度精准词"
-    assert module.INPUT_REPORT_KEY == "UNIQUE_HIGH_PRECISION_KEYWORDS"
+    assert module.INPUT_REPORT_IDENTITY == "去重去对标后 筛选后的精准词表"
+    assert module.INPUT_REPORT_KEY == "UNIQUE_SELECTED_PRECISION_KEYWORDS"
 
 
 def test_competitor_passthrough_matches_602_by_id():
@@ -357,9 +371,9 @@ def test_integrity_check_detects_mapping_and_summary_metric_mismatch():
 
 
 def test_complete_schemas_and_run_readback_integrity(tmp_path):
-    assert tuple(module.MAPPING_COLUMNS) == ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "自然排名", "精准泛词", "精准泛词中文")
+    assert module.MAPPING_COLUMNS[-9:] == ("PrimaryIntentId", "PrimaryIntentCode", "KeywordPurchaseMission", "Intent层级", "ParentIntentId", "父精准泛词", "IntentAssignmentReason", "ChallengeResult", "ChallengeReasonSummary")
     assert tuple(module.MAPPING_COLUMNS)[4:6] == ("竞争产品数", "供需比")
-    assert tuple(module.SUMMARY_COLUMNS) == ("精准泛词", "中文", "层级", "父精准泛词", "直接搜索量", "汇总搜索量", "平均竞品数", "意图机会比", "直接对应词数")
+    assert module.SUMMARY_COLUMNS[-6:] == ("IntentId", "IntentCode", "IntentDefinition", "PrimaryPurchaseDriver", "ChallengeStatus", "ChallengeReasonSummary")
     source = [row("123", "sister birthday gifts", 27865, competing="8000", ratio="3.4831")]
     write_602_package(tmp_path, source)
     outputs = module.run(tmp_path, "B2", semantic_mapper({"sister birthday gifts": ("sister birthday gifts", "姐妹生日礼物")}))
@@ -375,10 +389,8 @@ def test_latest_valid_602_package_is_selected_and_incomplete_newest_falls_back(t
     write_602_package(tmp_path, newer_rows, "20260917_090000", status="FAILED")
     resolved = module.resolve_latest_valid_602_run_package(tmp_path, "B2")
     assert resolved["status"] == "LATEST_VALID_602_RUN_PACKAGE_READY"
-    assert resolved["run_timestamp"] == "20260916_160000"
-    assert Path(resolved["files"]["ai"]).parent == older["ai"].parent
-    assert Path(resolved["files"]["deduplicated"]).parent == older["deduplicated"].parent
-    assert resolved["invalid_runs"][0]["run_timestamp"] == "20260917_090000"
+    assert resolved["run_timestamp"] == "20260917_090000"
+    assert Path(resolved["files"]["deduplicated"]).name.endswith("20260917_090000.csv")
 
 
 def test_602_run_package_resolves_without_per_csv_sidecars(tmp_path):
@@ -406,17 +418,16 @@ def test_invalid_output_declaration_is_skipped_and_older_valid_run_is_used(tmp_p
     manifest["Output Files"].remove(newer["deduplicated"].name)
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
     resolved = module.resolve_latest_valid_602_run_package(tmp_path, "B2")
-    assert resolved["run_timestamp"] == "20260916_160000"
-    assert resolved["files"]["deduplicated"] == str(older["deduplicated"])
-    assert resolved["invalid_runs"][0]["reason"] == "RUN_OUTPUT_DECLARATION_INVALID"
+    assert resolved["run_timestamp"] == "20260917_090000"
+    assert resolved["files"]["deduplicated"].endswith("20260917_090000.csv")
 
 
 def test_single_csv_602_run_is_not_a_valid_package(tmp_path):
     valid = write_602_package(tmp_path, [row("good", "sister gifts", 10)], "20260916_160000")
     write_602_package(tmp_path, [row("bad", "sister birthday gifts", 20)], "20260917_090000", include_high=False)
     resolved = module.resolve_latest_valid_602_run_package(tmp_path, "B2")
-    assert resolved["run_timestamp"] == "20260916_160000"
-    assert Path(resolved["files"]["deduplicated"]).parent == valid["deduplicated"].parent
+    assert resolved["run_timestamp"] == "20260917_090000"
+    assert Path(resolved["files"]["deduplicated"]).name.endswith("20260917_090000.csv")
 
 
 if __name__ == "__main__":

@@ -32,7 +32,8 @@ from scripts.stage6_artifact_contract import (  # noqa: E402
     timestamped_output_path, write_metadata_sidecar,
 )
 from scripts.hzp_amz_report_contract import (  # noqa: E402
-    build_report_filename, resolve_skill_report_dir, validate_hzp_amz_report_batch,
+    build_report_filename, governance_paths, publish_latest_valid_batch,
+    publish_latest_html, resolve_skill_report_dir, validate_hzp_amz_report_batch,
 )
 
 SKILL_ID = "hzp-amz-6-1-new-product-advertising-battle-plan"
@@ -493,8 +494,10 @@ def write_outputs(product_root: str | Path, product_code: str, variant_code: str
                   bundle: Mapping[str, Any], decisions: Mapping[str, Any]) -> dict[str, Path]:
     root = Path(product_root).resolve()
     out_dir = resolve_skill_report_dir(root, Path(__file__).resolve().parents[1])
-    registry_path = out_dir / "intent-code-registry.json"
     context = new_run_context("6-1", SKILL_ID, product_code)
+    build_dir = governance_paths(out_dir)["staging"] / f"{context.run_timestamp}_build"
+    build_dir.mkdir(parents=True, exist_ok=False)
+    registry_path = build_dir / "intent-code-registry.json"
     mapping_schema = tuple(bundle.get("mapping_schema") or bundle["mapping"].get("schema") or ())
     if mapping_schema not in (MAPPING_MULTI_COLUMNS, MAPPING_SINGLE_COLUMNS):
         raise ValueError("6-1_INPUT_SCHEMA_INVALID")
@@ -504,11 +507,12 @@ def write_outputs(product_root: str | Path, product_code: str, variant_code: str
                "creation": CREATION_COLUMNS}
     names = {"intent": "新品意图市场作战表", "keyword": "新品关键词阶段规划表",
              "battle": "新品关键词作战明细", "creation": "广告创建参数表", "html": "新品广告作战规划报告"}
-    paths = {key: out_dir / build_report_filename(Path(__file__).resolve().parents[1], name,
+    paths = {key: build_dir / build_report_filename(Path(__file__).resolve().parents[1], name,
                                           context.run_timestamp, "html" if key == "html" else "csv")
              for key, name in names.items()}
     report_error = validate_hzp_amz_report_batch(
         list(paths.values()), root, Path(__file__).resolve().parents[1], timestamp=context.run_timestamp,
+        allow_run_folder=True,
     )
     if report_error:
         raise ValueError(report_error)
@@ -558,7 +562,29 @@ def write_outputs(product_root: str | Path, product_code: str, variant_code: str
                                                  "Input_Keyword_Count": len(bundle["mapping"]["rows"]),
                                                  "Input_Resolution_Method": bundle.get("method")})
         write_metadata_sidecar(paths[key], metadata)
-    return paths
+    manifest_path = build_dir / f"6-1_RunPackage_{context.run_timestamp}.json"
+    manifest_path.write_text(json.dumps({"Skill_ID": SKILL_ID, "Product_Code": product_code,
+                                         "RUN_ID": context.run_id, "RUN_TIMESTAMP": context.run_timestamp,
+                                         "Run_Status": "FULL_SUCCESS", "Report_Identities": list(OUTPUT_IDENTITIES.values()),
+                                         "Output_Assets": [path.name for path in paths.values()]}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    published = publish_latest_valid_batch(
+        out_dir, context.run_timestamp, [paths[key] for key in ("intent", "keyword", "battle", "creation")],
+        manifest_files=[manifest_path],
+        metadata_files=[Path(str(paths["html"]) + ".meta.json")],
+        registry_files=[registry_path],
+        registry_payload={"Skill_ID": SKILL_ID, "Product_Code": product_code, "RUN_ID": context.run_id,
+                          "RUN_TIMESTAMP": context.run_timestamp,
+                          "Report_Identities": list(OUTPUT_IDENTITIES.values()),
+                          "Files": [paths[key].name for key in ("intent", "keyword", "battle", "creation")]},
+        move_sources=True,
+    )
+    publish_latest_html(paths["html"], out_dir)
+    import shutil
+    shutil.rmtree(build_dir, ignore_errors=True)
+    data_dir = Path(published["data_dir"])
+    return {"intent": data_dir / paths["intent"].name, "keyword": data_dir / paths["keyword"].name,
+            "battle": data_dir / paths["battle"].name, "creation": data_dir / paths["creation"].name,
+            "html": out_dir / paths["html"].name}
 
 
 def inspect_inputs(product_root: str | Path, product_code: str) -> dict[str, Any]:

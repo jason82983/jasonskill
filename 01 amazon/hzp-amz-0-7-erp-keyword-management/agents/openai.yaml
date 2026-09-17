@@ -1,5 +1,4 @@
 interface:
   display_name: "HZP Amazon 0-7｜ERP关键词管理"
   short_description: "扫描并安全补齐ERP PickKw缺失中文关键词，支持Dry Run、并发校验与回读审计"
-  default_prompt: "使用 $hzp-amz-0-7-erp-keyword-management，先以 Dry Run 扫描 PickKw.KeywordCn 缺失并生成翻译预览；未确认 PickKw Writer 前禁止真实回写。"
-
+  default_prompt: "使用 $hzp-amz-0-7-erp-keyword-management（用户也可简称 0-7 或 07），按用户指定的 Limit=N 扫描 PickKw.KeywordCn 缺失并翻译；每次生成报告，未确认 Writer 前禁止真实回写。"

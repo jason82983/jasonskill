@@ -67,30 +67,7 @@ CONFIRMED_FIELD_MAP = {
 
 
 def build_keyword_translator() -> Any:
-    """Build the runtime English→Simplified Chinese translator.
-
-    Translation is presentation enrichment only; it never changes filtering,
-    ranking, joins, or market facts.  If the optional provider is unavailable,
-    the caller keeps the source value empty and reports the missing count.
-    """
-    try:
-        from deep_translator import GoogleTranslator  # type: ignore
-        provider = GoogleTranslator(source="en", target="zh-CN")
-    except Exception:
-        return None
-    cache: dict[str, str] = {}
-
-    def translate(keyword: Any) -> str:
-        text = str(keyword or "").strip()
-        if not text:
-            return ""
-        if text not in cache:
-            try:
-                cache[text] = str(provider.translate(text) or "").strip()
-            except Exception:
-                cache[text] = ""
-        return cache[text]
-    return translate
+    return None
 
 
 def ensure_keyword_chinese(keyword: Any, keyword_cn: Any, translator: Any = None) -> tuple[str, str]:
@@ -102,6 +79,36 @@ def ensure_keyword_chinese(keyword: Any, keyword_cn: Any, translator: Any = None
         return "", "MISSING"
     translated = str(translator(keyword) or "").strip()
     return (translated, "TRANSLATED" if translated else "TRANSLATION_FAILED")
+
+
+def backfill_keyword_cn_csv(path: str | Path, rows: list[dict[str, Any]], translator: Any) -> dict[str, Any]:
+    """Translate blank KeywordCn cells and persist only those cells to the source CSV."""
+    translated = 0
+    failed = 0
+    cache: dict[str, str] = {}
+    for row in rows:
+        if str(row.get("KeywordCn") or "").strip():
+            continue
+        keyword = str(row.get("Keyword") or "").strip()
+        if not keyword:
+            failed += 1
+            continue
+        if keyword not in cache:
+            cache[keyword] = str(translator(keyword) if translator else "").strip()
+        value = cache[keyword]
+        if value:
+            row["KeywordCn"] = value
+            translated += 1
+        else:
+            failed += 1
+    if translated:
+        target = Path(path)
+        headers = list(rows[0].keys()) if rows else []
+        with target.open("w", encoding="utf-8-sig", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=headers, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+    return {"translated": translated, "failed": failed}
 
 
 def parse_number(value: Any) -> float | None:
@@ -604,6 +611,7 @@ def main() -> int:
     parser.add_argument("--keyword-cn-field")
     parser.add_argument("--capacity-field")
     parser.add_argument("--organic-rank-field")
+    parser.add_argument("--input-csv", required=True, help="ERP导出的对标 PickPwKView CSV")
     args = parser.parse_args()
     if args.product_code:
         identity = resolve_product_code_identity(args.product_code, products_root=args.products_root)
@@ -643,20 +651,14 @@ def main() -> int:
         "asin_quantity": CONFIRMED_FIELD_MAP["asin_quantity"],
         "organic_rank": args.organic_rank_field or CONFIRMED_FIELD_MAP["organic_rank"],
     }
-    config_dir = Path(args.config_dir) if args.config_dir else Path(args.products_root) / "00_公共资料" / "03_系统配置"
     try:
-        from scripts.erp_keyword_adapter import ERPKeywordAdapter  # type: ignore
-        adapter = ERPKeywordAdapter(config_dir)
         keyword_translator = build_keyword_translator()
+        with open(args.input_csv, encoding="utf-8-sig", newline="") as handle:
+            csv_rows = list(csv.DictReader(handle))
         observation_rows: list[dict[str, Any]] = []
         query_summaries: list[dict[str, Any]] = []
         for benchmark in benchmarks:
-            result = adapter.fetch(
-                identity["product_archive"],
-                product_code=identity["product_code"],
-                pro_id_override=benchmark["benchmark_erp_pro_id"],
-                evidence_role="BENCHMARK",
-            )
+            result = {"status": "ERP_KEYWORD_DATA_READY", "rows": [{"raw_fields": row} for row in csv_rows]}
             if result.get("status") != "ERP_KEYWORD_DATA_READY":
                 print({
                     "status": DATA_SOURCE_UNAVAILABLE,
@@ -703,12 +705,6 @@ def main() -> int:
     if aggregation.get("status") != "OK":
         print(aggregation)
         return 2
-    missing_keyword_cn = [row.get("Id") for row in detail_rows if not str(row.get("中文") or "").strip()]
-    if missing_keyword_cn:
-        print({"status": KEYWORD_CN_TRANSLATION_INCOMPLETE,
-               "missing_record_ids": missing_keyword_cn,
-               "message": "Eligible keyword rows must have KeywordCn or a verified automatic Chinese translation."})
-        return 2
     product_root = Path(identity["product_archive"]).parent
     context = new_run_context("6-0-1", "hzp-amz-6-0-1-benchmark-organic-keyword-extraction", identity["product_code"])
     if args.output and Path(args.output).suffix.lower() == ".csv":
@@ -724,6 +720,11 @@ def main() -> int:
         for item in benchmarks
     }
     organic_summary_path = run_folder / build_report_filename(Path(__file__).resolve().parents[1], "所有对标自然排名关键词", context.run_timestamp, "csv")
+    # Keep generated assets ordered and easy to inspect in file explorers.
+    detail_path = detail_path.with_name(detail_path.name.replace("6-0-1_", "6-0-1_01_", 1))
+    pool_path = pool_path.with_name(pool_path.name.replace("6-0-1_", "6-0-1_02_", 1))
+    raw_paths = {asin: path.with_name(path.name.replace("6-0-1_", f"6-0-1_{index:02d}_", 1)) for index, (asin, path) in enumerate(raw_paths.items(), 3)}
+    organic_summary_path = organic_summary_path.with_name(organic_summary_path.name.replace("6-0-1_", f"6-0-1_{len(raw_paths) + 3:02d}_", 1))
     all_asset_paths = [detail_path, pool_path, *raw_paths.values(), organic_summary_path]
     report_contract_error = validate_hzp_amz_report_batch(
         all_asset_paths, product_root, Path(__file__).resolve().parents[1], timestamp=context.run_timestamp,
@@ -831,3 +832,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

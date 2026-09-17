@@ -26,3 +26,11 @@ metadata:
 并发时使用最新 Tags 和条件更新保护，不能用旧快照覆盖别人新增的标签。只有回读确认 ID、Keyword、完整精准标签和原有其他标签均保持后才记为 `SUCCESS`；否则记为 `FAILED` / `[ERP_PRECISION_TAG_READBACK_FAILED]`。日志保存到 `[Product Root]/06_SKILL分析报告/6-0-4_AI精准词同步ERP/执行日志/`，不是正式报告，不进入 0-2 索引，也不写入密码、连接字符串或 Secret。
 
 实现细节见 [references/restricted-writer-contract.md](references/restricted-writer-contract.md)，固定业务适配器见 `scripts/restricted_writer.py`。本开发阶段仅做 Mock/静态验证，不运行真实 6-0-4，不执行真实 ERP UPDATE。
+
+## Human Report Publishing
+
+本 Skill 生成正式 HTML 报告时，遵循统一的人类可见报告规则：Skill 报告根目录只保留一个当前最新 HTML；旧 HTML（以及同名 `.meta.json`）全部移动到同级 `历史HTML/`，不删除、不覆盖。一次性 Skill 的正式机器 CSV/JSON 只进入当前 Skill 报告目录的 `data/`，且只保留完整 `LATEST VALID` Batch；RunPackage/Manifest、metadata sidecar、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`。HTML 仅按人类报告规则发布到根目录或 `历史HTML/`。完成写入、回读和校验后才发布当前报告；失败或不完整 Run 不得发布。公共实现与索引规则见 [`skills/references/human-report-publishing.md`](../references/human-report-publishing.md)。
+
+## 全局报告文件治理（适用本 Skill）
+
+本 Skill 遵循公共 `scripts/hzp_amz_report_contract.py`、[human-report-publishing.md](../references/human-report-publishing.md) 与 [report-governance.md](../references/report-governance.md)：正式机器业务数据只进入当前 Skill 报告目录的 `data/`，`data/` 只保留完整 `LATEST VALID` Batch；旧 VALID Batch 整包进入 `历史数据/<RUN_TIMESTAMP>/`。RunPackage/Manifest、metadata、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`。新 Batch 必须先 Staging、验证完整性后再原子发布；失败不得替换旧 data。根目录只保留最新人类 HTML（如有）及正式子目录，机器数据不得写根目录。下游通过正式 Registry/Resolver 读取 `data/`，不得按 HTML 或根目录 mtime 选数。已有成熟时间戳 Run Package 的持续 Skill 可保留其内部运行包，但仍遵守根目录清洁和系统资产分层。

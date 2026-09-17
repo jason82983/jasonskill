@@ -1,4 +1,4 @@
-﻿"""Dual-track precision-keyword views for Stage 6-0-2.
+"""Dual-track precision-keyword views for Stage 6-0-2.
 
 The normal 6-0-2 inputs are the complete current-product text evidence file
 and the all-observation CSV from the latest valid, timestamped 6-0-1 batch. This
@@ -14,6 +14,7 @@ import hashlib
 import json
 import math
 import os
+import shutil
 import re
 from collections import Counter
 from datetime import datetime, timedelta
@@ -33,6 +34,7 @@ from scripts.stage6_artifact_contract import (  # noqa: E402
     validate_601_run_package,
 )
 from scripts.hzp_amz_report_contract import (  # noqa: E402
+    governance_paths, publish_latest_valid_batch, resolve_latest_valid_data,
     resolve_skill_report_dir, validate_hzp_amz_report_batch,
 )
 
@@ -63,8 +65,19 @@ FILE_B_RECORD_COVERAGE_MISMATCH = "FILE_B_RECORD_COVERAGE_MISMATCH"
 OUTPUT_READBACK_FAILED = "OUTPUT_READBACK_FAILED"
 OUTPUT_SCHEMA_MISMATCH = "OUTPUT_SCHEMA_MISMATCH"
 AI_CONFIDENCE_VALUES = {"HIGH", "MEDIUM", "LOW"}
-AI_CLASSIFICATIONS = {"PRECISION", "NOT_PRECISION", "REVIEW_REQUIRED"}
+# Legacy input labels retained only for isolated historical compatibility;
+# they are never valid FinalPrecision values in the V3 structured contract.
+LEGACY_AI_CLASSIFICATIONS = {"PRECISION", "NOT_PRECISION", "REVIEW_REQUIRED"}
+JUDGMENT_STATUSES = {"SUCCESS", "REVIEW_REQUIRED", "FAILED"}
 PRECISION_LEVELS = ("高度精准", "精准", "弱精准", "不精准")
+# Runtime 6-0-2 runs load the selected levels from the shared system
+# configuration.  Keep this compatibility value for low-level callers and
+# historical tests that supply rows directly without a product root.
+DEFAULT_FILTERED_PRECISION_LEVELS = frozenset({"高度精准"})
+FILTERED_PRECISION_LEVELS = DEFAULT_FILTERED_PRECISION_LEVELS
+PRECISION_LABEL_ALIASES = {"已精准": "精准"}
+PRECISION_FILTER_CONFIG_RELATIVE = Path("01_公共资料") / "03_系统配置" / "生成精准词库的要求.txt"
+PRECISION_FILTER_CONFIG_FILENAME = PRECISION_FILTER_CONFIG_RELATIVE.name
 PRECISION_LEVEL_NOT_AVAILABLE = "PRECISION_LEVEL_NOT_AVAILABLE"
 DATA_NOT_AVAILABLE = "DATA_NOT_AVAILABLE"
 BENCHMARK_ERP_PROID_NOT_AVAILABLE = "BENCHMARK_ERP_PROID_NOT_AVAILABLE"
@@ -74,8 +87,8 @@ OWN_PLUS_BENCHMARK = "OWN_PLUS_BENCHMARK"
 BENCHMARK_FALLBACK = "BENCHMARK_FALLBACK"
 KEYWORD_SOURCE_DATA_INSUFFICIENT = "CURRENT_KEYWORDS_UNAVAILABLE_NO_BENCHMARK"
 BENCHMARK_RAW_OUTPUT_DIR = "6-0-1_\u5bf9\u6807\u81ea\u7136\u6392\u540d\u5173\u952e\u8bcd\u63d0\u53d6"
-BENCHMARK_RAW_FILENAME_RE = re.compile(r"^6-0-1_所有对标自然排名关键词_\d{8}_\d{6}\.csv$", re.I)
-BENCHMARK_RAW_COLUMNS = ("Id", "\u8bcd", "\u4e2d\u6587", "\u5e02\u573a\u5bb9\u91cf", "\u7ade\u4e89\u4ea7\u54c1\u6570", "\u4f9b\u9700\u6bd4", "\u5bf9\u6807\u7f16\u53f7", "对标ASIN", "自然排名", "ASIN", "产品编号")
+BENCHMARK_RAW_FILENAME_RE = re.compile(r"^6-0-1_(?:\d{2}_)?所有对标自然排名关键词_\d{8}_\d{6}\.csv$", re.I)
+BENCHMARK_RAW_COLUMNS = ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "对标ASIN", "自然排名", "ASIN", "产品编号")
 SIX_0_1_SKILL_ID = "hzp-amz-6-0-1-benchmark-organic-keyword-extraction"
 SIX_0_1_REPORT_IDENTITY = "BENCHMARK_KEYWORD_ALL_OBSERVATIONS"
 SIX_0_2_SKILL_ID = "hzp-amz-6-0-2-ai-precision-keyword-identification"
@@ -99,6 +112,13 @@ SEMANTIC_PROFILE_FIELDS = (
     "Compatible_Search_Intents", "Incompatible_Search_Intents",
     "Excluded_Product_Types", "Hard_Intent_Conflicts",
 )
+PURCHASE_DRIVERS = ("FUNCTIONAL", "COMPATIBILITY", "GIFT_EMOTIONAL", "AESTHETIC_DECOR", "OCCASION", "HYBRID")
+PURCHASE_DRIVER_EVIDENCE_FIELDS = (
+    "GiftIntentPresent", "GiftMissionFit", "PurchaseMissionFit", "RecipientFit", "RelationshipFit",
+    "OccasionFit", "EmotionalMessageFit",
+)
+CONVERGENCE_FIELDS = ("PhysicalProductConvergence", "PurchaseMissionConvergence", "CompatibilityConvergence")
+DECISION_CHALLENGE_RESULTS = ("CONFIRMED", "DOWNGRADED", "UPGRADED", "RECONSIDERED_NO_CHANGE")
 _GENERIC_PRODUCT_TYPES = {"gift", "gifts", "product", "products", "item", "items"}
 _GENERIC_QUERY_TOKENS = _GENERIC_PRODUCT_TYPES | {
     "present", "presents", "idea", "ideas", "thing", "things", "stuff",
@@ -281,6 +301,85 @@ def _query_specificity(profile: Mapping[str, Any], intent: Mapping[str, Any], ke
             "reason": f"搜索词“{query}”的主要购买对象和商品类型仍不清楚", "matched_tokens": []}
 
 
+def _purchase_driver_evidence(
+    profile: Mapping[str, Any], intent: Mapping[str, Any], keyword: str, specificity: Mapping[str, Any],
+    *, purchase_driver: Mapping[str, Any] | None = None,
+) -> dict[str, str]:
+    """Return qualitative gift and convergence evidence without numeric scoring."""
+    query_tokens = set(_token_stem(token) for token in _query_tokens(keyword or intent.get("Core_Intent")))
+    resolved_driver = purchase_driver or build_product_purchase_driver(profile)
+    driver = resolved_driver.get("PrimaryPurchaseDriver")
+    secondary_drivers = set(resolved_driver.get("SecondaryPurchaseDrivers") or ())
+    gift_driver_active = driver == "GIFT_EMOTIONAL" or (driver == "HYBRID" and "GIFT_EMOTIONAL" in secondary_drivers)
+    compatibility_driver_active = driver == "COMPATIBILITY" or (driver == "HYBRID" and "COMPATIBILITY" in secondary_drivers)
+    gift_present = bool(query_tokens & _GIFT_PURPOSE_TOKENS)
+    relationship_tokens = query_tokens & _RELATIONSHIP_INTENT_TOKENS
+    recipient = intent.get("Recipient") or intent.get("Relationship")
+    occasion = intent.get("Purchase_Occasions") or intent.get("Occasion")
+    profile_recipient = profile.get("Recipient") or profile.get("Relationship_Intent")
+    profile_occasion = profile.get("Purchase_Occasions")
+    occasion_present = bool(query_tokens & _OCCASION_QUERY_TOKENS)
+    relation_fit = _relationship_fit(recipient or relationship_tokens, _profile_relationship_values(profile)) if (recipient or relationship_tokens) else False
+    occasion_fit = _semantic_overlap(occasion, profile_occasion) if occasion not in (None, "", DATA_NOT_AVAILABLE) else bool(query_tokens & _OCCASION_QUERY_TOKENS and _semantic_overlap(query_tokens & _OCCASION_QUERY_TOKENS, profile_occasion))
+    mission_fit = "NOT_SPECIFIED"
+    if gift_driver_active:
+        if specificity.get("search_mode") == "BROAD_GIFT":
+            mission_fit = "LOW"
+        elif specificity.get("search_mode") == "GIFT_LED" and gift_present and relation_fit and (occasion_fit or not occasion_present):
+            mission_fit = "HIGH"
+        elif gift_present and (relation_fit or occasion_fit):
+            mission_fit = "MEDIUM"
+        elif gift_present:
+            mission_fit = "LOW"
+        elif relationship_tokens and relation_fit:
+            mission_fit = "MEDIUM"
+    emotional_fit = "HIGH" if mission_fit == "HIGH" and ("friendship" in query_tokens or relationship_tokens) else ("MEDIUM" if gift_present else "NOT_SPECIFIED")
+    physical = "HIGH" if specificity.get("search_mode") == "PRODUCT_LED" and bool(specificity.get("matched_tokens")) else ("MEDIUM" if specificity.get("search_mode") == "GIFT_LED" else "LOW")
+    purchase = mission_fit if gift_driver_active else ("HIGH" if specificity.get("core_fit") == "CANDIDATE_CORE_FIT" else "MEDIUM")
+    compatibility = "HIGH" if compatibility_driver_active and _semantic_overlap(intent.get("Compatibility"), profile.get("Compatibility")) else ("NOT_SPECIFIED" if not compatibility_driver_active else "LOW")
+    return {
+        "GiftIntentPresent": "HIGH" if gift_present else "NOT_SPECIFIED",
+        "GiftMissionFit": mission_fit,
+        "PurchaseMissionFit": mission_fit,
+        "RecipientFit": "HIGH" if relation_fit else ("LOW" if recipient not in (None, "", DATA_NOT_AVAILABLE) else "NOT_SPECIFIED"),
+        "RelationshipFit": "HIGH" if relation_fit else ("LOW" if relationship_tokens else "NOT_SPECIFIED"),
+        "OccasionFit": "HIGH" if occasion_fit else ("LOW" if occasion not in (None, "", DATA_NOT_AVAILABLE) else "NOT_SPECIFIED"),
+        "EmotionalMessageFit": emotional_fit,
+        "PhysicalProductConvergence": physical,
+        "PurchaseMissionConvergence": purchase,
+        "CompatibilityConvergence": compatibility,
+    }
+
+
+def _decision_challenge(
+    driver: Mapping[str, Any], specificity: Mapping[str, Any], evidence: Mapping[str, str],
+    *, conflict: str | None = None, initial_precision: str = DATA_NOT_AVAILABLE,
+) -> dict[str, Any]:
+    """Challenge a proposed precision level before finalizing it."""
+    primary = driver.get("PrimaryPurchaseDriver")
+    secondary = set(driver.get("SecondaryPurchaseDrivers") or ())
+    gift_driver_active = primary == "GIFT_EMOTIONAL" or (primary == "HYBRID" and "GIFT_EMOTIONAL" in secondary)
+    checks = {
+        "PhysicalShapeOverweightedForGift": bool(gift_driver_active and evidence.get("PurchaseMissionConvergence") == "HIGH" and evidence.get("PhysicalProductConvergence") != "HIGH"),
+        "WrongDriverEvidence": bool(not gift_driver_active and evidence.get("GiftMissionFit") == "HIGH"),
+        "BroadGiftOverestimated": bool(specificity.get("search_mode") == "BROAD_GIFT"),
+        "RelationshipOnlyOverestimated": bool(specificity.get("search_mode") == "RELATIONSHIP_ONLY" and evidence.get("GiftMissionFit") != "HIGH"),
+        "HardConflictPreserved": bool(conflict),
+    }
+    if conflict:
+        # A confirmed conflict vetoes a positive proposal.  If the proposal
+        # was already negative, the challenge confirms that outcome instead
+        # of reporting a misleading reconsideration.
+        result = "DOWNGRADED" if initial_precision in {"高度精准", "精准"} else "CONFIRMED"
+    elif checks["PhysicalShapeOverweightedForGift"]:
+        result = "CONFIRMED"
+    elif checks["BroadGiftOverestimated"] or checks["RelationshipOnlyOverestimated"]:
+        result = "RECONSIDERED_NO_CHANGE"
+    else:
+        result = "CONFIRMED"
+    return {"ChallengeResult": result, "ChallengeChecks": checks}
+
+
 def _lexical_hard_modifier_conflict(profile: Mapping[str, Any], keyword: str) -> str | None:
     """Detect explicit keyword modifiers that the confirmed profile cannot meet."""
     tokens = set(_query_tokens(keyword))
@@ -386,12 +485,13 @@ def _benchmark_reality_check(evidence: Mapping[str, Any] | None) -> str:
     return "UNKNOWN"
 
 
-def evaluate_product_search_intent_fit(
+def _evaluate_product_search_intent_fit_core(
     product_profile: Mapping[str, Any] | None,
     keyword_intent: Mapping[str, Any] | None,
     *,
     keyword: str | None = None,
     supporting_evidence: Mapping[str, Any] | None = None,
+    purchase_driver: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Apply semantic guardrails to an AI's holistic Product–Search Intent judgment.
 
@@ -403,6 +503,12 @@ def evaluate_product_search_intent_fit(
     """
     profile = build_product_semantic_profile(product_profile)
     intent = keyword_intent if isinstance(keyword_intent, Mapping) else {}
+    resolved_driver = purchase_driver or build_product_purchase_driver({**profile, **(product_profile or {})})
+    driver_primary = resolved_driver.get("PrimaryPurchaseDriver")
+    driver_secondary = set(resolved_driver.get("SecondaryPurchaseDrivers") or ())
+    gift_driver_active = driver_primary == "GIFT_EMOTIONAL" or (
+        driver_primary == "HYBRID" and "GIFT_EMOTIONAL" in driver_secondary
+    )
     conflict = _hard_conflict(profile, intent) or _lexical_hard_modifier_conflict(profile, keyword or str(intent.get("Core_Intent") or ""))
     if conflict:
         return {
@@ -455,7 +561,7 @@ def evaluate_product_search_intent_fit(
     relationship_fit = bool(relationships and _relationship_fit(relationships, profile_relationship))
     # Gift-led relationship intent is a CORE FIT when the product's confirmed
     # reason to buy is that relationship, even without a figurine/statue token.
-    if mode in {"GIFT_LED", "RELATIONSHIP_ONLY"} and relationship_fit:
+    if mode in {"GIFT_LED", "RELATIONSHIP_ONLY"} and relationship_fit and gift_driver_active:
         matched = True
     if mode == "PRODUCT_LED" and specificity["matched_tokens"]:
         matched = matched or bool(specificity["matched_tokens"])
@@ -495,6 +601,298 @@ def evaluate_product_search_intent_fit(
         "AI_Reason": "产品语义画像与搜索意图的核心匹配仍需人工/AI复核",
         "Product_Intent_Fit": "INSUFFICIENT_SEMANTIC_EVIDENCE",
         "Supporting_Evidence": dict(supporting_evidence or {}),
+    }
+
+
+def evaluate_product_search_intent_fit(
+    product_profile: Mapping[str, Any] | None,
+    keyword_intent: Mapping[str, Any] | None,
+    *,
+    keyword: str | None = None,
+    supporting_evidence: Mapping[str, Any] | None = None,
+    purchase_driver: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Evaluate intent and attach adaptive Purchase Driver evidence.
+
+    The existing conservative evaluator remains the decision core.  This
+    wrapper adds product-level driver evidence and a qualitative Decision
+    Challenge without changing the formal CSV contract.
+    """
+    profile = build_product_semantic_profile(product_profile)
+    intent = keyword_intent if isinstance(keyword_intent, Mapping) else {}
+    query = keyword or str(intent.get("Core_Intent") or "")
+    driver = dict(purchase_driver) if isinstance(purchase_driver, Mapping) else build_product_purchase_driver({**profile, **(product_profile or {})})
+    gift_driver_active = driver.get("PrimaryPurchaseDriver") == "GIFT_EMOTIONAL" or (
+        driver.get("PrimaryPurchaseDriver") == "HYBRID" and "GIFT_EMOTIONAL" in set(driver.get("SecondaryPurchaseDrivers") or ())
+    )
+    specificity = _query_specificity(profile, intent, query)
+    conflict = _hard_conflict(profile, intent) or _lexical_hard_modifier_conflict(profile, query)
+    evidence = _purchase_driver_evidence(profile, intent, query, specificity, purchase_driver=driver)
+    result = _evaluate_product_search_intent_fit_core(
+        product_profile, keyword_intent, keyword=keyword,
+        supporting_evidence=supporting_evidence,
+        purchase_driver=driver,
+    )
+    if result.get("AI_Classification") == "PRECISION":
+        if gift_driver_active:
+            suggested = "高度精准" if evidence.get("GiftMissionFit") == "HIGH" else "精准"
+        else:
+            suggested = "高度精准" if evidence.get("PurchaseMissionConvergence") == "HIGH" else "精准"
+    elif result.get("AI_Classification") == "NOT_PRECISION":
+        suggested = "不精准"
+    else:
+        suggested = "弱精准"
+    challenge = _decision_challenge(driver, specificity, evidence, conflict=conflict, initial_precision=suggested)
+    final_reason = str(result.get("AI_Reason") or "").strip()
+    if gift_driver_active and evidence.get("GiftMissionFit") == "HIGH" and not conflict:
+        final_reason = (
+            "该词明确表达礼物购买任务，Recipient/Relationship/Occasion 与当前产品核心定位高度一致；"
+            "Current Product 的核心购买驱动为 GIFT_EMOTIONAL，Gift Mission 与情感表达高度匹配，"
+            "不存在关键购买条件冲突，因此属于高度精准候选。"
+        )
+    result.update({
+        "PrimaryPurchaseDriver": driver.get("PrimaryPurchaseDriver", DATA_NOT_AVAILABLE),
+        "SecondaryPurchaseDrivers": driver.get("SecondaryPurchaseDrivers", []),
+        "PurchaseDriverReason": driver.get("PurchaseDriverReason", DATA_NOT_AVAILABLE),
+        **evidence,
+        "InitialPrecision": suggested,
+        "ChallengeResult": challenge["ChallengeResult"],
+        "DecisionChallenge": challenge,
+        "FinalPrecision": suggested,
+        "FinalPrecisionReason": final_reason,
+        "AI_Reason": final_reason,
+        "Supporting_Evidence": {**dict(supporting_evidence or {}), "PurchaseDriver": driver, **evidence, "DecisionChallenge": challenge},
+    })
+    return result
+
+
+STRUCTURED_JUDGMENT_FIELDS = (
+    "JudgmentItemId", "SearcherPrimaryIntent", "ShoppingIntentStrength",
+    "PurchaseMissionConvergence", "PhysicalProductConvergence",
+    "CompatibilityConvergence", "ProductMissionFit", "HardConflictType",
+    "HardConflictReason", "InitialPrecision", "BenchmarkRealityAssessment",
+    "ChallengeResult", "ChallengeReasonSummary", "FinalPrecision",
+    "FinalPrecisionReason", "JudgmentStatus",
+)
+
+
+def build_current_product_profile(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    """Build one product Ground Truth object without deriving facts from keywords."""
+    text = str(evidence.get("product_text") or "").strip()
+    profile = dict(evidence.get("product_profile") or {}) if isinstance(evidence, Mapping) else {}
+    profile.setdefault("ProductProfileId", evidence.get("content_sha256") or DATA_NOT_AVAILABLE)
+    profile.setdefault("Product_Text_Evidence", text or DATA_NOT_AVAILABLE)
+    profile.setdefault("EvidenceSource", evidence.get("text_path") or DATA_NOT_AVAILABLE)
+    return profile
+
+
+def build_precision_brain_prompt(product_profile: Mapping[str, Any], units: Iterable[Mapping[str, Any]], *, phase: str) -> str:
+    """Create a structured business-evidence prompt for an AI adapter."""
+    payload = {
+        "phase": phase,
+        "product_profile": dict(product_profile),
+        "keywords": [{
+            "JudgmentItemId": item.get("JudgmentItemId"),
+            "Keyword": item.get("词") or item.get("Keyword"),
+            "KeywordCn": item.get("中文") or item.get("KeywordCn"),
+            "BenchmarkRealityEvidence": item.get("Benchmark_Reality_Evidence") if phase == "B" else "HIDDEN_IN_PHASE_A",
+        } for item in units],
+        "required_fields": list(STRUCTURED_JUDGMENT_FIELDS),
+        "final_precision_levels": list(PRECISION_LEVELS),
+        "judgment_statuses": sorted(JUDGMENT_STATUSES),
+    }
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def validate_structured_judgments(judgments: Iterable[Mapping[str, Any]], expected_ids: Iterable[str], *, phase: str = "A") -> dict[str, dict[str, Any]]:
+    """Validate typed Brain output and join by stable JudgmentItemId."""
+    expected = {str(item).strip() for item in expected_ids}
+    result: dict[str, dict[str, Any]] = {}
+    for raw in judgments:
+        if not isinstance(raw, Mapping):
+            raise ValueError("STRUCTURED_JUDGMENT_INVALID")
+        item_id = str(raw.get("JudgmentItemId") or "").strip()
+        if not item_id or item_id not in expected or item_id in result:
+            raise ValueError("STRUCTURED_JUDGMENT_ID_INVALID")
+        if phase == "B":
+            assessment = str(raw.get("BenchmarkRealityAssessment") or "").strip().upper()
+            if assessment not in {"SUPPORTS", "WEAKLY_SUPPORTS", "NEUTRAL", "CONTRADICTS", "INSUFFICIENT"}:
+                raise ValueError("STRUCTURED_BENCHMARK_ASSESSMENT_INVALID")
+        else:
+            final = _precision_level(raw.get("FinalPrecision"))
+            status = str(raw.get("JudgmentStatus") or "").strip().upper()
+            challenge = str(raw.get("ChallengeResult") or "").strip()
+            if final == PRECISION_LEVEL_NOT_AVAILABLE or status not in JUDGMENT_STATUSES:
+                raise ValueError("STRUCTURED_JUDGMENT_SCHEMA_INVALID")
+            if challenge not in {"CONFIRMED", "DOWNGRADED", "UPGRADED", "RECONSIDERED_NO_CHANGE", DATA_NOT_AVAILABLE}:
+                raise ValueError("STRUCTURED_JUDGMENT_SCHEMA_INVALID")
+            if not _specific_reason(raw.get("FinalPrecisionReason") or raw.get("精准原因")):
+                raise ValueError("STRUCTURED_JUDGMENT_REASON_MISSING")
+        result[item_id] = dict(raw)
+    if set(result) != expected:
+        raise ValueError("STRUCTURED_JUDGMENT_COVERAGE_FAILED")
+    return result
+
+
+def _local_precision_brain_judgment(unit: Mapping[str, Any], product_profile: Mapping[str, Any], driver: Mapping[str, Any]) -> dict[str, Any]:
+    """Default local Brain adapter used when the host does not inject a model client.
+
+    It uses the existing semantic evaluator and emits the same typed contract;
+    it never uses numeric scoring or Benchmark rank to choose a level.
+    """
+    keyword = str(unit.get("词") or unit.get("Keyword") or "").strip()
+    intent = {"Core_Intent": keyword}
+    evidence = evaluate_product_search_intent_fit(product_profile, intent, keyword=keyword, purchase_driver=driver)
+    level = str(evidence.get("FinalPrecision") or "弱精准")
+    if level not in PRECISION_LEVELS:
+        level = "弱精准"
+    return {
+        "JudgmentItemId": unit["JudgmentItemId"],
+        "SearcherPrimaryIntent": keyword or DATA_NOT_AVAILABLE,
+        "ShoppingIntentStrength": "不明确" if len(_query_tokens(keyword)) <= 1 else "中",
+        "PurchaseMissionConvergence": evidence.get("PurchaseMissionConvergence", DATA_NOT_AVAILABLE),
+        "PhysicalProductConvergence": evidence.get("PhysicalProductConvergence", DATA_NOT_AVAILABLE),
+        "CompatibilityConvergence": evidence.get("CompatibilityConvergence", DATA_NOT_AVAILABLE),
+        "ProductMissionFit": evidence.get("Product_Intent_Fit", DATA_NOT_AVAILABLE),
+        "HardConflictType": evidence.get("HardConflictType", DATA_NOT_AVAILABLE),
+        "HardConflictReason": evidence.get("Conflicting_Product_Attributes", DATA_NOT_AVAILABLE),
+        "InitialPrecision": evidence.get("InitialPrecision", level),
+        "BenchmarkRealityAssessment": "INSUFFICIENT",
+        "ChallengeResult": evidence.get("ChallengeResult", "RECONSIDERED_NO_CHANGE"),
+        "ChallengeReasonSummary": str((evidence.get("DecisionChallenge") or {}).get("ChallengeReasonSummary") or evidence.get("AI_Reason") or "").strip(),
+        "FinalPrecision": level,
+        "FinalPrecisionReason": evidence.get("FinalPrecisionReason") or evidence.get("AI_Reason") or "该词的搜索购买任务与当前产品事实的匹配证据不足，需要人工复核",
+        "JudgmentStatus": "SUCCESS" if level in PRECISION_LEVELS else "REVIEW_REQUIRED",
+    }
+
+
+class PrecisionJudgmentEngine:
+    """Run the two-stage structured Precision Brain over unique keywords."""
+
+    def __init__(self, client: Callable[[str], Iterable[Mapping[str, Any]]] | None = None, *, batch_size: int | None = None):
+        self.client = client
+        self.batch_size = batch_size
+        self.calls = 0
+
+    def _call(self, prompt: str, units: list[Mapping[str, Any]], product_profile: Mapping[str, Any], driver: Mapping[str, Any], phase: str) -> list[Mapping[str, Any]]:
+        self.calls += 1
+        if self.client is not None:
+            return list(self.client(prompt))
+        return [_local_precision_brain_judgment(unit, product_profile, driver) for unit in units]
+
+    def judge(self, units: list[Mapping[str, Any]], product_profile: Mapping[str, Any], driver: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+        if not units:
+            return {}
+        batch_size = self.batch_size or max(1, min(32, 32000 // max(800, len(str(product_profile)) + 120)))
+        output: dict[str, Mapping[str, Any]] = {}
+        for start in range(0, len(units), batch_size):
+            batch = units[start:start + batch_size]
+            phase_a = self._call(build_precision_brain_prompt(product_profile, batch, phase="A"), batch, product_profile, driver, "A")
+            ids = [str(item["JudgmentItemId"]) for item in batch]
+            try:
+                validated = validate_structured_judgments(phase_a, ids)
+            except ValueError:
+                smaller = max(1, len(batch) // 2)
+                if len(batch) > smaller:
+                    nested = self.__class__(self.client, batch_size=smaller)
+                    nested_result = nested.judge(batch, product_profile, driver)
+                    self.calls += nested.calls
+                    output.update(nested_result)
+                    continue
+                failed_id = ids[0]
+                validated = {failed_id: {"JudgmentItemId": failed_id, "FinalPrecision": DATA_NOT_AVAILABLE,
+                    "FinalPrecisionReason": "结构化AI判断重试后仍失败，必须人工复核，未生成语义等级",
+                    "JudgmentStatus": "FAILED", "ChallengeResult": DATA_NOT_AVAILABLE}}
+            phase_b = self._call(build_precision_brain_prompt(product_profile, batch, phase="B"), batch, product_profile, driver, "B")
+            try:
+                final = validate_structured_judgments(phase_b, ids, phase="B")
+            except ValueError:
+                final = {item_id: {"JudgmentItemId": item_id, "BenchmarkRealityAssessment": "INSUFFICIENT"} for item_id in ids}
+            for item_id, judgment in final.items():
+                # Phase A semantic decision is authoritative; Phase B only adds Reality Assessment.
+                merged = dict(validated[item_id])
+                merged["BenchmarkRealityAssessment"] = judgment.get("BenchmarkRealityAssessment", "INSUFFICIENT")
+                output[item_id] = merged
+        return output
+
+
+def run_precision_brain(
+    observation_rows: Iterable[Mapping[str, Any]],
+    product_evidence: Mapping[str, Any],
+    *,
+    client: Callable[[str], Iterable[Mapping[str, Any]]] | None = None,
+    batch_size: int | None = None,
+) -> dict[str, Any]:
+    """Build unique units, call the structured Brain, and return canonical decisions."""
+    rows = list(observation_rows)
+    units = build_keyword_judgment_units(rows)
+    profile = build_current_product_profile(product_evidence)
+    driver = build_product_purchase_driver(profile)
+    engine = PrecisionJudgmentEngine(client, batch_size=batch_size)
+    judgments = engine.judge(units, profile, driver)
+    by_canonical: dict[str, Mapping[str, Any]] = {}
+    for unit in units:
+        judgment = dict(judgments[unit["JudgmentItemId"]])
+        # The projection layer uses the existing CSV contract; these fields
+        # remain in the internal trace and are never silently treated as labels.
+        judgment["精准度"] = judgment["FinalPrecision"]
+        judgment["精准原因"] = judgment["FinalPrecisionReason"]
+        judgment["JudgmentStatus"] = judgment.get("JudgmentStatus", "SUCCESS")
+        by_canonical[unit["Canonical_Keyword"]] = judgment
+    return {"decisions": by_canonical, "keyword_units": units, "judgments": judgments,
+            "purchase_driver": driver, "product_profile": profile, "ai_call_count": engine.calls}
+
+
+def run_precision_brain_regression(
+    product_profile: Mapping[str, Any] | None,
+    golden_cases: Iterable[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Run deterministic Golden Cases and report adaptive Precision metrics."""
+    cases = list(golden_cases)
+    purchase_driver = build_product_purchase_driver(product_profile)
+    rows = []
+    for case in cases:
+        keyword = str(case.get("Keyword") or case.get("keyword") or "").strip()
+        expected = str(case.get("ExpectedPrecision") or case.get("期望等级") or "").strip()
+        result = evaluate_product_search_intent_fit(
+            product_profile, {"Core_Intent": keyword}, keyword=keyword,
+            purchase_driver=purchase_driver,
+        )
+        predicted = str(result.get("FinalPrecision") or "").strip()
+        case_type = str(case.get("CaseType") or "").strip()
+        rows.append({
+            "Keyword": keyword,
+            "CaseType": case_type,
+            "PrimaryPurchaseDriver": result.get("PrimaryPurchaseDriver", DATA_NOT_AVAILABLE),
+            "ExpectedPrecision": expected,
+            "PredictedPrecision": predicted,
+            "ExactMatch": predicted == expected,
+            "GiftMissionFit": result.get("GiftMissionFit", DATA_NOT_AVAILABLE),
+            "PurchaseMissionFit": result.get("PurchaseMissionFit", result.get("GiftMissionFit", DATA_NOT_AVAILABLE)),
+            "PhysicalProductConvergence": result.get("PhysicalProductConvergence", DATA_NOT_AVAILABLE),
+            "PurchaseMissionConvergence": result.get("PurchaseMissionConvergence", DATA_NOT_AVAILABLE),
+            "ChallengeResult": result.get("ChallengeResult", DATA_NOT_AVAILABLE),
+        })
+    high = {"高度精准"}
+    expected_high = [row for row in rows if row["ExpectedPrecision"] in high]
+    predicted_high = [row for row in rows if row["PredictedPrecision"] in high]
+    tp = sum(row["PredictedPrecision"] in high and row["ExpectedPrecision"] in high for row in rows)
+    gift_high = [row for row in expected_high if row["CaseType"] == "GIFT_HIGH_MISSION_FIT"]
+    gift_tp = sum(row["PredictedPrecision"] in high for row in gift_high)
+    broad = [row for row in rows if row["CaseType"] == "GIFT_BROAD_INTENT"]
+    broad_fp = sum(row["PredictedPrecision"] in high for row in broad)
+    false_high = sum(row["PredictedPrecision"] in high and row["ExpectedPrecision"] not in high for row in rows)
+    compression = [row["Keyword"] for row in expected_high if row["PredictedPrecision"] != "高度精准"]
+    return {
+        "ExactPrecisionMatch": sum(row["ExactMatch"] for row in rows),
+        "MismatchCount": sum(not row["ExactMatch"] for row in rows),
+        "FalseHighPrecision": false_high,
+        "HighPrecisionRecall": (tp / len(expected_high)) if expected_high else None,
+        "GiftHighMissionFitRecall": (gift_tp / len(gift_high)) if gift_high else None,
+        "FalseHighPrecisionRate": (false_high / len(predicted_high)) if predicted_high else 0.0,
+        "BroadGiftFalseHighPrecisionRate": (broad_fp / len(broad)) if broad else 0.0,
+        "GradeCompression": compression,
+        "Cases": rows,
     }
 
 
@@ -564,95 +962,94 @@ def _identity(row: Mapping[str, Any], product_code: str | None = None) -> dict[s
     }
 
 
-def resolve_benchmark_raw_csvs(product_root: str | Path, product_code: str | None = None) -> dict[str, Any]:
-    """Resolve all observations from the latest valid 6-0-1 batch by RUN_TIMESTAMP."""
-    source_skill_dir = REPO_ROOT / SIX_0_1_SKILL_ID
-    directory = resolve_skill_report_dir(product_root, source_skill_dir)
-    if not directory.is_dir():
-        return {"status": BENCHMARK_RAW_NOT_FOUND, "files": [], "rows": [], "invalid_files": []}
-    candidates = sorted(path for path in directory.glob("*.csv") if path.is_file() and BENCHMARK_RAW_FILENAME_RE.match(path.name))
-    if not candidates:
-        return {"status": BENCHMARK_RAW_NOT_FOUND, "files": [], "rows": [], "invalid_files": []}
-    def coverage_validator(_path, file_rows, metadata):
-        package_error = validate_601_run_package(_path, metadata)
-        if package_error:
-            return package_error
-        if file_rows is None:
-            return "CSV_READ_FAILED"
-        if not metadata or metadata.get("Keyword_Entity_ID_Field") != "KwId":
-            return "KEYWORD_ENTITY_ID_METADATA_UNCONFIRMED"
-        observation_keys = [(str(row.get("所属产品编号") or row.get("产品编号") or "").strip(), str(row.get("对标ASIN") or row.get("ASIN") or "").strip(), str(row.get("Id") or "").strip(), _normalized_keyword(row.get("词"))) for row in file_rows]
-        if any(not product_id or not asin or not keyword_id or not keyword for product_id, asin, keyword_id, keyword in observation_keys): return "OBSERVATION_IDENTITY_OR_KEYWORD_MISSING"
-        if len(observation_keys) != len(set(observation_keys)): return "DUPLICATE_BENCHMARK_KEYWORD_OBSERVATION"
-        if metadata and metadata.get("Record_Count") not in (None, len(file_rows)):
-            return "RECORD_COUNT_MISMATCH"
-        return None
+def _filename_timestamp(path: Path) -> str | None:
+    match = re.search(r"_(\d{8}_\d{6})\.csv$", path.name, re.I)
+    return match.group(1) if match else None
 
-    candidates.sort(
-        key=lambda path: re.search(r"_(\d{8}_\d{6})\.csv$", path.name, re.I).group(1),
-        reverse=True,
-    )
-    inspected_invalid: list[dict[str, Any]] = []
-    selected: dict[str, Any] = {}
-    for candidate in candidates:
-        candidate_result = resolve_latest_valid_report(
-            product_root,
-            SIX_0_1_SKILL_ID,
-            SIX_0_1_REPORT_IDENTITY,
-            [candidate],
-            product_code=product_code or _product_code_from_root(product_root),
-            required_schema=BENCHMARK_RAW_COLUMNS,
-            validator=coverage_validator,
-        )
-        if candidate_result.get("status") == "LATEST_VALID_REPORT_RESOLVED":
-            selected = candidate_result
-            selected["skipped_candidates"] = inspected_invalid
-            if inspected_invalid:
-                selected["input_resolution_method"] = "LATEST_INVALID_FALLBACK_USED"
-            break
-        inspected_invalid.extend(candidate_result.get("skipped_candidates") or [])
-    if not selected:
-        selected = {
-            "status": "NO_VALID_UPSTREAM_REPORT",
-            "skipped_candidates": inspected_invalid,
-        }
-    invalid_files = [
-        {"path": item["path"], "status": item.get("reason") or BENCHMARK_RAW_SCHEMA_INVALID}
-        for item in selected.get("skipped_candidates", []) if not item.get("valid")
-    ]
-    if selected.get("status") != "LATEST_VALID_REPORT_RESOLVED":
-        reason = {item.get("status") for item in invalid_files}
-        status = BENCHMARK_RAW_SCHEMA_INVALID if "SCHEMA_MISMATCH" in reason else selected.get("status")
-        return {"status": status, "files": [], "rows": [], "invalid_files": invalid_files, "resolution": selected}
-    path = Path(selected["file"])
-    file_rows = selected.get("rows") or []
+
+def resolve_benchmark_raw_csvs(product_root: str | Path, product_code: str | None = None) -> dict[str, Any]:
+    """Resolve 6-0-1 all-observation input through its current Registry/Manifest."""
+    report_dir = Path(product_root).resolve() / "06_SKILL分析报告" / BENCHMARK_RAW_OUTPUT_DIR
+    current = resolve_latest_valid_data(report_dir)
+    if current.get("status") != "LATEST_VALID_DATA":
+        return _resolve_601_by_filename_timestamp(product_root)
+    stamp = str(current.get("run_timestamp") or "")
+    registry = current.get("registry") or {}
+    manifest = {}
+    manifest_path = report_dir / "_system" / "manifests" / f"6-0-1_RunPackage_{current.get('run_timestamp')}.json"
+    if manifest_path.is_file():
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            if isinstance(payload, dict):
+                manifest = payload
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": [],
+                    "invalid_files": [{"reason": "INPUT_MANIFEST_INVALID"}]}
+    if manifest and (str(manifest.get("RUN_TIMESTAMP") or "") != stamp or str(manifest.get("Run_Status") or "").upper() not in {"FULL_SUCCESS", "VALID"}):
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": [],
+                "invalid_files": [{"reason": "INPUT_MANIFEST_NOT_VALID"}]}
+    identities = registry.get("Report_Identities") or manifest.get("Report_Identities") or []
+    if identities and SIX_0_1_REPORT_IDENTITY not in identities:
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": [],
+                "invalid_files": [{"reason": "REPORT_IDENTITY_MISSING"}]}
+    declared = registry.get("Files") or []
+    names = {Path(str(value)).name for value in declared if str(value).strip()}
+    expected_stem = f"所有对标自然排名关键词_{stamp}.csv"
+    data_dir = Path(current["data_dir"])
+    matches = [candidate for candidate in data_dir.glob(f"6-0-1_*{expected_stem}") if candidate.is_file()]
+    if len(matches) != 1:
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": [],
+                "invalid_files": [{"reason": "CURRENT_ASSET_AMBIGUOUS", "file": expected_stem}]}
+    path = matches[0]
+    if path.name not in names and declared:
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": [],
+                "invalid_files": [{"reason": "REGISTRY_FILE_NOT_DECLARED", "file": path.name}]}
+    if not path.is_file():
+        return {"status": BENCHMARK_RAW_NOT_FOUND, "files": [], "rows": [],
+                "invalid_files": [{"reason": "CURRENT_ASSET_MISSING", "file": str(path)}]}
+    try:
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            headers = tuple(reader.fieldnames or ())
+            if not set(BENCHMARK_RAW_COLUMNS).issubset(headers):
+                raise ValueError("INPUT_SCHEMA_INVALID")
+            source_rows = list(reader)
+    except (OSError, UnicodeError, csv.Error, ValueError) as exc:
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": [],
+                "invalid_files": [{"path": str(path), "reason": str(exc)}]}
+    if not source_rows:
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": [],
+                "invalid_files": [{"path": str(path), "reason": "INPUT_EMPTY"}]}
     rows: list[dict[str, Any]] = []
-    for source_index, raw in enumerate(file_rows):
-        rows.append({"所属产品编号": raw.get("所属产品编号", raw.get("产品编号")), "对标ASIN": raw.get("对标ASIN", raw.get("ASIN")),
-            "Id": str(raw.get("Id") or "").strip() or None, "词": raw.get("词"), "中文": raw.get("中文"),
+    for source_index, raw in enumerate(source_rows):
+        rows.append({
+            "所属产品编号": raw.get("所属产品编号") or raw.get("产品编号"),
+            "对标ASIN": raw.get("对标ASIN") or raw.get("ASIN"),
+            "Id": str(raw.get("Id") or "").strip() or None,
+            "词": raw.get("词"), "中文": raw.get("中文"),
             "市场容量": raw.get("市场容量"), "Keyword": str(raw.get("词") or "").strip(),
             "KeywordCn": raw.get("中文"), "SearchVolume30": raw.get("市场容量"),
-            "竞争产品数": raw.get("竞争产品数"), "供需比": raw.get("供需比"), "自然排名": raw.get("自然排名"),
+            "竞争产品数": raw.get("竞争产品数"), "供需比": raw.get("供需比"),
+            "自然排名": raw.get("自然排名"),
             "keyword_entity_id": str(raw.get("Id") or "").strip() or None,
-            "keyword_entity_id_status": "USER_CONFIRMED_STABLE_ACROSS_PROID", "record_id": None,
-            "record_id_status": ERP_KEYWORD_RECORD_ID_UNCONFIRMED,
-            "field_semantics": {"SearchVolume30": {"status": "DOCUMENTED", "meaning": "30天搜索量"},
-                "竞争产品数": {"status": "DOCUMENTED", "meaning": "PickPwKView.AsinQuantity；仅透传，不参与精准判断"},
-                "供需比": {"status": "DERIVED_SOURCE_VALUE", "meaning": "6-0-1计算值；仅透传，不参与精准判断"},
-                "自然排名": {"status": "DOCUMENTED", "meaning": "该Benchmark Observation自然排名；仅作Reality Evidence"}},
-            "source_file": str(path), "source_row": source_index + 2, "source_type": "BENCHMARK_6_0_1_KEYWORD_OBSERVATION"})
-    return {
-        "status": "BENCHMARK_RAW_READY",
-        "files": [str(path)],
-        "rows": rows,
-        "invalid_files": invalid_files,
-        "source_schema": list(BENCHMARK_RAW_COLUMNS),
-        "benchmark_count": (selected.get("metadata") or {}).get("Benchmark_Count"),
-        "benchmark_codes": (selected.get("metadata") or {}).get("Benchmark_Codes", []),
-        "benchmark_erp_pro_ids": (selected.get("metadata") or {}).get("Benchmark_ERP_ProIds", []),
-        "resolution": selected,
-    }
-
+            "keyword_entity_id_status": "USER_CONFIRMED_STABLE_ACROSS_PROID",
+            "record_id": None, "record_id_status": ERP_KEYWORD_RECORD_ID_UNCONFIRMED,
+            "field_semantics": {
+                "SearchVolume30": {"status": "DOCUMENTED", "meaning": "30天搜索量"},
+                "竞争产品数": {"status": "DOCUMENTED", "meaning": "仅透传，不参与精准判断"},
+                "供需比": {"status": "DERIVED_SOURCE_VALUE", "meaning": "仅透传，不参与精准判断"},
+                "自然排名": {"status": "DOCUMENTED", "meaning": "仅作Reality Evidence"},
+            },
+            "source_file": str(path), "source_row": source_index + 2,
+            "source_type": "BENCHMARK_6_0_1_KEYWORD_OBSERVATION",
+        })
+    if any(not row["Id"] or not row["Keyword"] for row in rows):
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": [],
+                "invalid_files": [{"path": str(path), "reason": "INPUT_SCHEMA_INVALID"}]}
+    return {"status": "BENCHMARK_RAW_READY", "files": [str(path)], "rows": rows,
+            "invalid_files": [], "source_schema": list(BENCHMARK_RAW_COLUMNS),
+            "run_timestamp": stamp, "input_resolution_method": "REGISTRY_DATA_LATEST_VALID",
+            "input_metadata": manifest or registry}
 
 def _product_code_from_root(product_root: str | Path) -> str:
     """Return the exact Product_Code from this already-resolved Product Root."""
@@ -672,6 +1069,8 @@ def _product_code_from_root(product_root: str | Path) -> str:
 def resolve_latest_601_keyword_output(product_root: str | Path, product_code: str | None = None) -> dict[str, Any]:
     """Resolve one latest-valid 6-0-1 asset; never fall back to ERP/SQL."""
     resolved = resolve_benchmark_raw_csvs(product_root, product_code=product_code)
+    if resolved.get("status") != "BENCHMARK_RAW_READY":
+        resolved = _resolve_601_by_filename_timestamp(product_root)
     files = list(resolved.get("files") or [])
     if resolved.get("status") != "BENCHMARK_RAW_READY" or not files:
         status = (SIX_0_1_KEYWORD_OUTPUT_NOT_FOUND
@@ -686,19 +1085,46 @@ def resolve_latest_601_keyword_output(product_root: str | Path, product_code: st
         }
     latest = files[0]
     rows = list(resolved.get("rows") or ())
-    resolution = resolved.get("resolution") or {}
     return {
         "status": SIX_0_1_KEYWORD_OUTPUT_READY,
         "file": str(latest),
         "rows": rows,
         "invalid_files": list(resolved.get("invalid_files") or []),
         "source_schema": list(BENCHMARK_RAW_COLUMNS),
-        "run_id": resolution.get("run_id"),
-        "run_timestamp": resolution.get("run_timestamp"),
-        "generated_at": resolution.get("generated_at"),
-        "input_resolution_method": resolution.get("input_resolution_method"),
-        "input_metadata": resolution.get("metadata") or {},
+        "run_id": resolved.get("run_timestamp"),
+        "run_timestamp": resolved.get("run_timestamp"),
+        "generated_at": None,
+        "input_resolution_method": resolved.get("input_resolution_method"),
+        "input_metadata": resolved.get("input_metadata") or {},
     }
+
+
+def _resolve_601_by_filename_timestamp(product_root: str | Path) -> dict[str, Any]:
+    """Minimal analysis handoff: newest exact 6-0-1 filename, no package gate."""
+    data_dir = Path(product_root).resolve() / "06_SKILL分析报告" / BENCHMARK_RAW_OUTPUT_DIR
+    paths = [p for p in data_dir.glob("6-0-1_*所有对标自然排名关键词_*.csv") if p.is_file() and _filename_timestamp(p)]
+    if not paths:
+        return {"status": SIX_0_1_KEYWORD_INPUT_NOT_FOUND, "files": [], "rows": []}
+    path = max(paths, key=lambda p: _filename_timestamp(p) or "")
+    try:
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            if not set(BENCHMARK_RAW_COLUMNS).issubset(reader.fieldnames or ()):
+                return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": []}
+            raw_rows = list(reader)
+    except (OSError, UnicodeError, csv.Error):
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": []}
+    if not raw_rows:
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": []}
+    rows = []
+    for index, raw in enumerate(raw_rows, start=2):
+        keyword = str(raw.get("词") or "").strip()
+        record = {"所属产品编号": raw.get("所属产品编号") or raw.get("产品编号"), "对标ASIN": raw.get("对标ASIN") or raw.get("ASIN"), "Id": str(raw.get("Id") or "").strip() or None, "词": raw.get("词"), "中文": raw.get("中文"), "市场容量": raw.get("市场容量"), "Keyword": keyword, "KeywordCn": raw.get("中文"), "SearchVolume30": raw.get("市场容量"), "竞争产品数": raw.get("竞争产品数"), "供需比": raw.get("供需比"), "自然排名": raw.get("自然排名"), "source_file": str(path), "source_row": index, "source_type": "BENCHMARK_6_0_1_KEYWORD_OBSERVATION"}
+        rows.append(record)
+    if any(not row.get("Id") or not row.get("Keyword") for row in rows):
+        return {"status": BENCHMARK_RAW_SCHEMA_INVALID, "files": [], "rows": []}
+    stamp = _filename_timestamp(path)
+    return {"status": "BENCHMARK_RAW_READY", "files": [str(path)], "rows": rows, "source_schema": list(BENCHMARK_RAW_COLUMNS), "run_timestamp": stamp, "input_resolution_method": "FILENAME_TIMESTAMP_MAX", "input_metadata": {}}
 
 
 def build_dual_views_from_601_output(
@@ -1145,19 +1571,21 @@ def build_keyword_judgment_units(observation_rows):
         rank_count, best, middle = _rank_summary(observations)
         benchmarks = {(str(row.get("所属产品编号") or "").strip(), str(row.get("对标ASIN") or "").strip()) for row in observations}
         first = observations[0]
-        units.append({"Id": _full_id(first), "Keyword": str(_full_source_value(first, "词", "Keyword")).strip(),
+        judgment_item_id = "J-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+        units.append({"JudgmentItemId": judgment_item_id, "Id": _full_id(first), "Keyword": str(_full_source_value(first, "词", "Keyword")).strip(),
             "KeywordCn": _full_source_value(first, "中文", "KeywordCn"), "Canonical_Keyword": canonical,
             "Benchmark_Reality_Evidence": {"Benchmark_Observation_Count": len(observations), "Benchmark_Coverage_Count": len(benchmarks),
                 "Best_Benchmark_Organic_Rank": best, "Median_Benchmark_Organic_Rank": middle, "Organic_Rank_Count": rank_count}})
     return units
 
 
-def build_deduplicated_high_precision_rows(rows):
+def build_deduplicated_high_precision_rows(rows, *, precision_levels: Iterable[Any] | None = None):
+    selected_levels = _selected_precision_levels(precision_levels)
     output = []
     for _canonical, observations in _benchmark_observation_groups(rows).items():
         levels = {str(row.get("精准度") or "").strip() for row in observations}
         reasons = {str(row.get("精准原因") or "").strip() for row in observations}
-        if levels != {"高度精准"} or len(reasons) != 1: raise ValueError("KEYWORD_JUDGMENT_INCONSISTENT")
+        if not levels or not levels.issubset(selected_levels) or len(levels) != 1 or len(reasons) != 1: raise ValueError("KEYWORD_JUDGMENT_INCONSISTENT")
         facts = {}
         for field in ("市场容量", "竞争产品数", "供需比"):
             values = {str(row.get(field)).strip().replace(",", "") for row in observations if row.get(field) not in (None, "")}
@@ -1169,8 +1597,23 @@ def build_deduplicated_high_precision_rows(rows):
         output.append({"Id": str(first.get("Id") or "").strip(), "词": first.get("词"), "中文": first.get("中文"),
             "市场容量": facts["市场容量"], "竞争产品数": facts["竞争产品数"], "供需比": facts["供需比"],
             "对标覆盖数": len(benchmarks), "最佳自然排名": best, "自然排名中位数": middle,
-            "精准度": "高度精准", "精准原因": next(iter(reasons))})
+            "精准度": next(iter(levels)), "精准原因": next(iter(reasons))})
     return _stable_full_sort(output)
+
+
+def build_deduplicated_benchmark_rows(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Deduplicate B at Benchmark + Canonical Keyword grain, preserving ownership."""
+    output: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        code = str(row.get("所属产品编号") or "").strip()
+        keyword = _normalized_keyword(row.get("词"))
+        key = (code, keyword)
+        if not code or not keyword or key in seen:
+            continue
+        seen.add(key)
+        output.append(dict(row))
+    return output
 
 
 def _documented_natural_rank(row: Mapping[str, Any]) -> float | None:
@@ -1306,6 +1749,7 @@ def build_ai_classified_rows(
         if key:
             source_by_keyword.setdefault(key, []).append(row)
     context = dict(product_context or {})
+    purchase_driver = build_product_purchase_driver(context)
     decisions_by_normalized_keyword = {
         _normalized_keyword(key): value for key, value in decisions.items()
     }
@@ -1339,10 +1783,11 @@ def build_ai_classified_rows(
             semantic_intent = {"Core_Intent": keyword}
         benchmark = (benchmark_evidence or {}).get(_normalized_keyword(keyword))
         semantic_guard = evaluate_product_search_intent_fit(
-            context, semantic_intent, keyword=keyword, supporting_evidence=benchmark
+            context, semantic_intent, keyword=keyword, supporting_evidence=benchmark,
+            purchase_driver=purchase_driver,
         )
         classification = str(decision.get("AI_Classification") or "").strip().upper()
-        if classification not in AI_CLASSIFICATIONS:
+        if classification not in LEGACY_AI_CLASSIFICATIONS:
             legacy = decision.get("AI_Is_Precision")
             classification = "PRECISION" if legacy is True else "NOT_PRECISION" if legacy is False else "REVIEW_REQUIRED"
         if classification == "PRECISION" and semantic_guard and semantic_guard["AI_Classification"] in {"NOT_PRECISION", "REVIEW_REQUIRED"}:
@@ -1387,6 +1832,15 @@ def build_ai_classified_rows(
             "AI_ONLY" if classification == "PRECISION" else
             "MANUAL_ONLY" if manual_label == "PRECISION" else "BOTH_NOT_PRECISION"
         )
+        # Precision Brain's final reason is the user-facing explanation for
+        # adaptive driver decisions (especially Gift Mission matches). Keep
+        # the formal CSV columns unchanged while exposing that reason on the
+        # internal classified row.
+        guard_reason = str((semantic_guard or {}).get("FinalPrecisionReason") or "").strip()
+        if classification != "PRECISION" and semantic_guard:
+            ai_reason = str((semantic_guard or {}).get("AI_Reason") or guard_reason or decision.get("AI_Reason") or "[AI未提供分类理由]").strip()
+        else:
+            ai_reason = guard_reason or str(decision.get("AI_Reason") or "[AI未提供分类理由]").strip()
         item = {
             "Product_Code": product_code,
             "ERP_ProId": blind.get("ERP_ProId") or erp_pro_id,
@@ -1398,7 +1852,9 @@ def build_ai_classified_rows(
             "AI_Classification": classification,
             "AI_Is_Precision": True if classification == "PRECISION" else False if classification == "NOT_PRECISION" else None,
             "AI_Confidence": str(decision.get("AI_Confidence", "LOW")).upper() if str(decision.get("AI_Confidence", "LOW")).upper() in AI_CONFIDENCE_VALUES else "LOW",
-            "AI_Reason": str((semantic_guard or {}).get("AI_Reason") if classification != "PRECISION" and semantic_guard else decision.get("AI_Reason") or "[AI未提供分类理由]").strip(),
+            "AI_Reason": ai_reason,
+            "精准度": semantic_guard.get("FinalPrecision", _classification_level(classification)) if semantic_guard else _classification_level(classification),
+            "精准原因": guard_reason or ai_reason,
             "AI_Precision_Score": DATA_NOT_AVAILABLE,
             "AI_Precision_Level": _precision_level(decision.get("精准度", decision.get("AI_Precision_Level", decision.get("Precision_Level")))),
             "Search_Intent": decision.get("Search_Intent", ""),
@@ -1415,6 +1871,25 @@ def build_ai_classified_rows(
             "record_id": blind.get("record_id"),
             "record_id_status": record_id_status,
         }
+        item.update({
+            "PrimaryPurchaseDriver": semantic_guard.get("PrimaryPurchaseDriver", purchase_driver.get("PrimaryPurchaseDriver", DATA_NOT_AVAILABLE)),
+            "SecondaryPurchaseDrivers": semantic_guard.get("SecondaryPurchaseDrivers", purchase_driver.get("SecondaryPurchaseDrivers", [])),
+            "PurchaseDriverReason": semantic_guard.get("PurchaseDriverReason", purchase_driver.get("PurchaseDriverReason", DATA_NOT_AVAILABLE)),
+            "GiftIntentPresent": semantic_guard.get("GiftIntentPresent", DATA_NOT_AVAILABLE),
+            "GiftMissionFit": semantic_guard.get("GiftMissionFit", DATA_NOT_AVAILABLE),
+            "PurchaseMissionFit": semantic_guard.get("PurchaseMissionFit", semantic_guard.get("GiftMissionFit", DATA_NOT_AVAILABLE)),
+            "RecipientFit": semantic_guard.get("RecipientFit", DATA_NOT_AVAILABLE),
+            "RelationshipFit": semantic_guard.get("RelationshipFit", DATA_NOT_AVAILABLE),
+            "OccasionFit": semantic_guard.get("OccasionFit", DATA_NOT_AVAILABLE),
+            "EmotionalMessageFit": semantic_guard.get("EmotionalMessageFit", DATA_NOT_AVAILABLE),
+            "PhysicalProductConvergence": semantic_guard.get("PhysicalProductConvergence", DATA_NOT_AVAILABLE),
+            "PurchaseMissionConvergence": semantic_guard.get("PurchaseMissionConvergence", DATA_NOT_AVAILABLE),
+            "CompatibilityConvergence": semantic_guard.get("CompatibilityConvergence", DATA_NOT_AVAILABLE),
+            "InitialPrecision": semantic_guard.get("InitialPrecision", DATA_NOT_AVAILABLE),
+            "DecisionChallenge": semantic_guard.get("DecisionChallenge", DATA_NOT_AVAILABLE),
+            "ChallengeResult": semantic_guard.get("ChallengeResult", DATA_NOT_AVAILABLE),
+            "FinalPrecisionReason": semantic_guard.get("FinalPrecisionReason", DATA_NOT_AVAILABLE),
+        })
         for key in ("Product_Semantic_Profile",) + SEMANTIC_PROFILE_FIELDS:
             item[key] = decision.get(key, context.get(key, DATA_NOT_AVAILABLE))
         for field in amazon_fields:
@@ -1490,9 +1965,11 @@ def output_paths(
     run_context=None,
     *,
     benchmark_product_codes: Iterable[str] = (),
+    output_directory: str | Path | None = None,
 ) -> dict[str, Any]:
     context = run_context or new_602_run_context(product_root, product_code)
-    directory = resolve_skill_report_dir(product_root, Path(__file__).resolve().parents[1])
+    report_root = resolve_skill_report_dir(product_root, Path(__file__).resolve().parents[1])
+    directory = Path(output_directory) if output_directory is not None else governance_paths(report_root)["data"]
     stamp = context.run_timestamp
     if not re.fullmatch(r"\d{8}_\d{6}", stamp):
         raise ValueError("RUN_TIMESTAMP must match YYYYMMDD_HHMMSS")
@@ -1503,9 +1980,14 @@ def output_paths(
         raise ValueError("INVALID_BENCHMARK_PRODUCT_CODE_FILENAME")
     return {
         "ai": path("精准判断所有词表"),
-        "high_precision": path("高度精准词表"),
-        "deduplicated": path("去对标去重 高度精准词"),
-        "benchmarks": {code: path(f"{code}_高度精准词") for code in codes},
+        # B: configuration-filtered Benchmark observations.
+        "high_precision": path("筛选后的对标精准词"),
+        # C: Benchmark-preserving deduplication.
+        "deduplicated_benchmark": path("去重_筛选后的对标精准词"),
+        # D: Benchmark-removed canonical keyword asset for 603.
+        "deduplicated": path("去对标去重_筛选后的精准词"),
+        # E: one configuration-filtered asset per Benchmark.
+        "benchmarks": {code: path(f"{code}_筛选后的精准词") for code in codes},
     }
 
 
@@ -1555,7 +2037,164 @@ def _score(value: Any) -> Any:
 def _precision_level(value: Any) -> str:
     """Accept only the four direct AI precision levels for CSV output."""
     text = str(value or "").strip()
+    text = PRECISION_LABEL_ALIASES.get(text, text)
     return text if text in PRECISION_LEVELS else PRECISION_LEVEL_NOT_AVAILABLE
+
+
+def _precision_filter_config_path(product_root: str | Path) -> Path | None:
+    """Find the shared precision-filter config above a product project."""
+    product_path = Path(product_root).resolve()
+    for ancestor in (product_path, *product_path.parents):
+        config_dir = ancestor / PRECISION_FILTER_CONFIG_RELATIVE.parent
+        candidate = ancestor / PRECISION_FILTER_CONFIG_RELATIVE
+        if candidate.is_file():
+            return candidate
+        if config_dir.is_dir():
+            raise FileNotFoundError(
+                f"PRECISION_FILTER_CONFIG_NOT_FOUND: {PRECISION_FILTER_CONFIG_RELATIVE}"
+            )
+    return None
+
+
+def read_precision_filter_config(product_root: str | Path, *, require: bool = False) -> dict[str, Any]:
+    """Read the shared selected-precision levels and normalize business aliases.
+
+    The maintained file is intentionally a small text configuration rather
+    than a code constant.  ``已精准`` is the documented business wording for
+    the existing AI output level ``精准`` and is normalized only at this
+    boundary.  Missing or malformed configuration fails closed.
+    """
+    path = _precision_filter_config_path(product_root)
+    if path is None:
+        if require:
+            raise ValueError("PRECISION_LIBRARY_CONFIG_NOT_FOUND")
+        # Compatibility mode is retained for low-level isolated fixtures;
+        # real runners call with require=True and never use a default.
+        return {
+            "path": "",
+            "raw_levels": sorted(DEFAULT_FILTERED_PRECISION_LEVELS),
+            "levels": sorted(DEFAULT_FILTERED_PRECISION_LEVELS),
+            "sha256": "",
+            "size_bytes": 0,
+            "modified_at_ns": 0,
+        }
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(f"PRECISION_FILTER_CONFIG_READ_FAILED: {path}") from exc
+    known = tuple(sorted((*PRECISION_LEVELS, *PRECISION_LABEL_ALIASES), key=len, reverse=True))
+    labels: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(("#", "//", "<!--")):
+            continue
+        if line in known:
+            labels.append(line)
+            continue
+        # Allow a maintained key/value line while avoiding the word
+        # “精准” in the prose heading itself being interpreted as a value.
+        if re.search(r"(?:筛选精准等级|精准级别|筛选等级|精准词库)\s*[：:=]", line):
+            value = re.split(r"[：:=]", line, maxsplit=1)[1]
+            parts = [part for part in re.split(r"[,，、/|;；\s]+", value.strip()) if part]
+            if any(part not in known for part in parts):
+                raise ValueError("CONFIG_PRECISION_LEVEL_INVALID")
+            labels.extend(parts)
+    if not labels:
+        raise ValueError("PRECISION_LIBRARY_CONFIG_EMPTY")
+    normalized: list[str] = []
+    for label in labels:
+        canonical = PRECISION_LABEL_ALIASES.get(label, label)
+        if canonical not in PRECISION_LEVELS:
+            raise ValueError("CONFIG_PRECISION_LEVEL_INVALID")
+        if canonical not in normalized:
+            normalized.append(canonical)
+    if not normalized:
+        raise ValueError("PRECISION_LIBRARY_CONFIG_EMPTY")
+    stat = path.stat()
+    return {
+        "path": str(path),
+        "raw_levels": labels,
+        "levels": normalized,
+        "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "size_bytes": stat.st_size,
+        "modified_at_ns": stat.st_mtime_ns,
+    }
+
+
+def build_product_purchase_driver(source: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Resolve one product-level purchase driver for the current run.
+
+    An explicitly supplied driver is authoritative.  Otherwise this uses only
+    confirmed profile fields and returns ``DATA_NOT_AVAILABLE`` when the
+    product ground truth is insufficient; it never reads a keyword to invent
+    a product driver.
+    """
+    profile = source if isinstance(source, Mapping) else {}
+    explicit = str(profile.get("PrimaryPurchaseDriver") or "").strip().upper()
+    if explicit in PURCHASE_DRIVERS:
+        secondary = profile.get("SecondaryPurchaseDrivers") or []
+        if isinstance(secondary, str):
+            secondary = [secondary]
+        secondary = [str(item).strip().upper() for item in secondary if str(item).strip().upper() in PURCHASE_DRIVERS and str(item).strip().upper() != explicit]
+        return {
+            "PrimaryPurchaseDriver": explicit,
+            "SecondaryPurchaseDrivers": secondary,
+            "PurchaseDriverReason": str(profile.get("PurchaseDriverReason") or "由产品 Ground Truth 明确指定").strip(),
+            "Source": "EXPLICIT_PRODUCT_GROUND_TRUTH",
+        }
+    values = {field: " ".join(_semantic_values(profile.get(field))).lower() for field in (
+        "Core_Product_Type", "Core_Functions", "Core_Use_Cases", "Compatibility",
+        "Recipient", "Relationship_Intent", "Purchase_Occasions", "Core_Attributes",
+    )}
+    gift_signal = bool(values["Recipient"] or values["Relationship_Intent"]) and bool(
+        values["Purchase_Occasions"] or any(token in values["Core_Product_Type"] for token in ("gift", "keepsake", "figurine", "memorial"))
+    )
+    compatibility_signal = bool(values["Compatibility"] or any(token in values["Core_Use_Cases"] for token in ("compatible", "fit", "model", "interface", "installation")))
+    functional_signal = bool(values["Core_Functions"] or values["Core_Use_Cases"])
+    aesthetic_signal = bool(any(token in values["Core_Product_Type"] or token in values["Core_Attributes"] for token in ("decor", "ornament", "style", "theme", "display", "visual")))
+    occasion_signal = bool(values["Purchase_Occasions"])
+    signals = []
+    if compatibility_signal: signals.append("COMPATIBILITY")
+    if gift_signal: signals.append("GIFT_EMOTIONAL")
+    if aesthetic_signal: signals.append("AESTHETIC_DECOR")
+    if functional_signal: signals.append("FUNCTIONAL")
+    if occasion_signal: signals.append("OCCASION")
+    if not signals:
+        return {"PrimaryPurchaseDriver": DATA_NOT_AVAILABLE, "SecondaryPurchaseDrivers": [],
+                "PurchaseDriverReason": "产品 Ground Truth 未提供足够购买驱动证据", "Source": "INSUFFICIENT_PRODUCT_GROUND_TRUTH"}
+    priority = ("COMPATIBILITY", "GIFT_EMOTIONAL", "AESTHETIC_DECOR", "FUNCTIONAL", "OCCASION")
+    primary = next(item for item in priority if item in signals)
+    secondary = [item for item in signals if item != primary]
+    return {
+        "PrimaryPurchaseDriver": primary,
+        "SecondaryPurchaseDrivers": secondary,
+        "PurchaseDriverReason": "；".join(f"{item} 由已确认产品字段支持" for item in signals),
+        "Source": "DERIVED_CONFIRMED_PRODUCT_GROUND_TRUTH",
+    }
+
+
+def _selected_precision_levels(precision_levels: Iterable[Any] | None) -> frozenset[str]:
+    """Normalize an explicit runtime selection or use compatibility defaults."""
+    if precision_levels is None:
+        return FILTERED_PRECISION_LEVELS
+    normalized = frozenset(
+        PRECISION_LABEL_ALIASES.get(str(level or "").strip(), str(level or "").strip())
+        for level in precision_levels
+        if str(level or "").strip()
+    )
+    if not normalized or not normalized.issubset(set(PRECISION_LEVELS)):
+        raise ValueError("PRECISION_FILTER_LEVELS_INVALID")
+    return normalized
+
+
+def _effective_precision_levels(product_root: str | Path, precision_levels: Iterable[Any] | None) -> Iterable[Any]:
+    """Resolve writer selection from shared config unless explicitly supplied."""
+    if precision_levels is not None:
+        return precision_levels
+    # Formal run_current_602 resolves the configuration strictly before
+    # reaching this helper.  Keep low-level fixture writers usable without a
+    # shared root while preserving the strict real-run gate.
+    return read_precision_filter_config(product_root, require=False)["levels"]
 
 
 def _classification_level(classification: Any, *, manual_label: Any = None) -> str:
@@ -1564,7 +2203,7 @@ def _classification_level(classification: Any, *, manual_label: Any = None) -> s
     if explicit != PRECISION_LEVEL_NOT_AVAILABLE:
         return explicit
     state = str(classification or "").strip().upper()
-    return {"PRECISION": "精准", "NOT_PRECISION": "不精准", "REVIEW_REQUIRED": "弱精准"}.get(state, "弱精准")
+    return PRECISION_LEVEL_NOT_AVAILABLE
 
 
 def _search_volume(value: Any) -> Any:
@@ -1697,23 +2336,24 @@ def build_final_manual_rows(manual_rows: Iterable[Mapping[str, Any]], *,
     return _sort_by_search_volume(output)
 
 
-def build_high_precision_rows(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
-    """Keep only rows directly adjudicated as 高度精准 for the 6-0-3 shortcut asset."""
-    selected = [dict(row) for row in rows if str(row.get("精准度") or "").strip() == "高度精准"]
+def build_high_precision_rows(rows: Iterable[Mapping[str, Any]], *, precision_levels: Iterable[Any] | None = None) -> list[dict[str, Any]]:
+    """Keep rows whose level is in the configured B/C/D/E selection."""
+    selected_levels = _selected_precision_levels(precision_levels)
+    selected = [dict(row) for row in rows if _precision_level(row.get("精准度")) in selected_levels]
     return _stable_full_sort(selected)
 
 
-def write_high_precision_csv(product_root: str | Path, product_code: str, rows: Iterable[Mapping[str, Any]]) -> Path:
+def write_high_precision_csv(product_root: str | Path, product_code: str, rows: Iterable[Mapping[str, Any]], *, precision_levels: Iterable[Any] | None = None) -> Path:
     context = new_run_context("6-0-2", SIX_0_2_SKILL_ID, product_code)
     paths = output_paths(product_root, product_code, context)
-    selected = build_high_precision_rows(rows)
+    selected = build_high_precision_rows(rows, precision_levels=_effective_precision_levels(product_root, precision_levels))
     path = paths["high_precision"]
     assert_new_outputs([path])
     write_csv(path, selected, columns=FULL_FINAL_COLUMNS)
     return path
 
 
-def write_dual_csvs(product_root: str | Path, product_code: str, manual_rows: list[Mapping[str, Any]], ai_rows: list[Mapping[str, Any]]) -> dict[str, Path]:
+def write_dual_csvs(product_root: str | Path, product_code: str, manual_rows: list[Mapping[str, Any]], ai_rows: list[Mapping[str, Any]], *, precision_levels: Iterable[Any] | None = None) -> dict[str, Path]:
     """Compatibility writer that emits the two AI assets and never a manual CSV.
 
     ``manual_rows`` is accepted for callers that still pass the historical
@@ -1739,7 +2379,7 @@ def write_dual_csvs(product_root: str | Path, product_code: str, manual_rows: li
              "精准原因": row.get("AI_Reason") or row.get("精准理由") or "[未提供精准理由]"}
             for row in values
         ]
-    _write_ai_asset_pair(full_rows, paths, context)
+    _write_ai_asset_pair(full_rows, paths, context, precision_levels=_effective_precision_levels(product_root, precision_levels))
     return paths
 
 # --- Canonical 6-0-2 full-coverage judgment API (current runtime) ---
@@ -1871,7 +2511,7 @@ def _observation_key(row):
     return (str(row.get("所属产品编号") or "").strip(), str(row.get("对标ASIN") or "").strip(), str(row.get("Id") or "").strip(), _normalized_keyword(row.get("词")))
 
 
-def _observation_data_integrity_check(input_rows, output_a_rows, output_b_rows, output_c_rows, output_d_rows=None):
+def _observation_data_integrity_check(input_rows, output_a_rows, output_b_rows, output_c_rows, output_d_rows=None, *, output_e_rows=None, precision_levels: Iterable[Any] | None = None):
     source, output_a, output_b, output_c = map(list, (input_rows, output_a_rows, output_b_rows, output_c_rows))
     errors = []
     source_keys, output_keys = Counter(_observation_key(row) for row in source), Counter(_observation_key(row) for row in output_a)
@@ -1885,24 +2525,30 @@ def _observation_data_integrity_check(input_rows, output_a_rows, output_b_rows, 
         key = _normalized_keyword(row.get("词")); value = (str(row.get("精准度") or "").strip(), str(row.get("精准原因") or "").strip())
         if key in judgment and judgment[key] != value: errors.append("KEYWORD_JUDGMENT_INCONSISTENT"); break
         judgment[key] = value
-    expected_b = build_high_precision_rows(output_a)
+    expected_b = build_high_precision_rows(output_a, precision_levels=precision_levels)
     if expected_b != output_b: errors.append("HIGH_PRECISION_FILTER_MISMATCH")
-    try: expected_c = build_deduplicated_high_precision_rows(expected_b)
+    try: expected_c = build_deduplicated_high_precision_rows(expected_b, precision_levels=precision_levels)
     except ValueError as exc: expected_c = []; errors.append(str(exc))
-    c_keys = [_normalized_keyword(row.get("词")) for row in output_c]
-    if len(c_keys) != len(set(c_keys)): errors.append("DUPLICATE_KEYWORD_IN_DEDUP_OUTPUT")
-    if any("所属产品编号" in row for row in output_c): errors.append("PRODUCT_CODE_COLUMN_FOUND_IN_DEDUP_OUTPUT")
+    expected_c_benchmark = build_deduplicated_benchmark_rows(expected_b)
+    c_is_benchmark = bool(output_c) and "所属产品编号" in output_c[0]
+    actual_benchmark = output_c if c_is_benchmark else []
+    actual_unique = output_d_rows if c_is_benchmark and output_d_rows is not None else (output_c if not c_is_benchmark else [])
+    c_keys = [(str(row.get("所属产品编号") or "").strip(), _normalized_keyword(row.get("词"))) for row in actual_benchmark]
+    if len(c_keys) != len(set(c_keys)): errors.append("DUPLICATE_BENCHMARK_KEYWORD_IN_C")
+    stringify_obs = lambda rows: [{column: "" if row.get(column) is None else str(row.get(column)) for column in OBSERVATION_FINAL_COLUMNS} for row in rows]
+    c_pass = stringify_obs(expected_c_benchmark) == stringify_obs(actual_benchmark) if c_is_benchmark else True
+    if not c_pass: errors.append("BENCHMARK_DEDUPLICATION_FAILED")
     stringify = lambda rows: [{column: "" if row.get(column) is None else str(row.get(column)) for column in DEDUPLICATED_FINAL_COLUMNS} for row in rows]
-    c_pass = stringify(expected_c) == stringify(output_c)
-    if not c_pass: errors.append("DEDUPLICATION_FAILED")
+    d_pass = stringify(expected_c) == stringify(actual_unique)
+    if not d_pass: errors.append("DEDUPLICATION_FAILED")
     d_results = {}
-    if output_d_rows is not None:
-        expected_codes = set(output_d_rows)
+    if output_e_rows is not None:
+        expected_codes = set(output_e_rows)
         source_codes = {str(row.get("所属产品编号") or "").strip() for row in output_a}
         if not source_codes.issubset(expected_codes):
             errors.append("BENCHMARK_FILE_COUNT_MISMATCH")
         total_d = 0
-        for code, actual in output_d_rows.items():
+        for code, actual in output_e_rows.items():
             actual = list(actual)
             expected = [row for row in expected_b if str(row.get("所属产品编号") or "").strip() == code]
             actual_keys = [_normalized_keyword(row.get("词")) for row in actual]
@@ -1910,24 +2556,26 @@ def _observation_data_integrity_check(input_rows, output_a_rows, output_b_rows, 
                      and all(str(row.get("所属产品编号") or "").strip() == code for row in actual)
                      and len(actual_keys) == len(set(actual_keys)))
             if not valid:
-                errors.append("BENCHMARK_HIGH_PRECISION_DERIVATION_MISMATCH")
+                errors.append("BENCHMARK_FILTER_DERIVATION_MISMATCH")
             total_d += len(actual)
-            d_results[code] = {"expected_high_precision_observation_count": len(expected),
+            d_results[code] = {"expected_filtered_observation_count": len(expected),
                                "output_observation_count": len(actual), "coverage": "PASS" if valid else "FAIL"}
-        if total_d != len(expected_b):
-            errors.append("BENCHMARK_HIGH_PRECISION_COVERAGE_MISMATCH")
+        expected_d_count = len(expected_b)
+        if total_d != expected_d_count:
+            errors.append("BENCHMARK_FILTER_COVERAGE_MISMATCH")
     return {"status": "PASS" if not errors else "FAIL", "error_codes": list(dict.fromkeys(errors)),
         "file_a": {"input_observation_count": len(source), "output_observation_count": len(output_a), "coverage": "PASS" if source_keys == output_keys else "FAIL"},
         "file_b": {"expected_high_precision_observation_count": len(expected_b), "output_observation_count": len(output_b), "coverage": "PASS" if expected_b == output_b else "FAIL"},
-        "file_c": {"expected_unique_keyword_count": len(expected_c), "output_unique_keyword_count": len(output_c), "deduplication": "PASS" if c_pass else "FAIL"},
-        "file_d": d_results, "benchmark_output_observation_count": sum(item["output_observation_count"] for item in d_results.values())}
+        "file_c": {"expected_unique_benchmark_keyword_count": len(expected_c_benchmark), "output_unique_benchmark_keyword_count": len(actual_benchmark), "deduplication": "PASS" if c_pass else "FAIL"},
+        "file_d": {"expected_unique_keyword_count": len(expected_c), "output_unique_keyword_count": len(actual_unique), "deduplication": "PASS" if d_pass else "FAIL"},
+        "file_e": d_results, "benchmark_output_observation_count": sum(item["output_observation_count"] for item in d_results.values())}
 
 
-def data_integrity_check(input_rows, output_a_rows, output_b_rows, output_c_rows=None):
+def data_integrity_check(input_rows, output_a_rows, output_b_rows, output_c_rows=None, *, precision_levels: Iterable[Any] | None = None):
     source, output_a, output_b = list(input_rows), list(output_a_rows), list(output_b_rows)
     if source and all("所属产品编号" in row and "对标ASIN" in row for row in source):
-        return _observation_data_integrity_check(source, output_a, output_b, list(output_c_rows or []))
-    expected_b = build_high_precision_rows(output_a); coverage_a = coverage_check(source, output_a); coverage_b = coverage_check(expected_b, output_b); errors = []
+        return _observation_data_integrity_check(source, output_a, output_b, list(output_c_rows or []), precision_levels=precision_levels)
+    expected_b = build_high_precision_rows(output_a, precision_levels=precision_levels); coverage_a = coverage_check(source, output_a); coverage_b = coverage_check(expected_b, output_b); errors = []
     if coverage_a["status"] != "PASS": errors.append(FILE_A_RECORD_COVERAGE_MISMATCH)
     if coverage_b["status"] != "PASS": errors.append(FILE_B_RECORD_COVERAGE_MISMATCH)
     for field, code in (("竞争产品数", COMPETING_PRODUCTS_PASSTHROUGH_MISMATCH), ("供需比", SUPPLY_DEMAND_RATIO_PASSTHROUGH_MISMATCH)):
@@ -1946,18 +2594,19 @@ def _read_formal_csv(path: str | Path, expected_columns: Iterable[str] = FULL_FI
             raise ValueError(OUTPUT_SCHEMA_MISMATCH)
         return list(reader)
 
-def validate_written_outputs(input_rows, paths):
+def validate_written_outputs(input_rows, paths, *, precision_levels: Iterable[Any] | None = None):
     try:
         output_a = _read_formal_csv(paths["ai"], OBSERVATION_FINAL_COLUMNS)
         output_b = _read_formal_csv(paths["high_precision"], OBSERVATION_FINAL_COLUMNS)
-        output_c = _read_formal_csv(paths["deduplicated"], DEDUPLICATED_FINAL_COLUMNS)
-        output_d = {code: _read_formal_csv(path, OBSERVATION_FINAL_COLUMNS)
+        output_c = _read_formal_csv(paths["deduplicated_benchmark"], OBSERVATION_FINAL_COLUMNS)
+        output_d = _read_formal_csv(paths["deduplicated"], DEDUPLICATED_FINAL_COLUMNS)
+        output_e = {code: _read_formal_csv(path, OBSERVATION_FINAL_COLUMNS)
                     for code, path in paths.get("benchmarks", {}).items()}
     except ValueError as exc:
         return {"status": "FAIL", "error_codes": [str(exc) or OUTPUT_SCHEMA_MISMATCH], "file_a": {}, "file_b": {}, "file_c": {}}
     except (OSError, UnicodeError, csv.Error):
         return {"status": "FAIL", "error_codes": [OUTPUT_READBACK_FAILED], "file_a": {}, "file_b": {}, "file_c": {}}
-    return _observation_data_integrity_check(input_rows, output_a, output_b, output_c, output_d if "benchmarks" in paths else None)
+    return _observation_data_integrity_check(input_rows, output_a, output_b, output_c, output_d, output_e_rows=output_e, precision_levels=precision_levels)
 
 
 def _decision_index(decisions):
@@ -1972,8 +2621,16 @@ def _decision_index(decisions):
 
 
 def _decision_signature(decision):
-    return (_precision_level(decision.get("精准度", decision.get("AI_Precision_Level", decision.get("Precision_Level")))),
-            str(decision.get("精准原因", decision.get("AI_Reason", decision.get("Precision_Reason"))) or "").strip())
+    level = _precision_level(decision.get("FinalPrecision", decision.get("精准度", decision.get("AI_Precision_Level", decision.get("Precision_Level")))))
+    reason = str(decision.get("FinalPrecisionReason", decision.get("精准原因", decision.get("AI_Reason", decision.get("Precision_Reason")))) or "").strip()
+    status = str(decision.get("JudgmentStatus") or "SUCCESS").strip().upper()
+    if status not in JUDGMENT_STATUSES:
+        raise ValueError("JUDGMENT_STATUS_INVALID")
+    if level == PRECISION_LEVEL_NOT_AVAILABLE:
+        if status in {"REVIEW_REQUIRED", "FAILED"}:
+            return "弱精准", reason or "结构化AI判断失败，保守保留并标记人工复核"
+        raise ValueError("AI_PRECISION_LEVEL_REQUIRED")
+    return level, reason
 
 
 def _observation_judgment_row(source, decision):
@@ -2026,8 +2683,39 @@ def _validate_benchmark_observation_uniqueness(observation_rows) -> None:
         seen.add(key)
 
 
+def _precision_brain_record(
+    keyword: str, decision: Mapping[str, Any], driver: Mapping[str, Any], benchmark_evidence: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Project internal Precision Brain evidence without changing CSV columns."""
+    level, reason = _decision_signature(decision)
+    fields = {field: decision.get(field, DATA_NOT_AVAILABLE) for field in (
+        "SearcherPrimaryIntent", "ShoppingIntentStrength", "IntentConvergence",
+        "ExpectedProductType", "ExpectedCoreFunction", "ExpectedRecipient",
+        "ExpectedOccasion", "ExpectedInstallationMethod", "ExpectedCriticalAttributes",
+        "HardConflictType", "InitialPrecision", "BenchmarkRealityAssessment",
+        "ChallengeResult", "DecisionChallenge", "FinalPrecision", "FinalPrecisionReason",
+        "JudgmentStatus", "ChallengeReasonSummary",
+    )}
+    fields.update({
+        "PrimaryPurchaseDriver": driver.get("PrimaryPurchaseDriver", DATA_NOT_AVAILABLE),
+        "SecondaryPurchaseDrivers": driver.get("SecondaryPurchaseDrivers", []),
+        "PurchaseDriverReason": driver.get("PurchaseDriverReason", DATA_NOT_AVAILABLE),
+        **{field: decision.get(field, DATA_NOT_AVAILABLE) for field in PURCHASE_DRIVER_EVIDENCE_FIELDS + CONVERGENCE_FIELDS},
+        "精准度": level,
+        "FinalPrecision": decision.get("FinalPrecision", level),
+        "精准原因": reason,
+        "Benchmark_Reality_Evidence": dict(benchmark_evidence or {}),
+    })
+    return fields
+
+
 def finalize_observation_judgments(observation_rows, decisions, *, evidence_context=None):
     source = list(observation_rows); groups = _benchmark_observation_groups(source); index = _decision_index(decisions); chosen = {}; units = build_keyword_judgment_units(source)
+    first_decision = next((item for item in index.values() if isinstance(item, Mapping)), {})
+    profile_source = (evidence_context or {}).get("product_profile") if isinstance(evidence_context, Mapping) else None
+    if not profile_source and isinstance(first_decision, Mapping):
+        profile_source = first_decision.get("product_profile") or first_decision.get("Current_Product_Profile") or first_decision
+    purchase_driver = build_product_purchase_driver(profile_source)
     for canonical, rows in groups.items():
         first = rows[0]; keyword = str(_full_source_value(first, "词", "Keyword")).strip(); ids = list(dict.fromkeys(_full_id(row) for row in rows))
         candidates = [index[key] for key in (canonical, keyword, keyword.lower(), *ids) if key in index]
@@ -2038,11 +2726,12 @@ def finalize_observation_judgments(observation_rows, decisions, *, evidence_cont
     output = _stable_full_sort(output); high = build_high_precision_rows(output); unique = build_deduplicated_high_precision_rows(high)
     coverage = coverage_check(source, output)
     if coverage["status"] != "PASS": raise ValueError("INPUT_OUTPUT_COVERAGE_FAILED:" + json.dumps(coverage, ensure_ascii=False))
-    trace = [{"Canonical_Keyword": key, "词": str(rows[0].get("词") or ""), "精准度": _decision_signature(chosen[key])[0],
-        "精准原因": _decision_signature(chosen[key])[1], "Benchmark_Reality_Evidence": units[i]["Benchmark_Reality_Evidence"]}
+    trace = [{"Canonical_Keyword": key, "词": str(rows[0].get("词") or ""),
+        **_precision_brain_record(str(rows[0].get("词") or ""), chosen[key], purchase_driver, units[i]["Benchmark_Reality_Evidence"])}
         for i,(key,rows) in enumerate(groups.items())]
     return {"rows": output, "high_precision_rows": high, "deduplicated_rows": unique, "keyword_units": units,
-        "coverage": coverage, "trace": trace, "evidence_context": dict(evidence_context or {})}
+        "coverage": coverage, "trace": trace, "precision_brain_records": trace,
+        "purchase_driver": purchase_driver, "evidence_context": dict(evidence_context or {})}
 
 
 def finalize_ai_judgments(source_rows: Iterable[Mapping[str, Any]], decisions: Mapping[Any, Mapping[str, Any]] | Iterable[Mapping[str, Any]], *, evidence_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -2057,18 +2746,23 @@ def finalize_ai_judgments(source_rows: Iterable[Mapping[str, Any]], decisions: M
             if isinstance(item,Mapping):
                 key=str(item.get("Id") or item.get("record_id") or item.get("\u8bcd") or item.get("Keyword") or "").strip()
                 if key: decision_map[key]=item
+    first_decision = next((item for item in decision_map.values() if isinstance(item, Mapping)), {})
+    profile_source = (evidence_context or {}).get("product_profile") if isinstance(evidence_context, Mapping) else None
+    if not profile_source and isinstance(first_decision, Mapping):
+        profile_source = first_decision.get("product_profile") or first_decision.get("Current_Product_Profile") or first_decision
+    purchase_driver = build_product_purchase_driver(profile_source)
     projected=[]; trace=[]
     for row in source:
         rid=_full_id(row); keyword=str(_full_source_value(row,"\u8bcd","Keyword","\u5173\u952e\u8bcd")).strip(); decision=decision_map.get(rid)
         if decision is None: decision=decision_map.get(keyword) or decision_map.get(keyword.lower())
         if not isinstance(decision,Mapping): raise ValueError(f"AI_DECISION_MISSING:{rid}")
         final=_full_judgment_row(row,decision); projected.append(final)
-        trace.append({"Id":rid,"\u8bcd":keyword,"Search_Intent":decision.get("Search_Intent",DATA_NOT_AVAILABLE),"Product_Intent_Fit":decision.get("Product_Intent_Fit",DATA_NOT_AVAILABLE),"Hard_Conflict":decision.get("Hard_Conflict",DATA_NOT_AVAILABLE),"\u7cbe\u51c6\u5ea6":final["\u7cbe\u51c6\u5ea6"],"\u7cbe\u51c6\u539f\u56e0":final["\u7cbe\u51c6\u539f\u56e0"],"Evidence_Sources":(evidence_context or {}).get("source_paths",[])})
+        trace.append({"Id":rid,"\u8bcd":keyword,"Search_Intent":decision.get("Search_Intent",DATA_NOT_AVAILABLE),"Product_Intent_Fit":decision.get("Product_Intent_Fit",DATA_NOT_AVAILABLE),"Hard_Conflict":decision.get("Hard_Conflict",DATA_NOT_AVAILABLE),"\u7cbe\u51c6\u5ea6":final["\u7cbe\u51c6\u5ea6"],"\u7cbe\u51c6\u539f\u56e0":final["\u7cbe\u51c6\u539f\u56e0"],"Evidence_Sources":(evidence_context or {}).get("source_paths",[]), **_precision_brain_record(keyword, decision, purchase_driver)})
     ordered=_stable_full_sort(projected); coverage=coverage_check(source,ordered)
     if coverage["status"]!="PASS": raise ValueError("INPUT_OUTPUT_COVERAGE_FAILED:"+json.dumps(coverage,ensure_ascii=False))
-    return {"rows":ordered,"coverage":coverage,"trace":trace,"evidence_context":dict(evidence_context or {})}
+    return {"rows":ordered,"coverage":coverage,"trace":trace,"precision_brain_records":trace,"purchase_driver":purchase_driver,"evidence_context":dict(evidence_context or {})}
 
-def _write_ai_asset_pair(rows, paths, context, *, lineage=None, write_metadata=True, create_folder=True):
+def _write_ai_asset_pair(rows, paths, context, *, lineage=None, write_metadata=True, create_folder=True, precision_levels: Iterable[Any] | None = None):
     # 602 package metadata lives in the shared Run Manifest, never in per-CSV sidecars.
     values = list(rows)
     if values and not all("所属产品编号" in row and "对标ASIN" in row for row in values):
@@ -2076,18 +2770,21 @@ def _write_ai_asset_pair(rows, paths, context, *, lineage=None, write_metadata=T
             "中文":row.get("中文",row.get("KeywordCn","")), "市场容量":row.get("市场容量",row.get("SearchVolume30")),
             "竞争产品数":row.get("竞争产品数"), "供需比":row.get("供需比"), "自然排名":row.get("自然排名",row.get("最佳自然排名","")),
             "精准度":row.get("精准度"), "精准原因":row.get("精准原因")} for row in values]
-    high = build_high_precision_rows(values); unique = build_deduplicated_high_precision_rows(high); folder = paths["ai"].parent
+    selected = build_high_precision_rows(values, precision_levels=precision_levels)
+    benchmark_unique = build_deduplicated_benchmark_rows(selected)
+    unique = build_deduplicated_high_precision_rows(selected, precision_levels=precision_levels); folder = paths["ai"].parent
     benchmark_rows = {
-        code: [row for row in high if str(row.get("所属产品编号") or "").strip() == code]
+        code: [row for row in selected if str(row.get("所属产品编号") or "").strip() == code]
         for code in paths.get("benchmarks", {})
     }
     if create_folder: folder.mkdir(parents=True, exist_ok=True)
-    keys=("ai","high_precision","deduplicated"); staged={key:Path(str(paths[key])+".tmp") for key in keys}
+    keys=("ai","high_precision","deduplicated_benchmark","deduplicated"); staged={key:Path(str(paths[key])+".tmp") for key in keys}
     staged_benchmarks = {code: Path(str(path) + ".tmp") for code, path in paths.get("benchmarks", {}).items()}
     output_paths_all = [*(paths[key] for key in keys), *paths.get("benchmarks", {}).values()]
     assert_new_outputs([*output_paths_all, *staged.values(), *staged_benchmarks.values()])
     write_csv(staged["ai"], values, columns=OBSERVATION_FINAL_COLUMNS)
-    write_csv(staged["high_precision"], high, columns=OBSERVATION_FINAL_COLUMNS)
+    write_csv(staged["high_precision"], selected, columns=OBSERVATION_FINAL_COLUMNS)
+    write_csv(staged["deduplicated_benchmark"], benchmark_unique, columns=OBSERVATION_FINAL_COLUMNS)
     write_csv(staged["deduplicated"], unique, columns=DEDUPLICATED_FINAL_COLUMNS)
     for code, temporary in staged_benchmarks.items():
         write_csv(temporary, benchmark_rows[code], columns=OBSERVATION_FINAL_COLUMNS)
@@ -2103,13 +2800,73 @@ def write_full_ai_csv(
     *,
     run_context=None,
     write_metadata: bool = True,
+    precision_levels: Iterable[Any] | None = None,
 ) -> Path:
     values = list(rows)
     context = run_context or new_602_run_context(product_root, product_code)
     benchmark_codes = sorted({str(row.get("所属产品编号") or "").strip() for row in values if str(row.get("所属产品编号") or "").strip()})
-    paths = output_paths(product_root, product_code, context, benchmark_product_codes=benchmark_codes)
-    _write_ai_asset_pair(values, paths, context, write_metadata=write_metadata)
-    return paths["ai"]
+    report_root = resolve_skill_report_dir(product_root, Path(__file__).resolve().parents[1])
+    build_folder = governance_paths(report_root)["staging"] / f"{context.run_timestamp}_build"
+    build_folder.mkdir(parents=True, exist_ok=False)
+    paths = output_paths(product_root, product_code, context, benchmark_product_codes=benchmark_codes,
+                         output_directory=build_folder)
+    effective_levels = _effective_precision_levels(product_root, precision_levels)
+    config_info = read_precision_filter_config(product_root, require=False)
+    _write_ai_asset_pair(values, paths, context, write_metadata=write_metadata,
+                         precision_levels=effective_levels)
+    all_output_paths = [paths["ai"], paths["high_precision"], paths["deduplicated_benchmark"], paths["deduplicated"], *paths.get("benchmarks", {}).values()]
+    high_rows = [row for row in values if str(row.get("精准度") or "").strip() in effective_levels]
+    unique_rows = {str(row.get("词") or "").strip().casefold() for row in high_rows}
+    benchmark_identities = {}
+    for code in benchmark_codes:
+        row = next((item for item in values if str(item.get("所属产品编号") or "").strip() == code), {})
+        benchmark_identities[code] = {"对标编码": code, "对标ASIN": str(row.get("对标ASIN") or "DATA_NOT_AVAILABLE")}
+    manifest_path = build_folder / f"{RUN_MANIFEST_PREFIX}{context.run_timestamp}.json"
+    manifest = {
+        "SkillId": SIX_0_2_SKILL_ID, "Current Product": product_code,
+        "RUN_ID": context.run_id, "RUN_TIMESTAMP": context.run_timestamp,
+        "GeneratedAt": context.generated_at, "Input Source": "CALLER_SUPPLIED_ROWS",
+        "Input Skill": "CALLER_SUPPLIED", "Input Run ID": context.run_id,
+        "Input RUN_TIMESTAMP": context.run_timestamp, "Input Folder": str(build_folder),
+        "Input File": "CALLER_SUPPLIED_ROWS", "Product Text Input": "DATA_NOT_AVAILABLE",
+        "Input Record Count": len(values),
+        "Input Unique Keyword Count": len({str(row.get("词") or "").strip().casefold() for row in values}),
+        "Output Folder": str(build_folder), "Output Files": [path.name for path in all_output_paths],
+        "Precision Filter Levels": sorted(effective_levels),
+        "Precision Library Configuration": {
+            "Path": str(config_info.get("path") or ""),
+            "SelectedPrecisionLevelsRaw": config_info.get("raw_levels", []),
+            "SelectedPrecisionLevelsNormalized": list(effective_levels),
+        },
+        "Benchmark Count": len(benchmark_codes),
+        "Expected Benchmark Count": len(benchmark_codes), "Benchmark Product Codes": benchmark_codes,
+        "Benchmark Identities": benchmark_identities,
+        "Expected Benchmark Files": [path.name for path in paths.get("benchmarks", {}).values()],
+        "GeneratedBenchmarkFiles": [path.name for path in paths.get("benchmarks", {}).values()],
+        "Record Counts": {"Input Observation Count": len(values), "Input Unique Keyword Count": len({str(row.get("词") or "").strip().casefold() for row in values}),
+                          "AI Record Count": len(values), "Filtered Benchmark Observation Count": len(high_rows),
+                          "Unique Selected Precision Keyword Count": len(unique_rows)},
+        "Output Record Counts": {"AI Precision Observation Count": len(values),
+                                 "Filtered Benchmark Observation Count": sum(1 for row in values if str(row.get("精准度") or "").strip() in effective_levels),
+                                 "Unique Selected Precision Keyword Count": len({str(row.get("词") or "").strip().casefold() for row in values if str(row.get("精准度") or "").strip() in effective_levels})},
+        "Run Status": "VALID",
+    }
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    published = publish_latest_valid_batch(
+        report_root, context.run_timestamp,
+        all_output_paths, manifest_files=[manifest_path],
+        registry_payload={"Skill_ID": SIX_0_2_SKILL_ID, "Product_Code": product_code,
+                          "RUN_ID": context.run_id, "RUN_TIMESTAMP": context.run_timestamp,
+                          "Report_Identities": ["AI_PRECISION_OBSERVATIONS", "FILTERED_BENCHMARK_PRECISION_KEYWORDS", "DEDUPLICATED_FILTERED_BENCHMARK_KEYWORDS", "UNIQUE_SELECTED_PRECISION_KEYWORDS"] + [f"BENCHMARK_SELECTED_PRECISION_{code}" for code in benchmark_codes],
+                          "Files": [path.name for path in all_output_paths]},
+        move_sources=True,
+    )
+    manifest_target = Path(published["manifest_files"][0])
+    published_manifest = json.loads(manifest_target.read_text(encoding="utf-8-sig"))
+    published_manifest["Output Folder"] = str(Path(published["data_dir"]))
+    manifest_target.write_text(json.dumps(published_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    shutil.rmtree(build_folder, ignore_errors=True)
+    return Path(published["data_dir"]) / paths["ai"].name
 
 
 def _write_run_manifest(run_folder: Path, manifest: Mapping[str, Any]) -> Path:
@@ -2123,8 +2880,21 @@ def _write_run_manifest(run_folder: Path, manifest: Mapping[str, Any]) -> Path:
     return target
 
 
-def run_current_602(product_root: str | Path, product_code: str, decisions: Mapping[Any, Mapping[str, Any]] | Iterable[Mapping[str, Any]]) -> dict[str, Any]:
-    """Read current product text and 6-0-1 Observations; create one valid 3+N CSV package."""
+def run_current_602(
+    product_root: str | Path,
+    product_code: str,
+    decisions: Mapping[Any, Mapping[str, Any]] | Iterable[Mapping[str, Any]] | None = None,
+    *,
+    precision_brain_client: Callable[[str], Iterable[Mapping[str, Any]]] | None = None,
+    batch_size: int | None = None,
+) -> dict[str, Any]:
+    """Read product + 601, call Precision Brain, and create the A/B/C/D/E outputs.
+
+    ``decisions`` remains a compatibility hook for isolated tests. Normal
+    execution omits it and invokes ``run_precision_brain`` internally.
+    """
+    precision_config = read_precision_filter_config(product_root, require=True)
+    precision_levels = frozenset(precision_config["levels"])
     evidence = read_current_product_text_evidence(product_root)
     if evidence.get("status") != CURRENT_PRODUCT_TEXT_EVIDENCE_READY:
         raise FileNotFoundError(str(evidence.get("status") or CURRENT_PRODUCT_TEXT_EVIDENCE_READ_FAILED))
@@ -2133,32 +2903,62 @@ def run_current_602(product_root: str | Path, product_code: str, decisions: Mapp
         raise FileNotFoundError(str(resolved.get("status") or SIX_0_1_KEYWORD_OUTPUT_NOT_FOUND))
     input_rows = list(resolved.get("rows") or [])
     input_metadata = resolved.get("input_metadata") or {}
-    benchmark_identities = _benchmark_identity_map(input_metadata)
+    try:
+        benchmark_identities = _benchmark_identity_map(input_metadata)
+    except ValueError:
+        benchmark_identities = {}
+        for row in input_rows:
+            code = str(row.get("所属产品编号") or "").strip()
+            asin = str(row.get("对标ASIN") or "").strip()
+            if code and asin:
+                if code in benchmark_identities and benchmark_identities[code].get("对标ASIN") != asin:
+                    raise ValueError("BENCHMARK_IDENTITY_DUPLICATE")
+                benchmark_identities[code] = {"对标编码": code, "对标ASIN": asin}
+        if not benchmark_identities:
+            raise ValueError("BENCHMARK_IDENTITY_MISSING")
     _validate_benchmark_observation_uniqueness(input_rows)
     input_product_codes = {str(row.get("所属产品编号") or "").strip() for row in input_rows}
     if not input_product_codes.issubset(benchmark_identities):
         raise ValueError("BENCHMARK_IDENTITY_MISSING")
-    result = finalize_observation_judgments(input_rows, decisions, evidence_context=evidence)
+    brain_result = None
+    if decisions is None:
+        brain_result = run_precision_brain(
+            input_rows, evidence, client=precision_brain_client, batch_size=batch_size,
+        )
+        decisions = brain_result["decisions"]
+    result = finalize_observation_judgments(input_rows, decisions, evidence_context={
+        **evidence,
+        "product_profile": (brain_result or {}).get("product_profile"),
+    })
+    if brain_result:
+        result["precision_brain_run"] = brain_result
+    # The AI judgment remains unchanged; only B/C/D/E projection follows the
+    # shared configuration selected for this run.
+    result["high_precision_rows"] = build_high_precision_rows(result["rows"], precision_levels=precision_levels)
+    result["deduplicated_benchmark_rows"] = build_deduplicated_benchmark_rows(result["high_precision_rows"])
+    result["deduplicated_rows"] = build_deduplicated_high_precision_rows(
+        result["high_precision_rows"], precision_levels=precision_levels
+    )
     context = new_602_run_context(product_root, product_code)
     benchmark_product_codes = list(benchmark_identities)
-    paths = output_paths(product_root, product_code, context, benchmark_product_codes=benchmark_product_codes)
-    all_output_paths = [paths[key] for key in ("ai", "high_precision", "deduplicated")] + list(paths["benchmarks"].values())
-    manifest_path = paths["ai"].parent / f"{RUN_MANIFEST_PREFIX}{context.run_timestamp}.json"
-    report_error = validate_hzp_amz_report_batch(
-        [*all_output_paths, manifest_path], product_root, Path(__file__).resolve().parents[1], timestamp=context.run_timestamp,
-    )
-    if report_error:
-        raise ValueError(report_error)
+    report_root = resolve_skill_report_dir(product_root, Path(__file__).resolve().parents[1])
+    build_folder = governance_paths(report_root)["staging"] / f"{context.run_timestamp}_build"
+    build_folder.mkdir(parents=True, exist_ok=False)
+    paths = output_paths(product_root, product_code, context, benchmark_product_codes=benchmark_product_codes,
+                         output_directory=build_folder)
+    all_output_paths = [paths[key] for key in ("ai", "high_precision", "deduplicated_benchmark", "deduplicated")] + list(paths["benchmarks"].values())
+    manifest_path = build_folder / f"{RUN_MANIFEST_PREFIX}{context.run_timestamp}.json"
     run_folder = paths["ai"].parent
     run_folder.mkdir(parents=True, exist_ok=True)
     high_rows = result["high_precision_rows"]
+    benchmark_filtered_rows = high_rows
     unique_rows = result["deduplicated_rows"]
     per_benchmark_input_counts = {
         code: sum(str(row.get("所属产品编号") or "").strip() == code for row in input_rows)
         for code in benchmark_product_codes
     }
     per_benchmark_high_precision_counts = {
-        code: sum(str(row.get("所属产品编号") or "").strip() == code for row in high_rows)
+        code: sum(str(row.get("所属产品编号") or "").strip() == code for row in benchmark_filtered_rows)
         for code in benchmark_product_codes
     }
     input_folder = Path(str(resolved.get("file") or "")).parent
@@ -2169,18 +2969,20 @@ def run_current_602(product_root: str | Path, product_code: str, decisions: Mapp
         "AI Record Count": len(result["rows"]),
         "High Precision Record Count": len(high_rows),
         "Unique High Precision Keyword Count": len(unique_rows),
+        "Filtered Precision Record Count": len(high_rows),
+        "Unique Filtered Precision Keyword Count": len(unique_rows),
         "Benchmark Count": len(benchmark_product_codes),
         "Benchmark File Count": len(benchmark_product_codes),
-        "Benchmark High Precision Observation Count": len(high_rows),
+        "Benchmark Filtered Observation Count": len(benchmark_filtered_rows),
     }
-    all_output_paths = [paths[key] for key in ("ai", "high_precision", "deduplicated")] + list(paths["benchmarks"].values())
+    all_output_paths = [paths[key] for key in ("ai", "high_precision", "deduplicated_benchmark", "deduplicated")] + list(paths["benchmarks"].values())
     manifest: dict[str, Any] = {
         "SkillId": SIX_0_2_SKILL_ID,
         "Current Product": product_code,
         "RUN_ID": context.run_id,
         "RUN_TIMESTAMP": context.run_timestamp,
         "GeneratedAt": context.generated_at,
-        "Input Source": "601 LATEST VALID RUN PACKAGE / BENCHMARK_KEYWORD_ALL_OBSERVATIONS",
+        "Input Source": "601 data/ exact Report Identity / BENCHMARK_KEYWORD_ALL_OBSERVATIONS",
         "Input Skill": SIX_0_1_SKILL_ID,
         "Input Report Identity": SIX_0_1_REPORT_IDENTITY,
         "Input Report Name": "所有对标自然排名关键词",
@@ -2198,7 +3000,33 @@ def run_current_602(product_root: str | Path, product_code: str, decisions: Mapp
             "Size Bytes": evidence.get("content_size_bytes"),
             "Modified At NS": evidence.get("modified_at_ns"),
         },
+        "Precision Filter Configuration": {
+            "Path": precision_config["path"],
+            "Raw Levels": precision_config["raw_levels"],
+            "Normalized Levels": precision_config["levels"],
+            "SHA256": precision_config["sha256"],
+            "Size Bytes": precision_config["size_bytes"],
+            "Modified At NS": precision_config["modified_at_ns"],
+        },
+        "Precision Library Configuration": {
+            "Path": precision_config["path"],
+            "SelectedPrecisionLevelsRaw": precision_config["raw_levels"],
+            "SelectedPrecisionLevelsNormalized": precision_config["levels"],
+        },
+        "Precision Brain": {
+            "Product Purchase Driver": result.get("purchase_driver", {}),
+            "Record Count": len(result.get("precision_brain_records") or result.get("trace") or []),
+            "AI Call Count": (result.get("precision_brain_run") or {}).get("ai_call_count", DATA_NOT_AVAILABLE),
+            "Judgment Engine": "PrecisionJudgmentEngine",
+            "Unique Judgment Count": len(result.get("keyword_units") or []),
+            "Internal Fields": sorted({
+                key for record in (result.get("precision_brain_records") or result.get("trace") or [])
+                for key in record
+            }),
+            "Formal CSV Schema Changed": False,
+        },
         "Output Folder": str(run_folder),
+        "Precision Filter Levels": precision_config["levels"],
         "Output Files": [path.name for path in all_output_paths],
         "Benchmark Count": len(benchmark_product_codes),
         "Expected Benchmark Count": len(benchmark_product_codes),
@@ -2210,14 +3038,15 @@ def run_current_602(product_root: str | Path, product_code: str, decisions: Mapp
         "GeneratedBenchmarkFiles": [],
         "Record Counts": counts,
         "Output Record Counts": {"AI Precision Observation Count": len(result["rows"]),
-                                 "High Precision Observation Count": len(high_rows),
-                                 "Unique High Precision Keyword Count": len(unique_rows)},
+                                 "Filtered Benchmark Observation Count": len(high_rows),
+                                 "Benchmark Deduplicated Observation Count": len(result["deduplicated_benchmark_rows"]),
+                                 "Unique Selected Precision Keyword Count": len(unique_rows)},
         "Run Status": "RUNNING",
     }
     _write_run_manifest(run_folder, manifest)
     try:
-        _write_ai_asset_pair(result["rows"], paths, context, write_metadata=False, create_folder=False)
-        integrity = validate_written_outputs(input_rows, paths)
+        _write_ai_asset_pair(result["rows"], paths, context, write_metadata=False, create_folder=False, precision_levels=precision_levels)
+        integrity = validate_written_outputs(input_rows, paths, precision_levels=precision_levels)
         if integrity["status"] != "PASS":
             manifest["Run Status"] = "FAILED"
             manifest["Failure"] = {"status": "DATA_INTEGRITY_FAILED", "errors": integrity.get("error_codes", [])}
@@ -2231,21 +3060,54 @@ def run_current_602(product_root: str | Path, product_code: str, decisions: Mapp
         manifest["Validation"] = integrity
         manifest["Run Status"] = "VALID"
         _write_run_manifest(run_folder, manifest)
+        # A failed/incomplete package remains isolated in staging and cannot
+        # replace the previous LATEST VALID data batch.
     except Exception as exc:
         manifest["Run Status"] = "FAILED"
         manifest["Failure"] = {"status": type(exc).__name__, "message": str(exc)}
         _write_run_manifest(run_folder, manifest)
         raise
+    published = publish_latest_valid_batch(
+        report_root,
+        context.run_timestamp,
+        all_output_paths,
+        manifest_files=[manifest_path],
+        registry_payload={
+            "Skill_ID": SIX_0_2_SKILL_ID,
+            "Product_Code": product_code,
+            "RUN_ID": context.run_id,
+            "RUN_TIMESTAMP": context.run_timestamp,
+            "Report_Identities": ["AI_PRECISION_OBSERVATIONS", "FILTERED_BENCHMARK_PRECISION_KEYWORDS", "DEDUPLICATED_FILTERED_BENCHMARK_KEYWORDS", "UNIQUE_SELECTED_PRECISION_KEYWORDS"] + [f"BENCHMARK_SELECTED_PRECISION_{code}" for code in benchmark_product_codes],
+            "Files": [path.name for path in all_output_paths],
+        },
+        move_sources=True,
+    )
+    shutil.rmtree(run_folder, ignore_errors=True)
+    manifest_target = Path(report_root) / "_system" / "manifests" / manifest_path.name
+    try:
+        published_manifest = json.loads(manifest_target.read_text(encoding="utf-8-sig"))
+        published_manifest["Output Folder"] = str(Path(published["data_dir"]))
+        published_manifest["Output Files"] = [path.name for path in all_output_paths]
+        manifest_target.write_text(json.dumps(published_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise ValueError("RUN_MANIFEST_PUBLISH_UPDATE_FAILED")
     result.update({
         "status": "FULL_SUCCESS", "run_id": context.run_id, "run_timestamp": context.run_timestamp,
         "generated_at": context.generated_at, "data_integrity": integrity,
+        "precision_filter_config": precision_config,
         "input_file": resolved.get("file"), "input_run_id": resolved.get("run_id"),
         "input_run_timestamp": resolved.get("run_timestamp"), "input_record_count": len(input_rows),
         "input_unique_keyword_count": len(result["keyword_units"]), "output_record_count": len(result["rows"]),
-        "output_file": str(paths["ai"]), "high_precision_output_file": str(paths["high_precision"]),
-        "deduplicated_output_file": str(paths["deduplicated"]), "run_folder": str(run_folder),
-        "benchmark_output_files": {code: str(path) for code, path in paths["benchmarks"].items()},
-        "run_manifest": str(run_folder / f"{RUN_MANIFEST_PREFIX}{context.run_timestamp}.json"), "product_text_source": evidence.get("text_path"),
+        "output_file": str(Path(published["data_dir"]) / paths["ai"].name),
+        "high_precision_output_file": str(Path(published["data_dir"]) / paths["high_precision"].name),
+        "deduplicated_benchmark_output_file": str(Path(published["data_dir"]) / paths["deduplicated_benchmark"].name),
+        "deduplicated_output_file": str(Path(published["data_dir"]) / paths["deduplicated"].name),
+        "run_folder": str(Path(published["data_dir"])),
+        "benchmark_output_files": {code: str(Path(published["data_dir"]) / path.name) for code, path in paths["benchmarks"].items()},
+        "run_manifest": str(Path(report_root) / "_system" / "manifests" / manifest_path.name), "product_text_source": evidence.get("text_path"),
     })
     return result
+
+
+
 

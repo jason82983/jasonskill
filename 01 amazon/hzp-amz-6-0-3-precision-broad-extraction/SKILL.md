@@ -1,6 +1,6 @@
 ---
 name: hzp-amz-6-0-3-precision-broad-extraction
-description: Read only the 6-0-2去对标去重 高度精准词 asset from its latest complete VALID Run Package, organize each unique high-precision keyword into a semantic Search Intent hierarchy, and produce traceable mapping and hierarchy summary CSVs. Never rejudge precision or execute ad writes.
+description: Read the newest 6-0-2 C precision asset, build a stable Current Product Search Intent map with one Primary Intent per keyword, and produce traceable mapping and hierarchy CSVs. Never rejudge precision or execute ad writes.
 metadata:
   short-description: 精准泛词
 ---
@@ -11,23 +11,28 @@ metadata:
 
 Formal identity: 6-0-3 | 精准泛词 | Precision Broad Extraction | hzp-amz-6-0-3-precision-broad-extraction.
 
-Read only the 6-0-2 C asset `去对标去重 高度精准词` (`Report_Key=UNIQUE_HIGH_PRECISION_KEYWORDS`) from one latest complete `VALID` 602 Run Package. Never use the 602 observation tables `精准判断所有词表` or `高度精准词表`, or per-benchmark D tables, as Intent inputs. Do not rejudge precision, read 6-0-1, query ERP, edit 6-0-2, or execute Amazon Ads writes. Each unique input keyword receives exactly one `PRIMARY PRECISION BROAD INTENT`; 603 then builds a one-parent Intent Tree and calculates all totals in code.
+Read only the 6-0-2 C asset `去重去对标后 筛选后的精准词表` from the 602 `data/` directory, selecting the greatest filename timestamp and validating the minimum C schema. RunPackage, Manifest, sidecar and mtime are not prerequisites. C remains the sole semantic Intent input; never use A/B/D as Intent inputs. Do not rejudge precision, read 6-0-1, query ERP, edit 6-0-2, or execute Amazon Ads writes.
 
 ## Formal input
 
-Invocation: `6-0-3, Product_Code`. Resolve the Product Root, then scan `06_SKILL分析报告/6-0-2_AI精准关键词识别/` for timestamped run manifests and legacy timestamp folders. Sort by `RUN_TIMESTAMP`, require `Run Status=VALID`, and validate the complete 3+N 602 package, including every expected per-benchmark D asset. Skip failed, incomplete, or mismatched runs and fall back to the newest complete valid package. The resolver is `resolve_latest_valid_602_run_package(product_root, product_code)`; it returns all companion paths from one package.
+Invocation: `6-0-3, Product_Code`. Resolve the Product Root, scan the 602 `data/` directory for the exact C filename, choose the greatest `YYYYMMDD_HHMMSS`, and validate its schema and Product identity. Historical folders are not selected.
 
-602 package members are `6-0-2_精准判断所有词表_{RUN_TIMESTAMP}.csv`, `6-0-2_高度精准词表_{RUN_TIMESTAMP}.csv`, `6-0-2_去对标去重 高度精准词_{RUN_TIMESTAMP}.csv`, plus one `6-0-2_{所属产品编号}_高度精准词_{RUN_TIMESTAMP}.csv` for every expected benchmark and `6-0-3_RunPackage_{RUN_TIMESTAMP}.json`. All files are directly under the fixed 602 report root, and all timestamps must match the manifest. The shared manifest and package validation are authoritative; 603 does not require per-CSV `.meta.json` files. 603 uses only C as keyword input. A, B and D may be checked for package completeness/schema but must never be passed to Intent extraction.
+The B/C selection is controlled by the shared configuration `E:\【所有产品目录专用】\01_公共资料\03_系统配置\生成精准词库的要求.txt` (relative path `01_公共资料/03_系统配置/生成精准词库的要求.txt`) under the unified product root. 603 reads that configuration while validating the selected 602 package and rejects a package whose recorded normalized levels do not match the current file. The business label `已精准` is normalized to the existing AI label `精准`.
 
-Report Identity is `去对标去重 高度精准词`; `Report_Key` is `UNIQUE_HIGH_PRECISION_KEYWORDS`. Required columns are `Id,词,中文,市场容量,竞争产品数,供需比,对标覆盖数,最佳自然排名,自然排名中位数,精准度,精准原因`; benchmark identity fields including `所属产品编号` are not accepted in this unique-keyword schema. Every row must have `精准度=高度精准`, and `normalize_broad_keyword(词)` must be unique. Duplicate canonical keywords fail with `603_INPUT_DUPLICATE_KEYWORD`; any other precision level fails with `603_INPUT_NOT_ALL_HIGH_PRECISION`. Preserve each unique Id. `竞争产品数` and `供需比` are copied unchanged into the mapping CSV. The mapping column `自然排名` is sourced from `最佳自然排名`; the summary uses source `竞争产品数` only for the defined subtree arithmetic mean and does not aggregate keyword-level `供需比`.
+The 602 handoff passes only C to Intent extraction. A, B and D are never semantically extracted.
+历史迁移兼容：若旧批次目录中残留旧名 B/C CSV，且新命名资产齐全，校验仅忽略这两个同时间戳旧别名，不读取其内容；所有必需的新命名资产仍须完整且通过校验。
+
+Report Identity is `去重去对标后 筛选后的精准词表`; `Report_Key` is `UNIQUE_SELECTED_PRECISION_KEYWORDS`. Required columns are `Id,词,中文,市场容量,竞争产品数,供需比,对标覆盖数,最佳自然排名,自然排名中位数,精准度,精准原因`; benchmark identity fields including `所属产品编号` are not accepted in this unique-keyword schema. Every row must have `精准度` in the normalized levels loaded from the shared precision-filter configuration, and `normalize_broad_keyword(词)` must be unique. Duplicate canonical keywords fail with `603_INPUT_DUPLICATE_KEYWORD`; any other precision level fails with `603_INPUT_NOT_ALL_HIGH_PRECISION`. Preserve each unique Id. `竞争产品数` and `供需比` are copied unchanged into the mapping CSV. The mapping column `自然排名` is sourced from `最佳自然排名`; the summary uses source `竞争产品数` only for the defined subtree arithmetic mean and does not aggregate keyword-level `供需比`.
 
 Invalid input statuses include `NON_HIGH_PRECISION_RECORD_IN_603_INPUT`, `MISSING_RECORD_IDS`, and `DUPLICATE_RECORD_IDS`.
 
 ## Search Intent Hierarchy
 
+Load the current-product profile once from `05_分析源数据/01_产品数据/本产品/产品识别 - 文本文案.txt` when available. It is semantic context only; missing or empty profile is recorded in lineage and must not be replaced with invented facts. Build Phase-A semantic units and Phase-B globally reconciled candidate intents. Semantic batches are sized from estimated prompt characters and profile length, not a fixed row count.
+
 The AI maps each source keyword to exactly one natural, canonical `精准泛词` and may assign one `父精准泛词`. A broad intent is the minimum independently operable intent: preserve a dimension when removing it would merge commercially distinct purchase tasks (for example, a stable purchase occasion), but compress incidental numbers, adjectives, wording order, or isolated modifiers. Do not use N-gram extraction, mechanical stop-word deletion, or a phrase-specific hardcoded table. A parent is direct and unique; it must itself be an intent. Do not create a child from a single incidental modifier without strong semantic and cluster evidence. If no reliable primary can be formed, keep the Id with `[PRECISION_BROAD_MAPPING_UNRESOLVED]` and report the unresolved condition.
 
-A record such as `birthday gifts for sister` can map primarily to `sister birthday gifts`, whose direct parent is `sister gifts`. The mapping CSV stores only the primary intent; parent truth is stored in the summary CSV. One record never contributes base volume to both parent and child.
+A record such as `birthday gifts for sister` can map primarily to `sister birthday gifts`, whose direct parent is `sister gifts`. The mapping CSV stores the primary intent and its `ParentIntentId`; parent truth is also reflected in the summary CSV. One record never contributes base volume to both parent and child.
 
 Before accepting the hierarchy, review over-fragmentation (especially singleton intents caused only by incidental modifiers) and over-merge (distinct occasion, relationship, product-type, or purpose tasks compressed into a parent). These are semantic audits; do not fix them by numeric thresholds or by hardcoding a product's phrases.
 
@@ -52,22 +57,20 @@ Before reporting success, integrity checks verify the mapping's `竞争产品数
 Each run captures one `RUN_TIMESTAMP` in the strict `YYYYMMDD_HHMMSS` format
 and creates a new package directly under
 `06_SKILL分析报告/6-0-3_精准泛词提取/`. No timestamp subfolder is created.
-Timestamped files and `6-0-3_RunPackage_{RUN_TIMESTAMP}.json` preserve each run;
-existing files are not overwritten. The manifest and both formal filenames use
-the same timestamp:
+The two formal CSVs are published as one validated batch directly under `data/`; the current `data/` contains the latest complete batch. A manifest may be stored under `_system/manifests/` for lineage, but it is not required for the 603 input resolver. Prior valid batches remain under `历史数据/<RUN_TIMESTAMP>/`. The manifest and both formal filenames use the same timestamp:
 
 `6-0-3_词对应的精准泛词_{RUN_TIMESTAMP}.csv`
 
-Nine columns: `Id,词,中文,市场容量,竞争产品数,供需比,自然排名,精准泛词,精准泛词中文`. Preserve input order, all Ids, and the input competitor count/ratio unchanged.
+Fixed schema: `Id,词,中文,市场容量,竞争产品数,供需比,自然排名,精准泛词,精准泛词中文,PrimaryIntentId,PrimaryIntentCode,KeywordPurchaseMission,Intent层级,ParentIntentId,父精准泛词,IntentAssignmentReason,ChallengeResult,ChallengeReasonSummary`. Preserve input order, all Ids, and the input competitor count/ratio unchanged.
 
 The hierarchy summary is:
 
 `6-0-3_精准泛词汇总_{RUN_TIMESTAMP}.csv`
 
-Nine columns: `精准泛词,中文,层级,父精准泛词,直接搜索量,汇总搜索量,平均竞品数,意图机会比,直接对应词数`. `平均竞品数` is rounded to two decimal places and `意图机会比` to four. Sort by level ascending, then aggregated volume descending, with missing totals last and stable first appearance.
+Fixed schema: `精准泛词,中文,层级,父精准泛词,直接搜索量,汇总搜索量,平均竞品数,意图机会比,直接对应词数,IntentId,IntentCode,IntentDefinition,PrimaryPurchaseDriver,ChallengeStatus,ChallengeReasonSummary`. `平均竞品数` is rounded to two decimal places and `意图机会比` to four. Sort by level ascending, then aggregated volume descending, with missing totals last and stable first appearance.
 
 The manifest records `SkillId`, `Current Product`, `RUN_ID`, `RUN_TIMESTAMP`,
-`GeneratedAt`, `Input Skill=602`, `Input Report=去对标去重 高度精准词`, `Input Report Identity=去对标去重 高度精准词`, `Input Report Key=UNIQUE_HIGH_PRECISION_KEYWORDS`, the selected 602 Run ID/timestamp/folder/file, input record count, and input unique keyword count,
+`GeneratedAt`, `Input Skill=602`, `Input Report=去重去对标后 筛选后的精准词表`, `Input Report Identity=去重去对标后 筛选后的精准词表`, `Input Report Key=UNIQUE_SELECTED_PRECISION_KEYWORDS`, the selected 602 Run ID/timestamp/folder/file, input record count, and input unique keyword count,
 fixed output root/files/counts, validation, and Run Status. 603 resolves its own
 latest output with `resolve_latest_valid_603_run_package()`;
 `latest_output_paths()` returns both files from that one package. A run is
@@ -75,8 +78,15 @@ latest output with `resolve_latest_valid_603_run_package()`;
 hierarchy, calculation, and pass-through checks. Incomplete or failed runs
 remain archived in their timestamped manifests and are skipped.
 
-Downstream Skills must select the newest complete `VALID` 603 Run Package and
-read both files named by its manifest from the fixed report root. 6-2 may use L1 aggregate volume for overall
+Downstream Skills must select the newest timestamped valid A/B assets from the 603 `data/` directory using the specified Report Identity and minimum schema; a manifest may enrich lineage but is not a required input gate. 6-2 may use L1 aggregate volume for overall
 scale and L2/L3 aggregate volume for sub-intents, but must not sum parent and
 child aggregates. No keyword-family asset or advertising action is performed.
 See `scripts/broad_seed_cluster.py` and `references/broad-seed-cluster-v1.md`.
+
+## Human Report Publishing
+
+本 Skill 生成正式 HTML 报告时，遵循统一的人类可见报告规则：Skill 报告根目录只保留一个当前最新 HTML；旧 HTML（以及同名 `.meta.json`）全部移动到同级 `历史HTML/`，不删除、不覆盖。一次性 Skill 的正式机器 CSV/JSON 只进入当前 Skill 报告目录的 `data/`，且只保留完整 `LATEST VALID` Batch；RunPackage/Manifest、metadata sidecar、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`。HTML 仅按人类报告规则发布到根目录或 `历史HTML/`。完成写入、回读和校验后才发布当前报告；失败或不完整 Run 不得发布。公共实现与索引规则见 [`skills/references/human-report-publishing.md`](../references/human-report-publishing.md)。
+
+## 全局报告文件治理（适用本 Skill）
+
+本 Skill 遵循公共 `scripts/hzp_amz_report_contract.py`、[human-report-publishing.md](../references/human-report-publishing.md) 与 [report-governance.md](../references/report-governance.md)：正式机器业务数据只进入当前 Skill 报告目录的 `data/`，`data/` 只保留完整 `LATEST VALID` Batch；旧 VALID Batch 整包进入 `历史数据/<RUN_TIMESTAMP>/`。RunPackage/Manifest、metadata、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`。新 Batch 必须先 Staging、验证完整性后再原子发布；失败不得替换旧 data。根目录只保留最新人类 HTML（如有）及正式子目录，机器数据不得写根目录。下游通过指定 Report Identity 扫描 `data/` 并按文件名 `YYYYMMDD_HHMMSS` 取最新，不得按 HTML、根目录或文件修改时间选数。已有成熟时间戳 Run Package 的持续 Skill 可保留其内部运行包，但仍遵守根目录清洁和系统资产分层。

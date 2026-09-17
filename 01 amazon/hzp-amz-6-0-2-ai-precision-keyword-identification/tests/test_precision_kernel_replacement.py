@@ -42,6 +42,82 @@ def test_hard_modifiers_veto_core_fit():
         assert decide(keyword)["AI_Classification"] == "NOT_PRECISION"
 
 
+def test_purchase_driver_and_gift_mission_evidence_are_adaptive():
+    high = decide("sister birthday gifts")
+    broad = decide("birthday gifts for women")
+    relation_only = decide("sister")
+    assert high["PrimaryPurchaseDriver"] == "GIFT_EMOTIONAL"
+    assert high["GiftMissionFit"] == "HIGH"
+    assert high["PurchaseMissionConvergence"] == "HIGH"
+    assert high["PhysicalProductConvergence"] != "HIGH"
+    assert high["FinalPrecision"] == "高度精准"
+    assert broad["FinalPrecision"] == "弱精准"
+    assert relation_only["FinalPrecision"] == "精准"
+
+
+def test_golden_regression_detects_compression_and_broad_gift_overreach():
+    cases = [
+        {"Keyword": "sister birthday gifts", "ExpectedPrecision": "高度精准", "CaseType": "GIFT_HIGH_MISSION_FIT"},
+        {"Keyword": "friendship gifts for women", "ExpectedPrecision": "高度精准", "CaseType": "GIFT_HIGH_MISSION_FIT"},
+        {"Keyword": "birthday gifts for women", "ExpectedPrecision": "弱精准", "CaseType": "GIFT_BROAD_INTENT"},
+        {"Keyword": "sister", "ExpectedPrecision": "精准", "CaseType": "GIFT_RELATIONSHIP_ONLY"},
+    ]
+    metrics = kernel.run_precision_brain_regression(b2_profile(), cases)
+    assert metrics["ExactPrecisionMatch"] == 4
+    assert metrics["MismatchCount"] == 0
+    assert metrics["HighPrecisionRecall"] == 1.0
+    assert metrics["GiftHighMissionFitRecall"] == 1.0
+    assert metrics["GradeCompression"] == []
+
+
+def test_regression_resolves_product_driver_once_per_run(monkeypatch):
+    calls = []
+    original = kernel.build_product_purchase_driver
+
+    def counted(profile):
+        calls.append(profile)
+        return original(profile)
+
+    monkeypatch.setattr(kernel, "build_product_purchase_driver", counted)
+    kernel.run_precision_brain_regression(
+        b2_profile(),
+        [{"Keyword": "sister birthday gifts", "ExpectedPrecision": "高度精准", "CaseType": "GIFT_HIGH_MISSION_FIT"},
+         {"Keyword": "birthday gifts for women", "ExpectedPrecision": "弱精准", "CaseType": "GIFT_BROAD_INTENT"}],
+    )
+    assert len(calls) == 1
+
+
+def test_functional_driver_does_not_use_gift_mission_as_core_fit():
+    profile = {
+        "PrimaryPurchaseDriver": "FUNCTIONAL",
+        "Core_Product_Type": "wireless phone charger",
+        "Core_Functions": ["charge mobile phones"],
+        "Recipient": "sister",
+    }
+    result = kernel.evaluate_product_search_intent_fit(
+        profile, {"Core_Intent": "gift for sister"}, keyword="gift for sister"
+    )
+    assert result["PrimaryPurchaseDriver"] == "FUNCTIONAL"
+    assert result["GiftMissionFit"] == "NOT_SPECIFIED"
+    assert result["AI_Classification"] != "PRECISION"
+
+
+def test_hybrid_primary_match_is_not_penalized_by_unexpressed_secondary_driver():
+    profile = {
+        "PrimaryPurchaseDriver": "HYBRID",
+        "SecondaryPurchaseDrivers": ["GIFT_EMOTIONAL"],
+        "Core_Product_Type": "furniture anti-tip anchor",
+        "Core_Functions": ["anchor furniture to wall"],
+        "Compatible_Search_Intents": ["furniture anchor"],
+    }
+    result = kernel.evaluate_product_search_intent_fit(
+        profile, {"Core_Intent": "furniture anchor"}, keyword="furniture anchor"
+    )
+    assert result["AI_Classification"] == "PRECISION"
+    assert result["GiftMissionFit"] == "NOT_SPECIFIED"
+    assert result["FinalPrecision"] != "弱精准"
+
+
 def test_kernel_reference_and_agent_instruction_are_active():
     skill = (ROOT / "SKILL.md").read_text(encoding="utf-8-sig")
     agent = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8-sig")

@@ -23,3 +23,15 @@
 | personalized gifts for women | 不精准 | 明确要求个性化而产品无该能力 |
 
 完成一批关键词后必须做 Cross-Level Consistency Check：不能把“没有 figurine”一律降级，也不能把“出现 figurine”一律升为高度精准。Benchmark 自然排名只作为 Market Reality Evidence。
+
+## Golden Case 增量字段
+
+每个 Golden Case 同时记录 `PrimaryPurchaseDriver`、`PurchaseMissionFit`、`PhysicalProductConvergence`、`CaseType`。Gift 相关类型包括 `GIFT_HIGH_MISSION_FIT`、`GIFT_BROAD_INTENT`、`GIFT_RELATIONSHIP_ONLY`、`GIFT_OCCASION_ONLY`、`GIFT_HARD_CONFLICT`。这些案例用于回归，不是按 Keyword 字符串硬编码答案；Current Product 未确认前不得把案例自动写入正式判断。
+
+| CaseType | Keyword | Driver | PurchaseMissionFit | PhysicalProductConvergence | 期望等级 |
+|---|---|---|---|---|---|
+| GIFT_HIGH_MISSION_FIT | sister birthday gifts | GIFT_EMOTIONAL | HIGH | MEDIUM | 高度精准 |
+| GIFT_HIGH_MISSION_FIT | friendship gifts for women | GIFT_EMOTIONAL | HIGH | MEDIUM | 高度精准 |
+| GIFT_BROAD_INTENT | birthday gifts for women | GIFT_EMOTIONAL | LOW | LOW | 弱精准 |
+| GIFT_RELATIONSHIP_ONLY | sister | GIFT_EMOTIONAL | MEDIUM | LOW | 精准 |
+| GIFT_HARD_CONFLICT | personalized gifts for women | GIFT_EMOTIONAL | HIGH | LOW | 不精准 |

@@ -4,9 +4,9 @@ from __future__ import annotations
 import argparse
 import csv
 import html
-import importlib.util
 import json
 import re
+import shutil
 import statistics
 import sys
 from collections import defaultdict
@@ -24,7 +24,9 @@ from scripts.stage6_artifact_contract import (  # noqa: E402
     timestamped_output_path, write_metadata_sidecar,
 )
 from scripts.hzp_amz_report_contract import (  # noqa: E402
-    build_report_filename, resolve_skill_report_dir, validate_hzp_amz_report_batch,
+    build_report_filename, governance_paths, publish_latest_valid_batch,
+    publish_latest_html, resolve_latest_valid_data, resolve_skill_report_dir,
+    validate_hzp_amz_report_batch,
 )
 
 SKILL_ID = "hzp-amz-6-0-6-benchmark-intent-market-occupancy-analysis"
@@ -34,6 +36,7 @@ BENCHMARK_HIGH_PRECISION_COLUMNS = ("所属产品编号", "对标ASIN", "Id", "�
 DETAIL_COLUMNS = ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "对标编码", "对标ASIN", "自然排名")
 SUMMARY_COLUMNS = ("精准泛词", "中文", "层级", "父精准泛词", "直接搜索量", "汇总搜索量", "平均竞品数", "意图机会比", "直接对应词数")
 MAPPING_COLUMNS = ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "自然排名", "精准泛词", "精准泛词中文")
+MAPPING_MULTI_COLUMNS = ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "对标覆盖数", "最佳自然排名", "自然排名中位数", "精准泛词", "精准泛词中文")
 OCCUPANCY_COLUMNS = ("对标编码", "对标ASIN", "精准泛词", "中文", "层级", "父精准泛词", "汇总搜索量", "有效排名词数", "Top10关键词数", "Top20关键词数", "Top50关键词数", "Top100关键词数", "平均自然排名", "加权自然排名", "Top10占领搜索量", "Top10搜索量覆盖率", "Top20占领搜索量", "Top20搜索量覆盖率", "Top50占领搜索量", "Top50搜索量覆盖率", "Top100占领搜索量", "Top100搜索量覆盖率", "占领等级", "占领判断原因")
 CONSENSUS_COLUMNS = ("精准泛词", "中文", "层级", "父精准泛词", "汇总搜索量", "对标总数", "有效覆盖对标数", "核心占领对标数", "强占领对标数", "核心/强占领对标数", "最佳对标编码", "最佳对标ASIN", "最佳Top20搜索量覆盖率", "Top20覆盖率中位数", "Top50覆盖率中位数", "多对标共识等级", "共识判断原因")
 OCCUPANCY_LEVELS = {"核心占领", "强占领", "中度占领", "弱占领"}
@@ -65,129 +68,114 @@ def _fmt(value: Decimal | None, places: int = 4) -> str:
     return str(value.quantize(q, rounding=ROUND_HALF_UP))
 
 
-def _resolve_latest_valid_603_run_package(product_root: Path, product_code: str) -> dict[str, Any]:
-    report_root = product_root / "06_SKILL分析报告" / INPUT_DIR_603
-    if not report_root.is_dir():
+def _resolve_latest_603_csv_pair(root: Path, product_code: str) -> dict[str, Any]:
+    report_dir = root / "06_SKILL分析报告" / INPUT_DIR_603
+    current = resolve_latest_valid_data(report_dir)
+    if current.get("status") != "LATEST_VALID_DATA":
+        raise ValueError("606_INPUT_NOT_FOUND")
+    stamp = str(current.get("run_timestamp") or "")
+    registry = current.get("registry") or {}
+    declared = {Path(str(value)).name for value in (registry.get("Files") or [])}
+    if registry.get("Report_Identities"):
+        required_ids = {"PRECISION_BROAD_MAPPING", "PRECISION_BROAD_SUMMARY"}
+        if not required_ids.issubset(set(registry.get("Report_Identities") or [])):
+            raise ValueError("606_INPUT_REPORT_IDENTITY_INVALID")
+    data_dir = Path(current["data_dir"])
+    specs = {
+        "summary": (f"6-0-3_精准泛词汇总_{stamp}.csv", SUMMARY_COLUMNS),
+        "mapping": (f"6-0-3_词对应的精准泛词_{stamp}.csv", MAPPING_COLUMNS),
+    }
+    resolved = {}
+    for key, (name, columns) in specs.items():
+        path = data_dir / name
+        if declared and name not in declared:
+            raise ValueError("606_INPUT_REGISTRY_FILE_MISSING")
+        if not path.is_file():
+            raise ValueError("606_INPUT_NOT_FOUND")
+        headers, rows = _read_asset_csv(path)
+        if key == "mapping":
+            if tuple(headers) not in (MAPPING_COLUMNS, MAPPING_MULTI_COLUMNS):
+                raise ValueError("606_INPUT_SCHEMA_INVALID")
+        elif tuple(headers) != tuple(columns):
+            raise ValueError("606_INPUT_SCHEMA_INVALID")
+        if not rows:
+            raise ValueError("606_INPUT_EMPTY")
+        resolved[key] = {"file": str(path), "rows": rows, "schema": headers,
+                         "run_id": stamp, "run_timestamp": stamp,
+                         "input_resolution_method": "REGISTRY_DATA_LATEST_VALID"}
+    return {"status": "LATEST_VALID_603_DATA_READY", "run_id": stamp, "run_timestamp": stamp,
+            "assets": resolved, "files": {key: item["file"] for key, item in resolved.items()},
+            "manifest": {}, "input_resolution_method": "REGISTRY_DATA_LATEST_VALID"}
+
+
+def _resolve_602_data(root: Path, product_code: str) -> dict[str, Any]:
+    report_dir = root / "06_SKILL分析报告" / "6-0-2_AI精准关键词识别"
+    current = resolve_latest_valid_data(report_dir)
+    if current.get("status") != "LATEST_VALID_DATA":
         raise FileNotFoundError("606_INPUT_NOT_FOUND")
-    manifests = []
-    for path in report_root.glob("6-0-3_RunPackage_*.json"):
-        match = re.fullmatch(r"6-0-3_RunPackage_(\d{8}_\d{6})\.json", path.name)
-        if match:
-            manifests.append((match.group(1), path))
-    invalid: list[tuple[str, str]] = []
-    valid: list[dict[str, Any]] = []
-    expected_schemas = {"summary": SUMMARY_COLUMNS, "mapping": MAPPING_COLUMNS}
-    for stamp, manifest_path in sorted(manifests, key=lambda item: item[0], reverse=True):
+    stamp = str(current.get("run_timestamp") or "")
+    registry = current.get("registry") or {}
+    identities = set(registry.get("Report_Identities") or [])
+    manifest_path = report_dir / "_system" / "manifests" / f"6-0-2_RunPackage_{stamp}.json"
+    manifest: dict[str, Any] = {}
+    if manifest_path.is_file():
         try:
-            datetime.strptime(stamp, "%Y%m%d_%H%M%S")
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
-            if not isinstance(manifest, dict):
-                raise ValueError("MANIFEST_INVALID")
-            if (manifest.get("SkillId") != "hzp-amz-6-0-3-precision-broad-extraction"
-                    or manifest.get("Current Product") != product_code
-                    or manifest.get("Run Status") != "VALID"
-                    or manifest.get("RUN_TIMESTAMP") != stamp
-                    or not manifest.get("RUN_ID")):
-                raise ValueError("MANIFEST_IDENTITY_STATUS_OR_TIMESTAMP_INVALID")
-            if Path(str(manifest.get("Output Folder") or "")).resolve() != report_root.resolve():
-                raise ValueError("OUTPUT_FOLDER_MISMATCH")
-            declared = manifest.get("Output Files")
-            expected_names = {
-                "summary": f"6-0-3_精准泛词汇总_{stamp}.csv",
-                "mapping": f"6-0-3_词对应的精准泛词_{stamp}.csv",
-            }
-            if not isinstance(declared, list) or len(declared) != 2 or set(declared) != set(expected_names.values()):
-                raise ValueError("OUTPUT_PACKAGE_INCOMPLETE")
-            files = {key: report_root / name for key, name in expected_names.items()}
-            if any(path.parent.resolve() != report_root.resolve() or not path.is_file() for path in files.values()):
-                raise ValueError("OUTPUT_PACKAGE_INCOMPLETE")
-            if {path.name for path in report_root.glob(f"*_{stamp}.csv")} != set(expected_names.values()):
-                raise ValueError("OUTPUT_PACKAGE_CONTAINS_UNDECLARED_CSV")
-            assets: dict[str, dict[str, Any]] = {}
-            for key, path in files.items():
-                headers, rows = _read_asset_csv(path)
-                if headers != list(expected_schemas[key]):
-                    raise ValueError(f"{key.upper()}_SCHEMA_INVALID")
-                if not rows:
-                    raise ValueError(f"{key.upper()}_EMPTY")
-                assets[key] = {"file": str(path), "rows": rows, "metadata": {
-                    "Skill_ID": "hzp-amz-6-0-3-precision-broad-extraction",
-                    "Report_Identity": "PRECISION_BROAD_SUMMARY" if key == "summary" else "PRECISION_BROAD_MAPPING",
-                    "Product_Code": product_code, "RUN_ID": manifest["RUN_ID"],
-                    "RUN_TIMESTAMP": stamp, "Run_Status": "VALID",
-                }, "run_id": manifest["RUN_ID"], "run_timestamp": stamp,
-                    "record_count": len(rows), "schema": headers}
-            counts = manifest.get("Output Record Counts") or {}
-            input_count = manifest.get("Input Record Count")
-            unique_count = manifest.get("Input Unique Keyword Count")
-            if (counts.get("Intent Count") != len(assets["summary"]["rows"])
-                    or counts.get("Keyword Count") != len(assets["mapping"]["rows"])
-                    or input_count != len(assets["mapping"]["rows"])
-                    or unique_count != len(assets["mapping"]["rows"])):
-                raise ValueError("RECORD_COUNTS_MISMATCH")
-            valid.append({"status": "LATEST_VALID_603_RUN_PACKAGE_READY", "run_id": manifest["RUN_ID"],
-                          "run_timestamp": stamp, "folder": str(report_root.resolve()),
-                          "files": {key: str(path.resolve()) for key, path in files.items()},
-                          "assets": assets, "manifest": manifest})
-        except (OSError, UnicodeError, json.JSONDecodeError, AttributeError, TypeError, ValueError) as exc:
-            invalid.append((stamp, str(exc)))
-    if not valid:
-        raise ValueError("606_INPUT_NOT_FOUND: no complete VALID 603 Run Package")
-    selected = max(valid, key=lambda item: item["run_timestamp"])
-    if any(stamp > selected["run_timestamp"] for stamp, _ in invalid):
-        selected["input_resolution_method"] = "LATEST_INVALID_FALLBACK_USED"
-    else:
-        selected["input_resolution_method"] = "LATEST_VALID_603_RUN_PACKAGE"
-    selected["invalid_runs"] = [{"run_timestamp": stamp, "reason": reason} for stamp, reason in invalid]
-    for asset in selected["assets"].values():
-        asset["input_resolution_method"] = selected["input_resolution_method"]
-    return selected
-
-
-def _resolve_602_package(root: Path, product_code: str) -> dict[str, Any]:
-    skills_root = Path(__file__).resolve().parents[2]
-    resolver_path = skills_root / "hzp-amz-6-0-3-precision-broad-extraction" / "scripts" / "broad_seed_cluster.py"
-    if not resolver_path.is_file():
-        raise FileNotFoundError("606_602_PACKAGE_RESOLVER_UNAVAILABLE")
-    spec = importlib.util.spec_from_file_location("stage6_603_602_package_resolver", resolver_path)
-    if spec is None or spec.loader is None:
-        raise FileNotFoundError("606_602_PACKAGE_RESOLVER_UNAVAILABLE")
-    resolver = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(resolver)
-    package = resolver.resolve_latest_valid_602_run_package(root, product_code)
-    if package.get("status") != "LATEST_VALID_602_RUN_PACKAGE_READY":
-        raise ValueError("606_602_RUN_PACKAGE_NOT_FOUND")
-    return package
-
+            payload = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            if isinstance(payload, dict):
+                manifest = payload
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            raise ValueError("606_INPUT_MANIFEST_INVALID")
+    benchmark_codes = [str(code).strip() for code in (manifest.get("Benchmark Product Codes") or []) if str(code).strip()]
+    expected_names = list(manifest.get("Expected Benchmark Files") or [])
+    if not benchmark_codes or len(expected_names) != len(benchmark_codes):
+        expected_names = sorted(name for name in (registry.get("Files") or []) if "_高度精准词_" in Path(str(name)).name)
+        benchmark_codes = [Path(name).name.split("_", 2)[1] for name in expected_names if "_" in Path(name).name]
+    if not expected_names:
+        raise ValueError("606_602_BENCHMARK_FILE_COUNT_MISMATCH")
+    data_dir = Path(current["data_dir"])
+    benchmark_files: dict[str, str] = {}
+    rows_by_file: dict[str, list[dict[str, str]]] = {}
+    for code, name in zip(benchmark_codes, expected_names):
+        filename = Path(str(name)).name
+        path = data_dir / filename
+        if not path.is_file():
+            raise ValueError("606_602_BENCHMARK_FILE_COUNT_MISMATCH")
+        headers, rows = _read_asset_csv(path)
+        if tuple(headers) != tuple(BENCHMARK_HIGH_PRECISION_COLUMNS) or not rows:
+            raise ValueError("606_INPUT_SCHEMA_INVALID")
+        benchmark_files[code] = str(path)
+        rows_by_file[str(path)] = rows
+    if identities and not any("BENCHMARK_HIGH_PRECISION" in value for value in identities):
+        raise ValueError("606_INPUT_REPORT_IDENTITY_INVALID")
+    return {"status": "LATEST_VALID_602_DATA_READY", "run_id": stamp, "run_timestamp": stamp,
+            "files": {"benchmarks": benchmark_files}, "rows_by_file": rows_by_file,
+            "manifest": manifest, "input_resolution_method": "REGISTRY_MANIFEST_LATEST_VALID"}
 
 def resolve_inputs(product_root: str | Path, product_code: str) -> dict[str, Any]:
     root = Path(product_root).resolve()
-    benchmark = _resolve_602_package(root, product_code)
-    package603 = _resolve_latest_valid_603_run_package(root, product_code)
+    benchmark = _resolve_602_data(root, product_code)
+    package603 = _resolve_latest_603_csv_pair(root, product_code)
     summary = package603["assets"]["summary"]
     mapping = package603["assets"]["mapping"]
-    manifest = benchmark.get("manifest") or {}
-    identities_by_product_id = manifest.get("Benchmark Identities") or {}
-    if (manifest.get("Current Product") != product_code
-            or not isinstance(identities_by_product_id, dict)
-            or len(identities_by_product_id) != manifest.get("Benchmark Count")):
-        raise ValueError("BENCHMARK_IDENTITY_MISSING")
     benchmark_identities: dict[str, str] = {}
     product_id_by_code: dict[str, str] = {}
-    for product_id, identity in identities_by_product_id.items():
-        code, asin = _s(identity.get("对标编码")), _s(identity.get("对标ASIN"))
-        if not code or not asin or code in benchmark_identities:
-            raise ValueError("BENCHMARK_IDENTITY_MISSING")
-        benchmark_identities[code] = asin
-        product_id_by_code[code] = _s(product_id)
-    detail_rows: list[dict[str, str]] = []
     benchmark_files = benchmark.get("files", {}).get("benchmarks") or {}
+    for product_id, path_value in benchmark_files.items():
+        rows = benchmark.get("rows_by_file", {}).get(path_value) or []
+        for row in rows:
+            code, asin = _s(row.get("所属产品编号")), _s(row.get("对标ASIN"))
+            if not code or not asin:
+                raise ValueError("BENCHMARK_IDENTITY_MISSING")
+            if code in benchmark_identities and benchmark_identities[code] != asin:
+                raise ValueError("BENCHMARK_IDENTITY_MISSING")
+            benchmark_identities[code] = asin
+            product_id_by_code[code] = code
+    detail_rows: list[dict[str, str]] = []
     if set(benchmark_files) != set(product_id_by_code.values()):
         raise ValueError("606_602_BENCHMARK_FILE_COUNT_MISMATCH")
     for code, product_id in product_id_by_code.items():
         path = Path(benchmark_files[product_id])
-        rows = _read_asset_csv(path)
-        headers, benchmark_rows = rows
+        headers, benchmark_rows = _read_asset_csv(path)
         if headers != list(BENCHMARK_HIGH_PRECISION_COLUMNS):
             raise ValueError("606_INPUT_SCHEMA_INVALID")
         seen: set[str] = set()
@@ -208,13 +196,14 @@ def resolve_inputs(product_root: str | Path, product_code: str) -> dict[str, Any
                            "Report_Identity": "BENCHMARK_HIGH_PRECISION_KEYWORDS"},
               "run_id": benchmark.get("run_id"),
               "run_timestamp": benchmark.get("run_timestamp"),
-              "input_resolution_method": "LATEST_VALID_602_3_PLUS_N_RUN_PACKAGE"}
+              "input_resolution_method": "FILENAME_TIMESTAMP_LATEST_EXACT_IDENTITY"}
     summary_rows, mapping_rows = summary.get("rows") or [], mapping.get("rows") or []
     if not summary_rows or not mapping_rows:
         raise ValueError("606_INPUT_EMPTY")
     return {"detail": detail, "benchmark": benchmark, "summary": summary, "mapping": mapping,
             "detail_rows": detail_rows, "summary_rows": summary_rows, "mapping_rows": mapping_rows,
             "benchmark_identities": benchmark_identities,
+            "run_id": package603.get("run_id"), "run_timestamp": package603.get("run_timestamp"),
             "product_code": product_code, "product_root": str(root)}
 
 
@@ -603,15 +592,17 @@ def build_outputs(product_root: str | Path, product_code: str, inputs: Mapping[s
     context = new_run_context("6-0-6", SKILL_ID, product_code)
     skill_dir = Path(__file__).resolve().parents[1]
     out_dir = resolve_skill_report_dir(product_root, skill_dir)
+    build_dir = governance_paths(out_dir)["staging"] / f"{context.run_timestamp}_build"
+    build_dir.mkdir(parents=True, exist_ok=False)
     definitions = {
         "occupancy": ("对标意图市场占领明细", "csv", OCCUPANCY_COLUMNS, "BENCHMARK_INTENT_OCCUPANCY_DETAIL"),
         "consensus": ("意图多对标占领共识", "csv", CONSENSUS_COLUMNS, "BENCHMARK_INTENT_OCCUPANCY_CONSENSUS"),
         "html": ("对标意图市场占领分析报告", "html", None, "BENCHMARK_INTENT_OCCUPANCY_REPORT"),
     }
-    paths = {key: out_dir / build_report_filename(skill_dir, name, context.run_timestamp, ext)
+    paths = {key: build_dir / build_report_filename(skill_dir, name, context.run_timestamp, ext)
              for key, (name, ext, _, _) in definitions.items()}
     report_error = validate_hzp_amz_report_batch(list(paths.values()), product_root, skill_dir,
-                                                 timestamp=context.run_timestamp)
+                                                 timestamp=context.run_timestamp, allow_run_folder=True)
     if report_error:
         raise ValueError(report_error)
     sidecars = [metadata_sidecar_path(path) for path in paths.values()]
@@ -683,7 +674,39 @@ def build_outputs(product_root: str | Path, product_code: str, inputs: Mapping[s
                                           inputs=lineage, output_assets=[str(p) for p in paths.values()],
                                           extra=metadata_extra)
         write_metadata_sidecar(paths[key], metadata)
-    return paths
+    manifest_path = build_dir / f"6-0-6_RunPackage_{context.run_timestamp}.json"
+    manifest_payload = {
+        "SkillId": SKILL_ID, "Product_Code": product_code, "RUN_ID": context.run_id,
+        "RUN_TIMESTAMP": context.run_timestamp, "Run Status": status,
+        "Report_Identities": ["BENCHMARK_INTENT_OCCUPANCY_DETAIL", "BENCHMARK_INTENT_OCCUPANCY_CONSENSUS", "BENCHMARK_INTENT_OCCUPANCY_REPORT"],
+        "Output Files": [paths["occupancy"].name, paths["consensus"].name, paths["html"].name],
+        "Output Record Counts": {"Occupancy": len(result["occupancy"]), "Consensus": len(result["consensus"])},
+        "Input 602 RUN_TIMESTAMP": benchmark_package.get("run_timestamp"),
+        "Input 603 RUN_TIMESTAMP": inputs.get("run_timestamp"),
+        "Validation": {"Rank Audit Count": len(result["rank_audit"]), "Status": status},
+    }
+    manifest_path.write_text(json.dumps(manifest_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    published = publish_latest_valid_batch(
+        out_dir, context.run_timestamp, [paths["occupancy"], paths["consensus"]],
+        manifest_files=[manifest_path],
+        metadata_files=[metadata_sidecar_path(paths["html"])],
+        registry_payload={"Skill_ID": SKILL_ID, "Product_Code": product_code,
+                          "RUN_ID": context.run_id, "RUN_TIMESTAMP": context.run_timestamp,
+                          "Report_Identities": ["BENCHMARK_INTENT_OCCUPANCY_DETAIL", "BENCHMARK_INTENT_OCCUPANCY_CONSENSUS"],
+                          "Files": [paths["occupancy"].name, paths["consensus"].name]},
+        move_sources=True,
+    ) if status == "FULL_SUCCESS" else {"status": "INVALID"}
+    if status != "FULL_SUCCESS":
+        return {**paths, "manifest": manifest_path}
+    # Human HTML remains the single root entry point; its metadata is already
+    # in _system/metadata and its older copies are archived by the shared HTML
+    # publisher.
+    publish_latest_html(paths["html"], out_dir)
+    data_dir = Path(published["data_dir"])
+    shutil.rmtree(build_dir, ignore_errors=True)
+    return {"occupancy": data_dir / paths["occupancy"].name,
+            "consensus": data_dir / paths["consensus"].name,
+            "html": out_dir / paths["html"].name}
 
 
 def inspect(product_root: str | Path, product_code: str) -> dict[str, Any]:

@@ -2,7 +2,7 @@
 
 Skill ID：`hzp-amz-6-0-6-benchmark-intent-market-occupancy-analysis`
 
-606 从 LATEST VALID 602 Batch 读取全部 `6-0-2_{所属产品编号}_高度精准词_{RUN_TIMESTAMP}.csv` D 资产，并从最新完整有效的 `6-0-3_RunPackage_{RUN_TIMESTAMP}.json` 读取同一 Run 的两张 603 表。602 Batch 必须包含 3 张公共表和每个预期对标一张 D 表；失败或不完整的新批次会跳过并回退最近完整 VALID Batch。603 通过共享 RunPackage 校验，失败或不完整的新包也会回退。606 不再直接读取 601 报表。它计算 Individual Organic Occupancy 与 Benchmark Consensus，不代表销量/GMV份额，不决定 6-1 怎么打，也不写广告或 ERP。
+606 从 602 `data/` 目录读取全部 `6-0-2_{所属产品编号}_高度精准词_{YYYYMMDD_HHMMSS}.csv` D 资产，并从 603 `data/` 目录读取同一文件名时间戳的两张表；按最大文件名时间戳选最新输入并做最小 Schema 校验，不依赖 RunPackage、manifest、sidecar 或文件修改时间。606 计算 Individual Organic Occupancy 与 Benchmark Consensus，不代表销量/GMV份额，不决定 6-1 怎么打，也不写广告或 ERP。
 
 先检查输入：
 
@@ -17,3 +17,5 @@ python scripts/benchmark_intent_occupancy.py build --product-root "<Product Root
 ```
 
 输出目录：`[Product Root]/06_SKILL分析报告/6-0-6_对标意图市场占领分析/`。两个 CSV 和 HTML 共用同一 RUN_ID、时间戳；旧文件保留。README、流程路由与 Skill 入口见仓库根目录 README。
+
+`简化取数规则（增量 Patch）`：分析型上游输入固定从指定 Skill 的 `data/` 目录读取，按完整 Report Identity 文件名中的 `YYYYMMDD_HHMMSS` 选择最大时间戳，进行最小 Schema 校验；不依赖 RunPackage、manifest、sidecar 或文件修改时间。

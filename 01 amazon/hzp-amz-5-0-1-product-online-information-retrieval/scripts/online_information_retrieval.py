@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 from scripts.hzp_amz_report_contract import (  # noqa: E402
-    build_report_filename, resolve_skill_report_dir, validate_hzp_amz_report_path,
+    build_report_filename, publish_latest_html, resolve_skill_report_dir, validate_hzp_amz_report_path,
 )
 
 STATUS_OK = "OK"
@@ -397,6 +397,7 @@ def run(product_code: str, *, product_root: str|Path|None=None, products_root: s
     if report_error:
         path.unlink(missing_ok=True)
         raise ValueError(report_error)
+    publish_latest_html(path, out_root, copy_from_package=False)
     return {"status":evidence.get("status"),"completion_status":evidence.get("completion_status"),"coverage":evidence.get("coverage"),"identity":identity,"evidence":evidence,"report_path":str(path),"report_filename":filename}
 
 if __name__ == "__main__":

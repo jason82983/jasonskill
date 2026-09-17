@@ -9,7 +9,7 @@ description: Scan a product project's formal Amazon Skill HTML reports and rebui
 
 只做：发现正式报告 → 解析元数据 → 分组排序 → 生成或更新 `06_SKILL分析报告/index.html`。
 
-不做产品分析、市场判断、报告内容修改、原始数据修改，也不重命名、删除、移动或覆盖任何正式历史报告。`index.html` 是唯一允许覆盖的动态文件。
+不做产品分析、市场判断、报告内容修改或原始数据修改，也不自行重命名、删除、移动或覆盖报告。报告生成 Skill 按统一发布规则归档旧 HTML；`index.html` 是本 Skill 唯一允许覆盖的动态文件。
 
 ## Product Root 定位
 
@@ -25,7 +25,7 @@ description: Scan a product project's formal Amazon Skill HTML reports and rebui
 [Product Root]/06_SKILL分析报告/
 ```
 
-递归发现实际存在的正式 `.html` 报告，但跳过 `广告表现汇报优化日志/` 及其所有子目录；同时排除 `index.html` 以及文件名或路径明确为 `test`、`temp`、`demo`、`debug` 的测试/临时输出。日志只能作为阶段6运行证据，不是正式报告索引对象。不得依赖上一次索引、人工清单或固定 Skill 列表；不存在的报告不显示。
+递归发现实际存在的正式 `.html` 报告，包含各 Skill 根目录当前报告和 `历史HTML/` 下的归档报告；跳过时间戳运行包目录、`广告表现汇报优化日志/` 及其所有子目录；同时排除 `index.html` 以及文件名或路径明确为 `test`、`temp`、`demo`、`debug` 的测试/临时输出。日志只能作为阶段6运行证据，不是正式报告索引对象。不得依赖上一次索引、人工清单或固定 Skill 列表；不存在的报告不显示。
 
 ## 文件名解析与排序
 
@@ -52,6 +52,8 @@ description: Scan a product project's formal Amazon Skill HTML reports and rebui
 所有链接必须是相对于 `index.html` 的路径，例如 `./2-2_细分市场分析/2-2_N24_细分市场分析_V3_20260928_192222.html`。不得写入盘符、UNC、`file:///` 或其他绝对路径。
 
 使用 [references/report-index.md](references/report-index.md) 了解兼容、排序和失败边界。使用 [scripts/update_report_index.py](scripts/update_report_index.py) 执行确定性的重建：
+
+报告生成 Skill 的人类可见 HTML 遵循统一发布规则：每个 Skill 根目录只保留一个当前最新文件；旧文件进入同级 `历史HTML/`。0-2 只读取并展示这些路径，不负责移动报告；时间戳运行包目录中的机器 HTML 不重复展示。
 
 ```text
 python scripts/update_report_index.py --product-root <Product Root>
@@ -80,3 +82,7 @@ Products Root：E:\【产品总目录】
 ## 完成检查
 
 确认 Product Root 身份、索引路径、实际扫描范围、报告总数、Skill 分组、版本/时间排序、最新标记、旧格式标记和相对链接。不要修改正式报告、原始数据或其他目录。
+
+## 全局报告文件治理（适用本 Skill）
+
+本 Skill 遵循公共 `scripts/hzp_amz_report_contract.py`、[human-report-publishing.md](../references/human-report-publishing.md) 与 [report-governance.md](../references/report-governance.md)：正式机器业务数据只进入当前 Skill 报告目录的 `data/`，`data/` 只保留完整 `LATEST VALID` Batch；旧 VALID Batch 整包进入 `历史数据/<RUN_TIMESTAMP>/`。RunPackage/Manifest、metadata、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`。新 Batch 必须先 Staging、验证完整性后再原子发布；失败不得替换旧 data。根目录只保留最新人类 HTML（如有）及正式子目录，机器数据不得写根目录。下游通过正式 Registry/Resolver 读取 `data/`，不得按 HTML 或根目录 mtime 选数。已有成熟时间戳 Run Package 的持续 Skill 可保留其内部运行包，但仍遵守根目录清洁和系统资产分层。

@@ -220,8 +220,9 @@ def test_runtime_requeries_live_erp_and_writes_timestamped_manifest(tmp_path, mo
     monkeypatch.setattr(sys, "argv", ["benchmark_organic_extract", "--product-code", "B2", "--products-root", str(tmp_path)])
     assert module.main() == 0
     assert calls == ["LIVE_QUERY"]
-    outputs = [path for path in output_dir.rglob("*.csv") if path != stale]
+    outputs = [path for path in output_dir.glob("*.csv") if path != stale]
     assert len(outputs) == 4
+    assert (output_dir / "历史CSV" / stale.name).exists()
     assert all(re.search(r"_\d{8}_\d{6}$", output.stem) for output in outputs)
     assert {output.parent for output in outputs} == {output_dir}
     timestamps = {output.stem[-15:] for output in outputs}
@@ -229,8 +230,8 @@ def test_runtime_requeries_live_erp_and_writes_timestamped_manifest(tmp_path, mo
     assert all(re.search(r"_\d{8}_\d{6}$", output.stem) for output in outputs)
     detail = next(path for path in outputs if "排名明细" in path.name)
     pool = next(path for path in outputs if "母池" in path.name)
-    raw = next(path for path in outputs if "ASIN-A+关键词自然排名" in path.name)
-    all_observations = next(path for path in outputs if "所有对标自然排名关键词汇总" in path.name)
+    raw = next(path for path in outputs if "ASIN-A_关键词自然排名" in path.name)
+    all_observations = next(path for path in outputs if "所有对标自然排名关键词" in path.name)
     with detail.open(encoding="utf-8-sig", newline="") as handle:
         assert next(csv.DictReader(handle))["Id"] == "KW-99"
     with pool.open(encoding="utf-8-sig", newline="") as handle:

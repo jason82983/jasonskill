@@ -1,6 +1,6 @@
 ---
 name: hzp-amz-6-0-2-ai-precision-keyword-identification
-description: 读取当前产品识别文本与6-0-1全部对标自然排名Observation，按Canonical Keyword只判断一次精准度，输出三张公共表及每个对标一张高度精准表；不查询ERP或执行写操作。
+description: 读取当前产品识别文本与6-0-1全部对标自然排名Observation，按Canonical Keyword只判断一次四级精准度，并依据共享配置输出A/B/C/D/E五类可追溯资产；不查询ERP或执行写操作。
 metadata:
   short-description: AI精准关键词识别
 ---
@@ -16,7 +16,7 @@ Use the complete current-product text evidence and the formal 6-0-1 all-observat
 
 正式链路：
 
-`05_分析源数据/01_产品数据/本产品/产品识别 - 文本文案.txt`（`CURRENT_PRODUCT_TEXT_EVIDENCE`） + 6-0-1 `BENCHMARK_KEYWORD_ALL_OBSERVATIONS` → one AI judgment per canonical Keyword → A/B/C shared assets + one D high-precision asset per benchmark product number.
+`05_分析源数据/01_产品数据/本产品/产品识别 - 文本文案.txt`（`CURRENT_PRODUCT_TEXT_EVIDENCE`） + 6-0-1 `BENCHMARK_KEYWORD_ALL_OBSERVATIONS` → one AI judgment per canonical Keyword → A 全量观察、B 配置筛选、C 对标内去重、D 去对标去重、E 按对标拆分。
 
 ## Formal inputs
 
@@ -26,17 +26,23 @@ Read the entire file at `05_分析源数据/01_产品数据/本产品/产品识�
 
 **Input B — 6-0-1**
 
-Read only `所有对标自然排名关键词` from the latest complete VALID 6-0-1 Run Package. Its formal asset identity is `BENCHMARK_KEYWORD_ALL_OBSERVATIONS`; accept only its timestamped package filename with the matching `RUN_TIMESTAMP`. Never use `BENCHMARK_KEYWORD_POOL` / `对标关键词母池`, a timestamp-less CSV, mtime selection, or a different 6-0-1 output. If the newest batch is invalid or incomplete, fall back to the newest complete VALID batch by `RUN_TIMESTAMP`.
+Read the newest timestamped `6-0-1_所有对标自然排名关键词_YYYYMMDD_HHMMSS.csv` in the 6-0-1 `data/` directory. Select by the filename timestamp and validate the minimum schema and current Product identity. A registry, manifest, RunPackage, sidecar, or filesystem mtime is not a prerequisite for this analysis handoff.
 
 Input B is Benchmark × Keyword Observation grain. Preserve every observation, including repeated Canonical Keywords from different Benchmarks. `产品编号` / `所属产品编号` is source Ground Truth: carry it unchanged to A and B; do not generate, renumber, replace with ASIN, or combine values. Keep each observation's ASIN and organic rank with its source row. `Id` is the source stable keyword entity (`KwId`), not a writable PickPwK row ID.
 
-Before judgment, build one Unique Keyword Judgment Unit per Canonical Keyword, summarize benchmark coverage, best organic rank and median organic rank as Reality Evidence, and let AI judge that keyword once. Apply the same level and reason to every source observation for that Canonical Keyword. Benchmark count is not a vote. Product identity, search meaning and fit with the shopper's purchase task/object/occasion take priority; market capacity, competitor count and supply-demand ratio do not affect precision. Coverage and rank are supporting evidence only. If required source identity or observation data is invalid, fail closed; do not query ERP or generate keywords.
+### 强制新批次规则
+
+每次调用本 Skill 都必须重新生成一套新的 6-0-2 Run Package：创建新的 `RUN_ID`、`RUN_TIMESTAMP` 和 A/B/C/D/E 全部输出文件。不得因为已经存在 `VALID` 的 6-0-2、输入没有变化、当前仍是同一天、或上一次运行刚完成而跳过、复用或直接返回旧批次。旧批次必须保留；即使输入完全相同，也要重新读取当前产品文本和最新有效 6-0-1 输入，重新完成本次判断、写入、回读和校验。只有本次新批次自身通过完整校验后，才能标记为 `VALID`；失败必须写入新的 `FAILED` 运行记录，不能冒充成功或覆盖旧批次。
+
+Before judgment, read the shared precision-filter configuration at `E:\【所有产品目录专用】\01_公共资料\03_系统配置\生成精准词库的要求.txt` (relative path `01_公共资料/03_系统配置/生成精准词库的要求.txt`) from the unified product root. The configured levels are the sole B/C/D/E selection source; normalize the business alias `已精准` to the existing AI label `精准`, record both raw and normalized values in the Run Manifest, and fail closed when the file is missing, unreadable or malformed. Then build one Unique Keyword Judgment Unit per Canonical Keyword, summarize benchmark coverage, best organic rank and median organic rank as Reality Evidence, and let AI judge that keyword once. Apply the same level and reason to every source observation for that Canonical Keyword. Benchmark count is not a vote. Product identity, search meaning and fit with the shopper's purchase task/object/occasion take priority; market capacity, competitor count and supply-demand ratio do not affect precision. Coverage and rank are supporting evidence only. If required source identity or observation data is invalid, fail closed; do not query ERP or generate keywords.
 
 Before precision judgment, construct the model input from `build_dual_views_from_601_output(...)["ai_blind_rows"]`; do not pass the raw 6-0-1 rows to the judgment prompt. This AI blind view omits `竞争产品数` and `供需比`, while the untouched source rows remain available for output projection and integrity checks. These are output-only pass-through fields for market opportunity analysis. They must not raise or lower any precision level; do not infer precision from their value, ratio, or NULL state.
 
 ## Precision Judgment Kernel
 
-必须读取并执行 `references/precision-judgment-kernel.md`。这是替换旧 Product-Type Explicitness 判断偏差的唯一内核；不要在此基础上另加一套分类规则。
+必须读取并执行 `references/precision-judgment-kernel.md` 与 [`references/precision-brain-v3.md`](references/precision-brain-v3.md)。前者定义语义边界，后者定义结构化 Brain、两阶段证据、稳定 ID 和失败处理；不要另加一套分类规则。
+
+Precision Brain 在同一 Run 先从 Current Product Ground Truth 识别一次 `PrimaryPurchaseDriver`（`FUNCTIONAL`、`COMPATIBILITY`、`GIFT_EMOTIONAL`、`AESTHETIC_DECOR`、`OCCASION`、`HYBRID`），再按 Driver 选择主要证据。内部记录 Gift Mission Evidence、Physical/Purchase Mission/Compatibility Convergence 和 Decision Challenge；这些字段属于审计证据，不改变 A/B/C/D/E 的正式 CSV Schema。
 
 Build `CURRENT_PRODUCT_UNDERSTANDING` once from the complete product text, then independently reconstruct each Amazon US searcher's intent before comparing it with the product. Distinguish `PRODUCT-LED`, `GIFT-LED`, `BROAD-GIFT`, `RELATIONSHIP-ONLY` and `HARD-SPECIFIED`; a Gift-led query does not need to contain figurine/statue/decor. Decide `CORE FIT` versus `CAN SERVE`, then check every explicit hard modifier (product type, material, quantity/representation, personalization, compatibility, size, function and theme). A hard conflict vetoes `高度精准`; a product-type conflict is normally `不精准`.
 
@@ -46,25 +52,63 @@ Do not use string matches, product-type explicitness, a fixed formula, word coun
 
 Every reason must be keyword-specific and state what the shopper wants plus why the product is CORE FIT, CAN SERVE or in conflict. Do not batch-apply one reason or one level to a keyword class; 不得复制通用理由. Use `REVIEW_REQUIRED` internally when evidence is insufficient; the formal CSV contract remains unchanged. Calibration examples are in `references/calibration-cases.md` and are not executable keyword mappings.
 
+## Runner and Precision Brain V3
+
+The normal entry point is `run_current_602(product_root, product_code)`; it must not require caller-supplied precision decisions. It reads the product evidence and 6-0-1 rows, canonicalizes and deduplicates keywords, then invokes the repository's `PrecisionJudgmentEngine`. A host model adapter may be injected through `precision_brain_client`; without one, the local semantic adapter remains a deterministic fallback and never uses numeric scoring, market facts, or rank to manufacture precision.
+
+The engine emits typed records keyed by stable `JudgmentItemId`, plans batches from profile/token/output size, retries invalid batches at smaller size, and uses two evidence phases. Phase A receives product and keyword semantics with benchmark rank hidden and decides the semantic fields and `InitialPrecision`. Phase B receives benchmark coverage/rank only to produce `BenchmarkRealityAssessment`; it cannot alter the Phase A semantic level. The decision challenge runs before `FinalPrecision`.
+
+`FinalPrecision` is limited to `高度精准`、`精准`、`弱精准`、`不精准`; `JudgmentStatus` remains separate and is limited to `SUCCESS`、`REVIEW_REQUIRED`、`FAILED`. `REVIEW_REQUIRED` is never a fifth precision level. The shared configuration selects which of the four levels enter B/C/D/E; it never changes the AI judgment. The legacy `PRECISION`/`NOT_PRECISION` labels are compatibility-only input fields and are never accepted as the structured FinalPrecision enum.
+
 ## Output and trace
 
-One run produces three shared UTF-8 with BOM CSV assets plus one D asset per valid benchmark product number, all directly in the fixed 602 report root. Every CSV uses the same `RUN_TIMESTAMP`. The shared `6-0-2_RunPackage_{RUN_TIMESTAMP}.json` is the package metadata source; 602 does not create per-CSV `.meta.json` files:
+One run produces five asset classes of UTF-8 with BOM CSVs. Every CSV uses the same `RUN_TIMESTAMP`. A manifest records the configuration lineage and validation:
 
 - A `6-0-2_精准判断所有词表_{RUN_TIMESTAMP}.csv`: all Benchmark × Keyword observations, with schema `所属产品编号,对标ASIN,Id,词,中文,市场容量,竞争产品数,供需比,自然排名,精准度,精准原因`.
-- B `6-0-2_高度精准词表_{RUN_TIMESTAMP}.csv`: derived only by filtering A where `精准度 == 高度精准`; it keeps observation grain and the source `所属产品编号`.
-- C `6-0-2_去对标去重 高度精准词_{RUN_TIMESTAMP}.csv`: derived from B, one row per Canonical Keyword, with schema `Id,词,中文,市场容量,竞争产品数,供需比,对标覆盖数,最佳自然排名,自然排名中位数,精准度,精准原因`. It has no benchmark identity fields. Its `Report_Identity` is `去对标去重 高度精准词`, its `Report_Key` is `UNIQUE_HIGH_PRECISION_KEYWORDS`, and it is the sole 6-0-3 keyword input.
-- D one `6-0-2_{所属产品编号}_高度精准词_{RUN_TIMESTAMP}.csv` per valid source product number. Each D is filtered from B by exact `所属产品编号`, retains that field and all other A/B columns, and has unique Canonical Keywords within the benchmark. Product numbers are used unchanged.
+- B `6-0-2_筛选后的对标精准词_{RUN_TIMESTAMP}.csv`: A filtered by the normalized levels in `生成精准词库的要求.txt`, retaining Benchmark observation grain.
+- C `6-0-2_去重_筛选后的对标精准词_{RUN_TIMESTAMP}.csv`: B deduplicated by `所属产品编号 + Canonical Keyword`, retaining Benchmark identity and observation fields.
+- D `6-0-2_去对标去重_筛选后的精准词_{RUN_TIMESTAMP}.csv`: B deduplicated by Canonical Keyword with Benchmark fields removed; this is the sole 6-0-3 input.
+- E `6-0-2_{所属产品编号}_筛选后的精准词_{RUN_TIMESTAMP}.csv`: B split by exact Benchmark product number, retaining all configured precision levels; these are the 6-0-6 inputs.
 
-A and B must retain every source observation exactly once. Their product number, ASIN, keyword Id, keyword, translation, market facts and rank are source passthrough fields; precision and reason are the only AI-produced output fields. `INPUT_RECORD_COUNT` must equal A's `OUTPUT_RECORD_COUNT`. B is a strict filter of A; C is a programmatic projection from B; D files are programmatic filters of B by source product number. No later output calls AI. C Canonical Keywords and each D's Canonical Keywords must be unique. Market capacity, competitor count and supply-demand ratio in C are retained once rather than summed. Validate the full `3+N` package, all schemas/counts, B filtering, C deduplication, D membership and per-benchmark uniqueness, total D coverage equal to B, and matching timestamps before marking the run VALID. Read back every CSV. Treat SQL NULL as a blank CSV cell, never as `0`.
+The configuration path is fixed at `E:\【所有产品目录专用】\01_公共资料\03_系统配置\生成精准词库的要求.txt`. `已精准` is normalized to `精准`. Missing, empty or invalid configuration fails closed with `PRECISION_LIBRARY_CONFIG_NOT_FOUND`, `PRECISION_LIBRARY_CONFIG_EMPTY` or `CONFIG_PRECISION_LEVEL_INVALID`; real runs never silently use a default level. B/C/D/E are programmatic projections and make zero additional AI calls.
+
+A and B must retain every source observation exactly once. Their product number, ASIN, keyword Id, keyword, translation, market facts and rank are source passthrough fields; precision and reason are the only AI-produced output fields. `INPUT_RECORD_COUNT` must equal A's `OUTPUT_RECORD_COUNT`. B is a strict filter of A; C is a programmatic projection from B; D files are programmatic filters of B by source product number. No later output calls AI. C Canonical Keywords and each D's Canonical Keywords must be unique. Market capacity, competitor count and supply-demand ratio in C are retained once rather than summed. Validate the full `A+B+C+D+N(E)` package, all schemas/counts, B filtering, C deduplication, D membership and per-benchmark uniqueness, total E coverage equal to B, and matching timestamps before marking the run VALID. Read back every CSV. Treat SQL NULL as a blank CSV cell, never as `0`.
 
 The Run Manifest records the 601 Skill ID, `BENCHMARK_KEYWORD_ALL_OBSERVATIONS` identity and report name, 601 Run ID/timestamp/folder/file, input Observation count, Unique Keyword count, and the current-product text file path plus version fingerprint. Preserve the 6-0-1 and product-text source facts in lineage. If any output or validation fails, mark the 602 run FAILED so it cannot become Latest Valid.
+
+The Run Manifest also records the shared precision-filter configuration path, raw configured labels, normalized labels, SHA-256, size and modification fingerprint. A later 6-0-3 resolver must compare the current shared configuration with this recorded selection before accepting the package.
 
 Keep an internal Evidence Trace containing Canonical Keyword, keyword, current-product text path/version, Searcher Intent, convergence, Fit, conflicts, aggregated benchmark context, precision level and reason; it is not added to the CSV. 6-0-2 never performs ERP, Amazon, Listing, advertising, price or promotion writes and does not generate broad seeds, keyword clusters or advertising decisions.
 
 No manual-precision CSV is generated. Existing historical manual files are not rewritten or deleted by this Skill. Use the maintained calibration examples in `references/calibration-cases.md` to align judgment boundaries; they guide the AI but are not executable keyword rules.
 
-6-0-3 consumes only C (`去对标去重 高度精准词`) from the latest VALID 602 Run Package. It must not use A, B or D as Intent input. 6-0-6 consumes the complete set of D assets plus the same-run 6-0-3 Intent Tree. 6-0-4 may consume the full judgment asset only under its own explicit ERP-sync safeguards; because `Id=KwId` is a cross-ProId keyword entity and not `PickPwK.Id`, it must fail closed unless a separately approved row-level identity expansion exists. Neither downstream Skill changes this judgment contract.
+6-0-3 consumes only D (`去对标去重_筛选后的精准词`) from the newest timestamped 602 `data/` output. It must not use A, B, C or E as Intent input. 6-0-6 consumes the complete set of E assets plus the same-run 6-0-3 Intent Tree. 6-0-4 may consume the full judgment asset only under its own explicit ERP-sync safeguards; because `Id=KwId` is a cross-ProId keyword entity and not `PickPwK.Id`, it must fail closed unless a separately approved row-level identity expansion exists.
 
 ## Stage 6 artifact versioning
 
-Resolve 6-0-1 using `../references/stage6-artifact-contract.md` and the shared `scripts/stage6_artifact_contract.py`; validate current Product Root, Skill ID, `BENCHMARK_KEYWORD_ALL_OBSERVATIONS` identity, observation schema and complete package, then choose the latest VALID Run by `RUN_TIMESTAMP`, never by latest standalone CSV. 602 writes A/B/C/D directly into `06_SKILL分析报告/6-0-2_AI精准关键词识别/` and preserves each run with timestamped filenames and `6-0-2_RunPackage_{RUN_TIMESTAMP}.json`; it does not create a timestamp subfolder. A 602 batch is valid only when all three shared assets and all N expected D assets are present and validated.
+Resolve the 6-0-1 timestamped CSV from its `data/` directory with the simple resolver described above. 602 writes A/B/C/D/E into `06_SKILL分析报告/6-0-2_AI精准关键词识别/data/` (with the established report-governance layout), preserves historical runs, and validates schemas, coverage, filter derivation, and matching timestamps before publishing a valid batch. A RunPackage is lineage metadata, not a gate for downstream analysis.
+
+## Precision Brain 增量硬契约
+
+精准度判断对象是“搜索者是否正在寻找 Current Product 这种具体产品/解决方案”，不是一般语义相关性。必须区分 `RELEVANCE`、`SEMANTIC SIMILARITY`、`BENCHMARK ORGANIC RANK`、`SEARCH VOLUME` 与 `PURCHASE INTENT PRECISION`。
+
+每个 Canonical Keyword 只判断一次，按以下顺序形成可审计记录：Search Intent → Shopping Intent Strength → Intent Convergence → Product–Intent Fit → Hard Conflict → Initial Precision → Benchmark Reality Check → Decision Challenge → Final Precision。Keyword 未表达的字段保持 UNKNOWN/NOT_SPECIFIED，不得补造。
+
+Initial Precision 不读取排名；Benchmark 只作为 SUPPORTS、WEAKLY_SUPPORTS、NEUTRAL、CONTRADICTS 或 INSUFFICIENT 的 Reality Evidence，不能覆盖 Hard Conflict、投票决定等级或因排名好而自动升高。Final Reason 必须说明搜索者主要想买什么、意图是否收敛、产品如何匹配、是否存在冲突以及 Benchmark 的实际作用。
+
+Decision Challenge 必须检查：是否把相关误当精准、是否只是宽泛 Category/Occasion/Recipient 词、购物意图是否不明确、是否存在 Hard Conflict、是否被多个 Benchmark 或排名锚定、去掉 Benchmark 后方向是否仍成立。Challenge 结果只能为 CONFIRMED、DOWNGRADED、UPGRADED、RECONSIDERED_NO_CHANGE。
+
+内部 Judgment Record 至少保留 PrimaryPurchaseDriver、SecondaryPurchaseDrivers、PurchaseDriverReason、SearcherPrimaryIntent、ShoppingIntentStrength、IntentConvergence、ExpectedProductType、ExpectedCoreFunction、ExpectedRecipient、ExpectedOccasion、ExpectedInstallationMethod、ExpectedCriticalAttributes、HardConflictType、InitialPrecision、BenchmarkRealityAssessment、ChallengeResult、FinalPrecisionReason，以及 Gift Mission 和 Physical/Purchase Mission/Compatibility Convergence Evidence；这些是业务证据，不是隐藏思维链。
+
+Batch 必须按模型上下文、Profile 长度、字段数量、历史截断/校验失败自适应规划；每个词使用稳定 JudgmentItemId 按 ID Join，失败时缩小批次重试，禁止静默接受缺字段或位置错配。任何 Precision Brain 修改必须运行 Golden Regression，并报告 ExactPrecisionMatch、MismatchCount、FalseHighPrecision、HighPrecisionRecall、GiftHighMissionFitRecall、FalseHighPrecisionRate、BroadGiftFalseHighPrecisionRate，并检查 Grade Compression。
+
+## Human Report Publishing
+
+本 Skill 生成正式 HTML 报告时，遵循统一的人类可见报告规则：Skill 报告根目录只保留一个当前最新 HTML；旧 HTML（以及同名 `.meta.json`）全部移动到同级 `历史HTML/`，不删除、不覆盖。一次性 Skill 的正式机器 CSV/JSON 只进入当前 Skill 报告目录的 `data/`，且只保留完整有效批次；Manifest、metadata、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`，用于血缘和审计而不是603/606取数前置门槛。HTML 仅按人类报告规则发布到根目录或 `历史HTML/`。完成写入、回读和校验后才发布当前报告；失败或不完整 Run 不得发布。公共实现与索引规则见 [`skills/references/human-report-publishing.md`](../references/human-report-publishing.md)。
+
+## 全局报告文件治理（适用本 Skill）
+
+本 Skill 遵循公共 `scripts/hzp_amz_report_contract.py`、[human-report-publishing.md](../references/human-report-publishing.md) 与 [report-governance.md](../references/report-governance.md)：正式机器业务数据只进入当前 Skill 报告目录的 `data/`，`data/` 只保留完整有效批次；旧批次整包进入 `历史数据/<RUN_TIMESTAMP>/`。系统 Manifest、metadata、稳定 Registry、日志只承担血缘与审计。新 Batch 必须先 Staging、验证完整性后再原子发布；失败不得替换旧 data。根目录只保留最新人类 HTML（如有）及正式子目录，机器数据不得写根目录。下游可通过简单 timestamp resolver 读取 `data/`，不得按 HTML 或根目录 mtime 选数。
+
+602 的正式 Report Identity 为：`精准判断所有词表`、`筛选后的对标精准词`、`去重_筛选后的对标精准词`、`去对标去重_筛选后的精准词`以及每个 Benchmark 的`筛选后的精准词`。旧历史文件保留，不覆盖、不删除；新运行只使用上述新资产。
+

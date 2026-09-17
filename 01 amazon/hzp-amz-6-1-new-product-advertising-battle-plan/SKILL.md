@@ -22,7 +22,7 @@ Formal identity: `6-1 | 新品广告作战规划 | New Product Advertising Battl
 ## Inputs and run sequence
 
 1. Resolve the confirmed Product Code and Product Root under `E:\【所有产品目录专用】\` unless the user supplies another root. Read the current `01_产品档案.md` and `04_产品推广思路.md` for product core demand and launch constraints; do not infer product identity from ASINs or filenames.
-2. Run `scripts/battle_plan.py inspect-inputs --product-root <ProductRoot> --product-code <ProductCode>`. It selects the newest complete valid 6-0-3 manifest-backed Run Package as one unit and falls back to the previous complete valid run. Never select the summary and mapping independently or read legacy root-level pairs.
+2. Run `scripts/battle_plan.py inspect-inputs --product-root <ProductRoot> --product-code <ProductCode>`. It resolves the governed 603 Registry/Manifest and reads the exact summary and mapping identities from the current complete `data/` Batch; both files must share the Registry/Manifest `RUN_TIMESTAMP`. Filesystem mtime and greatest filename selection are not version signals.
 3. Read the paired 6-0-3 Intent Summary and Keyword Mapping completely. Accept the current single-benchmark mapping schema or the multi-benchmark schema documented in [run-package-contract.md](references/run-package-contract.md). Preserve source metrics and record Ids; do not add benchmark rows together or recalculate parent/child totals.
 4. If a complete latest valid 6-0-6 run exists, read its Intent occupation detail and multi-benchmark consensus in the `inspect-inputs` result as reality evidence. If it does not exist, record `606_EVIDENCE_NOT_AVAILABLE` and continue without fabricating it.
 5. Make the business decisions described in [decision-contract.md](references/decision-contract.md). Consider product core need, parent/child Intent relationships, market scale, competition environment, concrete breakthrough keywords, and benchmark evidence together. Do not use fixed weights or mechanically promote the largest search volume, highest opportunity ratio, lowest competitor count, or best benchmark rank.
@@ -36,16 +36,7 @@ Write under the current Product Root:
 
 `06_SKILL分析报告/6-1_新品广告作战规划/`
 
-The package contains:
-
-- `6-1_新品意图市场作战表_{timestamp}.csv` (A)
-- `6-1_新品关键词阶段规划表_{timestamp}.csv` (C)
-- `6-1_新品关键词作战明细_{timestamp}.csv` (B)
-- `6-1_广告创建参数表_{timestamp}.csv` (Creation Blueprint; one row per approved target)
-- `6-1_新品广告作战规划报告_{timestamp}.html`
-- per-file `.meta.json` lineage sidecars
-
-The five formal deliverables and their sidecars use one `RUN_TIMESTAMP`. Reports are written directly in the fixed 6-1 output root without a timestamp subfolder, with previous files preserved. See [run-package-contract.md](references/run-package-contract.md) for schemas, the stable registry, and approval rules.
+The four formal CSV deliverables are one validated batch under `data/`; only the current complete `LATEST VALID` batch remains there. The RunPackage/Manifest is under `_system/manifests/`, sidecars under `_system/metadata/`, stable Registry under `_system/registry/`, and old valid batches under `历史数据/<RUN_TIMESTAMP>/`. The HTML is published as the single current human report in the Skill root; older HTML goes to `历史HTML/`. All five formal deliverables use one `RUN_TIMESTAMP`. See [run-package-contract.md](references/run-package-contract.md) for schemas, the stable registry, and approval rules.
 
 ## Report and handoff
 
@@ -54,3 +45,11 @@ The HTML is a self-contained decision dashboard rendered from this run's A/C/B a
 Independent campaigns are Intent-aware and include the stable Intent Code. Shared campaigns are role pools and omit Intent Code. The campaign preview uses `{ProductCode}.{CampaignTag}.{AdType}-{Role}-{TargetType}-[IntentCode]-{Seq}`; an independent CampaignTag is a runtime input and must not be guessed. When missing, display the supplied placeholder `{ProductCode}.{CampaignTag}.SP-COR-EXA-SBG-01`.
 
 State in the completion report which 603 run was consumed, whether 606 evidence was available, the output package path/status, and any unresolved compatibility limit. The 6-2 handoff points to this one complete package; downstream readers must not combine files from different runs.
+
+## Human Report Publishing
+
+本 Skill 生成正式 HTML 报告时，遵循统一的人类可见报告规则：Skill 报告根目录只保留一个当前最新 HTML；旧 HTML（以及同名 `.meta.json`）全部移动到同级 `历史HTML/`，不删除、不覆盖。一次性 Skill 的正式机器 CSV/JSON 只进入当前 Skill 报告目录的 `data/`，且只保留完整 `LATEST VALID` Batch；RunPackage/Manifest、metadata sidecar、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`。HTML 仅按人类报告规则发布到根目录或 `历史HTML/`。完成写入、回读和校验后才发布当前报告；失败或不完整 Run 不得发布。公共实现与索引规则见 [`skills/references/human-report-publishing.md`](../references/human-report-publishing.md)。
+
+## 全局报告文件治理（适用本 Skill）
+
+本 Skill 遵循公共 `scripts/hzp_amz_report_contract.py`、[human-report-publishing.md](../references/human-report-publishing.md) 与 [report-governance.md](../references/report-governance.md)：正式机器业务数据只进入当前 Skill 报告目录的 `data/`，`data/` 只保留完整 `LATEST VALID` Batch；旧 VALID Batch 整包进入 `历史数据/<RUN_TIMESTAMP>/`。RunPackage/Manifest、metadata、稳定 Registry、日志分别进入 `_system/manifests/`、`_system/metadata/`、`_system/registry/`、`_system/logs/`。新 Batch 必须先 Staging、验证完整性后再原子发布；失败不得替换旧 data。根目录只保留最新人类 HTML（如有）及正式子目录，机器数据不得写根目录。下游通过正式 Registry/Resolver 读取 `data/`，不得按 HTML 或根目录 mtime 选数。已有成熟时间戳 Run Package 的持续 Skill 可保留其内部运行包，但仍遵守根目录清洁和系统资产分层。

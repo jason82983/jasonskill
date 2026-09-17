@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from tempfile import TemporaryDirectory
 import csv
 import importlib.util
@@ -234,9 +234,9 @@ def test_complete_query_is_called_once_and_csv_has_bom(tmp_path):
     assert len(calls) == 1
     paths = module.write_dual_csvs(tmp_path, "B2", dual["manual_rows"], dual["ai_blind_rows"])
     assert paths["ai"].name.startswith("6-0-2_精准判断所有词表_") and paths["ai"].suffix == ".csv"
-    assert paths["high_precision"].name.startswith("6-0-2_高度精准词表_") and paths["high_precision"].suffix == ".csv"
-    assert paths["deduplicated"].name.startswith("6-0-2_去对标去重 高度精准词_") and paths["deduplicated"].suffix == ".csv"
-    fixed = [paths[key] for key in ("ai", "high_precision", "deduplicated")]
+    assert paths["high_precision"].name.startswith("6-0-2_筛选后的对标精准词_") and paths["high_precision"].suffix == ".csv"
+    assert paths["deduplicated"].name.startswith("6-0-2_去对标去重_筛选后的精准词_") and paths["deduplicated"].suffix == ".csv"
+    fixed = [paths[key] for key in ("ai", "high_precision", "deduplicated_benchmark", "deduplicated")]
     assert len({path.parent for path in fixed}) == 1
     assert len({path.stem.rsplit("_", 1)[-1] for path in fixed}) == 1
     for path in fixed:
@@ -259,14 +259,17 @@ def test_output_paths_exclude_formal_index_root():
     assert "06_SKILL分析报告" in str(paths["ai"])
     assert "6-0-2_AI精准关键词识别" in str(paths["ai"])
     assert paths["ai"].name.startswith("6-0-2_精准判断所有词表_") and paths["ai"].suffix == ".csv"
-    assert paths["high_precision"].name.startswith("6-0-2_高度精准词表_") and paths["high_precision"].suffix == ".csv"
-    assert paths["deduplicated"].name.startswith("6-0-2_去对标去重 高度精准词_") and paths["deduplicated"].suffix == ".csv"
-    fixed = [paths[key] for key in ("ai", "high_precision", "deduplicated")]
+    assert paths["high_precision"].name.startswith("6-0-2_筛选后的对标精准词_") and paths["high_precision"].suffix == ".csv"
+    assert paths["deduplicated"].name.startswith("6-0-2_去对标去重_筛选后的精准词_") and paths["deduplicated"].suffix == ".csv"
+    fixed = [paths[key] for key in ("ai", "high_precision", "deduplicated_benchmark", "deduplicated")]
     assert len({path.parent for path in fixed}) == 1
     assert len({path.stem.rsplit("_", 1)[-1] for path in fixed}) == 1
 
 
 def test_low_level_writer_writes_three_shared_assets_for_unscoped_rows(tmp_path):
+    config = tmp_path / "01_公共资料" / "03_系统配置" / "生成精准词库的要求.txt"
+    config.parent.mkdir(parents=True)
+    config.write_text("高度精准\n精准\n", encoding="utf-8")
     rows = [
         {"Id": "1", "词": "high term", "中文": "高", "市场容量": "500", "竞争产品数": "50", "供需比": "10.0000", "对标覆盖数": "2", "最佳自然排名": "1", "自然排名中位数": "2", "精准度": "高度精准", "精准原因": "具体商品意图与产品事实高度匹配"},
         {"Id": "2", "词": "regular term", "中文": "普", "市场容量": "400", "竞争产品数": "40", "供需比": "10.0000", "对标覆盖数": "1", "最佳自然排名": "2", "自然排名中位数": "2", "精准度": "精准", "精准原因": "主要购买意图匹配但存在扩散"},
@@ -275,17 +278,18 @@ def test_low_level_writer_writes_three_shared_assets_for_unscoped_rows(tmp_path)
     ]
     ai_path = module.write_full_ai_csv(tmp_path, "B2", rows, write_metadata=False)
     stamp = ai_path.stem[-15:]
-    assert ai_path.parent == tmp_path / "06_SKILL分析报告" / module.OUTPUT_DIR
-    high_precision_path = ai_path.with_name(ai_path.name.replace("精准判断所有词表", "高度精准词表"))
-    deduplicated_path = ai_path.with_name(ai_path.name.replace("精准判断所有词表", "去对标去重 高度精准词"))
+    assert ai_path.parent == tmp_path / "06_SKILL分析报告" / module.OUTPUT_DIR / "data"
+    high_precision_path = ai_path.with_name(ai_path.name.replace("精准判断所有词表", "筛选后的对标精准词"))
+    deduplicated_benchmark_path = ai_path.with_name(ai_path.name.replace("精准判断所有词表", "去重_筛选后的对标精准词"))
+    deduplicated_path = ai_path.with_name(ai_path.name.replace("精准判断所有词表", "去对标去重_筛选后的精准词"))
     assert ai_path.stem.endswith(f"_{stamp}")
-    assert high_precision_path.is_file() and deduplicated_path.is_file()
+    assert high_precision_path.is_file() and deduplicated_benchmark_path.is_file() and deduplicated_path.is_file()
     assert tuple(_read_csv(ai_path)[0]) == module.OBSERVATION_FINAL_COLUMNS
     high = _read_csv(high_precision_path)
-    assert [row["词"] for row in high] == ["high term"]
+    assert [row["词"] for row in high] == ["high term", "regular term"]
     unique = _read_csv(deduplicated_path)
     assert tuple(unique[0]) == module.DEDUPLICATED_FINAL_COLUMNS
-    assert [row["词"] for row in unique] == ["high term"]
+    assert [row["词"] for row in unique] == ["high term", "regular term"]
     assert "所属产品编号" not in unique[0]
 
 def test_final_ai_rows_sort_search_volume_descending_with_missing_last_and_stable_ties():
@@ -754,5 +758,7 @@ if __name__ == "__main__":
         test_empty_result_keeps_only_final_header(Path(directory))
     test_output_paths_exclude_formal_index_root()
     print("6-0-2 dual precision CSV tests: PASS")
+
+
 
 

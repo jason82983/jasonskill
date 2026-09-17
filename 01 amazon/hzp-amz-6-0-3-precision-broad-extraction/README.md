@@ -1,27 +1,47 @@
-﻿# HZP Amazon 6-0-3 | 精准泛词
+# HZP Amazon 6-0-3｜精准泛词提取 / Search Intent Market Map
 
-`hzp-amz-6-0-3-precision-broad-extraction` reads only C, `去对标去重 高度精准词` (`Report_Key=UNIQUE_HIGH_PRECISION_KEYWORDS`), from the latest complete `VALID` 6-0-2 Run Package under `06_SKILL分析报告/6-0-2_AI精准关键词识别/`. Its `Report_Identity` is `去对标去重 高度精准词`. `resolve_latest_valid_602_run_package(product_root, product_code)` validates the timestamped manifest, the three shared assets and all N per-benchmark D assets, schemas and counts, then falls back over failed/incomplete runs. 603 never uses A (`精准判断所有词表`), B (`高度精准词表`) or D as Intent input and never looks up a latest standalone CSV. The unique input must contain only `高度精准` rows and one canonical keyword per row; duplicate canonical keywords fail with `603_INPUT_DUPLICATE_KEYWORD`, and other precision values fail with `603_INPUT_NOT_ALL_HIGH_PRECISION`. The input lineage records the 602 Run ID, timestamp, folder, C file, record count and unique keyword count. It never rejudges precision, queries ERP, or performs advertising writes.
+`hzp-amz-6-0-3-precision-broad-extraction` 只消费 6-0-2 正式 C 资产：
+`6-0-2_去重去对标后 筛选后的精准词表_YYYYMMDD_HHMMSS.csv`。解析当前产品的
+`06_SKILL分析报告/6-0-2_AI精准关键词识别/data/`，按文件名时间戳取最大值（filename timestamp）并做最小
+Schema 校验；不把 RunPackage、Manifest、sidecar 或文件修改时间作为上下游前置条件。
 
-The AI maps every source record to exactly one canonical primary Search Intent and at most one direct parent. It preserves commercially independent dimensions such as a stable purchase occasion when the dimension is independently operable, while compressing incidental modifiers. A parent must exist as an intent and the tree cannot contain cycles.
+输入必须满足“一条 Canonical Keyword 一行”。A/B/D（包括“精准判断所有词表”和“筛选后的精准词表”）不参与603 Intent输入。重复 Canonical Keyword 返回
+`INPUT_NOT_UNIQUE`，603 不静默再去重，也不重新判断精准度、查询 ERP、处理 Benchmark
+重复或执行广告写操作。当前产品资料只用于理解 Purchase Driver 和搜索任务；优先复用
+602 已形成的产品语义证据。
 
-The program preserves each source `Id`, `竞争产品数` and `供需比`, validates Coverage and tree integrity, calculates direct volume and recursive aggregated volume from the input `市场容量`, and checks root-volume consistency. Intent `平均竞品数` is the direct arithmetic mean of valid (`> 0`) keyword-level competitor counts from unique source Ids across the full intent subtree; NULL, invalid, and zero values are excluded, with `DATA_NOT_AVAILABLE` when no valid value exists. Intent `意图机会比` is `汇总搜索量 / 平均竞品数`, rounded to four decimals. It is an internal opportunity signal, not an official Amazon ratio, difficulty score, unique ASIN count, or investment conclusion. Never sum competitor counts, average keyword ratios, use weighted averages, or average child averages. Parent and child aggregates can overlap by containment; they must never be added across levels. Missing inputs produce `DATA_NOT_AVAILABLE`.
+Intent Brain 分两阶段运行：Phase A 为每个关键词形成 Keyword Semantic Unit；Phase B
+基于这些单位全局合并同义购买任务、分配唯一 Primary Intent，并构建最多一个直接 Parent。
+大数据可分批，但必须 Global Reconciliation，不能把各批次树直接拼接。关系、场景、产品类型、
+兼容性等维度按当前产品的 Primary Purchase Driver 判断；字符串包含、词长和公共词根不能单独
+决定同Intent或父子关系。每个关键词保留 `IntentAssignmentReason`、`ChallengeResult` 和
+`ChallengeReasonSummary`，但不暴露隐藏推理过程。
 
-Each run captures one strict `RUN_TIMESTAMP` (`YYYYMMDD_HHMMSS`) and writes one
-complete package directly to `06_SKILL分析报告/6-0-3_精准泛词提取/`; no timestamp
-subfolder is created. The two UTF-8-BOM CSV filenames and
-`run_manifest_{RUN_TIMESTAMP}.json` belong to the same run. Historical files
-are preserved:
+## 输出
 
-1. `6-0-3_[Product_Code]_词对应的精准泛词_YYYYMMDD_HHMMSS.csv` (nine columns: `Id,词,中文,市场容量,竞争产品数,供需比,自然排名,精准泛词,精准泛词中文`)
-2. `6-0-3_[Product_Code]_精准泛词汇总_YYYYMMDD_HHMMSS.csv` (nine columns: `精准泛词,中文,层级,父精准泛词,直接搜索量,汇总搜索量,平均竞品数,意图机会比,直接对应词数`)
+正式输出写入 `06_SKILL分析报告/6-0-3_精准泛词提取/data/`，文件名带
+`YYYYMMDD_HHMMSS`；历史批次保留在 `历史数据/`，HTML（如生成）遵循公共报告归档规则。
 
-Before success, data-integrity checks compare mapping pass-through fields by Id and validate subtree average and ratio formulas. The generated CSV pair is read back and checked again.
+**B：`6-0-3_词对应的精准泛词_{timestamp}.csv`（Ground Truth）**
 
-The timestamped manifest records the selected 602 Run lineage, product
-identity, output files/counts, validation, and status. A run becomes `VALID`
-only after both files are written and pass readback integrity checks. Use
-`resolve_latest_valid_603_run_package(product_root, product_code)` or
-`latest_output_paths(product_root, product_code)` to select both files from the
-newest complete valid package; incomplete and failed runs are skipped. The
-summary is an internal aggregation of 6-0-2 evidence, not Amazon's official
-intent volume.
+固定字段：
+
+`Id｜词｜中文｜市场容量｜竞争产品数｜供需比｜自然排名｜精准泛词｜精准泛词中文｜PrimaryIntentId｜PrimaryIntentCode｜KeywordPurchaseMission｜Intent层级｜ParentIntentId｜父精准泛词｜IntentAssignmentReason｜ChallengeResult｜ChallengeReasonSummary`
+
+每个输入 Id 只出现一行，且只归属一个 Primary Intent。
+
+**A：`6-0-3_精准泛词汇总_{timestamp}.csv`（由 B 程序聚合）**
+
+固定字段：
+
+`精准泛词｜中文｜层级｜父精准泛词｜直接搜索量｜汇总搜索量｜平均竞品数｜意图机会比｜直接对应词数｜IntentId｜IntentCode｜IntentDefinition｜PrimaryPurchaseDriver｜ChallengeStatus｜ChallengeReasonSummary`
+
+直接搜索量、父/子 Subtree 汇总、平均竞品数、意图机会比及市场容量对账全部由程序计算；
+不求和竞品数、不平均子节点比值、不把父子汇总跨层相加。所有 Primary Intent 的直接搜索量
+必须与输入市场容量对账，否则返回 `MARKET_VOLUME_RECONCILIATION_FAILED`。
+
+稳定 Intent 身份优先复用既有 Registry；当前没有 Registry 时使用由 Canonical Intent
+Identity 派生的稳定标识，禁止按本次运行顺序生成 `INTENT_001` 造成漂移。
+
+606 通过 603 的 `data/` 读取统一 Intent Map 观察多对标自然占领；6-1 读取 A、B 及可用
+606 Reality Evidence 制定广告作战计划。603 只提供 Search Intent 市场结构，不输出广告决策。
