@@ -1,8 +1,0 @@
-interface:
-  display_name: "HZP Amazon 6-3｜广告诊断优化"
-  short_description: "基于6-2广告事实与605作战目的形成决策，不执行广告写入"
-  brand_color: "#7C3AED"
-  default_prompt: "Use $hzp-amz-6-3-advertising-diagnosis-optimization as the advertising DECIDE layer: resolve the latest complete 6-2 facts package, approved 6-0-5 purpose, supporting 6-0-3 intent context and optional 6-0-6 reality evidence; decide every Intent, Campaign, Target and Search Term with evidence maturity, reason and next observation; build the traceable decision package for human approval and 6-4 execution. Never query fresh advertising performance or write Amazon Ads."
-
-policy:
-  allow_implicit_invocation: true

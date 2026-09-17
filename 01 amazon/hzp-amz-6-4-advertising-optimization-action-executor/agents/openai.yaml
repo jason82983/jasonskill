@@ -1,6 +1,0 @@
-interface:
-  display_name: "HZP Amazon 6-4｜广告优化动作执行"
-  short_description: "执行已批准的广告优化动作并验证实际结果"
-  default_prompt: "Use $hzp-amz-6-4-advertising-optimization-action-executor to execute an approved 6-3 decision package with live-state checks, exact preview approval, and read-back verification."
-policy:
-  allow_implicit_invocation: true
