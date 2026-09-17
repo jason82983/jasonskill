@@ -162,7 +162,7 @@ Gate 只用于 AI 内部检查证据完整性和分析顺序，不用于暂停�
 当前版本完成七个已定义阶段和可用辅助分析后，直接生成正式 HTML：
 
 ```text
-06_SKILL分析报告/2-2_细分市场分析/2-2_细分市场分析_[YYYYMMDD_HHMMSS].html
+06_SKILL分析报告/2-2_细分市场分析/2-2_[产品编号]_细分市场分析_V[版本号]_[YYYYMMDD]_[HHMMSS].html
 ```
 
 报告必须显示当前 2-2 框架版本、阶段 1–7 结论、六阶段决策总览、硬否决检查、正反方检查、最终裁决逻辑、市场进入决策书、阶段 5 的消费者未满足需求地图与证据、阶段 6 的产品切入机会池/地图与验证项、实际使用的数据与证据、辅助分析标识及缺失/冲突说明。
@@ -173,11 +173,3 @@ Gate 只用于 AI 内部检查证据完整性和分析顺序，不用于暂停�
 
 本次只增量正式加入阶段 7｜市场进入决策；不重新设计阶段 1–6，不修改 2-1、0-1、0-2、原始数据或产品目录结构。
 
-
-## 全局正式报告目录与命名规则
-
-本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。若 HTML 由同批 CSV 生成，必须从文件名时间戳相同的 CSV 读取并生成不可变快照；禁止运行时另找“最新 CSV”。未由 CSV 构成输入的 HTML 报告遵循对应 Skill 的原有报告内容逻辑。此规则优先于本文档中旧的目录和文件名示例。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

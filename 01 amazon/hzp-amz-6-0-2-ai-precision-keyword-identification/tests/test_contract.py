@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 import importlib.util
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = (ROOT / "SKILL.md").read_text(encoding="utf-8-sig")
@@ -21,7 +21,9 @@ def test_full_output_contract():
     assert "\u7ade\u4e89\u4ea7\u54c1\u6570" in module.AI_EXCLUDED_FIELDS
     assert "\u4f9b\u9700\u6bd4" in module.AI_EXCLUDED_FIELDS
     assert len(module.FULL_FINAL_COLUMNS) == 11
-    assert tuple(module.FULL_FINAL_COLUMNS[:9]) == module.BENCHMARK_RAW_COLUMNS
+    assert module.OBSERVATION_FINAL_COLUMNS[0:3] == ("所属产品编号", "对标ASIN", "Id")
+    assert module.DEDUPLICATED_FINAL_COLUMNS == module.FULL_FINAL_COLUMNS
+    assert module.BENCHMARK_RAW_COLUMNS[-2:] == ("ASIN", "产品编号")
     assert "do not pass the raw 6-0-1 rows to the judgment prompt" in SKILL
     assert "This AI blind view omits `\u7ade\u4e89\u4ea7\u54c1\u6570` and `\u4f9b\u9700\u6bd4`" in SKILL
     assert "data_integrity_check" in (ROOT / "scripts" / "dual_precision_csv.py").read_text(encoding="utf-8-sig")
@@ -30,7 +32,8 @@ def test_full_output_contract():
     assert module.FILE_A_RECORD_COVERAGE_MISMATCH == "FILE_A_RECORD_COVERAGE_MISMATCH"
     assert module.FILE_B_RECORD_COVERAGE_MISMATCH == "FILE_B_RECORD_COVERAGE_MISMATCH"
     assert "INPUT_RECORD_COUNT" in SKILL and "OUTPUT_RECORD_COUNT" in SKILL
-    assert "Coverage Check" in SKILL
+    assert "Coverage" in SKILL
+    assert "3+N" in SKILL
     assert "UTF-8 with BOM" in README
     for level in ("高度精准", "精准", "弱精准", "不精准"):
         assert level in SKILL and level in README
@@ -39,7 +42,10 @@ def test_full_output_contract():
     assert "0–100" in SKILL
     assert "CURRENT_PRODUCT_UNDERSTANDING" in SKILL
     assert "calibration-cases.md" in SKILL
-    assert "AI高度精准词.csv" in SKILL
+    assert "6-0-2_精准判断所有词表_{RUN_TIMESTAMP}.csv" in SKILL
+    assert "6-0-2_高度精准词表_{RUN_TIMESTAMP}.csv" in SKILL
+    assert "6-0-2_去对标去重 高度精准词_{RUN_TIMESTAMP}.csv" in SKILL
+    assert "6-0-2_{所属产品编号}_高度精准词_{RUN_TIMESTAMP}.csv" in SKILL
     assert "No manual-precision CSV is generated" in SKILL
 def test_semantic_guardrails():
     for term in ("gift", "sister", "\u6cdb\u793c\u7269", "\u6cdb\u5bf9\u8c61", "\u641c\u7d22\u91cf", "Benchmark"):

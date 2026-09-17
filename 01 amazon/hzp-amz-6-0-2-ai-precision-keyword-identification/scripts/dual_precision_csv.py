@@ -1,4 +1,4 @@
-"""Dual-track precision-keyword views for Stage 6-0-2.
+﻿"""Dual-track precision-keyword views for Stage 6-0-2.
 
 The normal 6-0-2 inputs are the complete current-product text evidence file
 and the all-observation CSV from the latest valid, timestamped 6-0-1 batch. This
@@ -27,12 +27,10 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 from scripts.stage6_artifact_contract import (  # noqa: E402
     assert_new_outputs,
-    make_artifact_metadata,
     new_run_context,
     resolve_latest_valid_report,
     timestamped_output_path,
     validate_601_run_package,
-    write_metadata_sidecar,
 )
 from scripts.hzp_amz_report_contract import (  # noqa: E402
     resolve_skill_report_dir, validate_hzp_amz_report_batch,
@@ -94,12 +92,6 @@ CURRENT_PRODUCT_TEXT_EVIDENCE_READY = "CURRENT_PRODUCT_TEXT_EVIDENCE_READY"
 CURRENT_PRODUCT_TEXT_RELATIVE = Path("05_分析源数据") / "01_产品数据" / "本产品" / "产品识别 - 文本文案.txt"
 RUN_MANIFEST_NAME = "run_manifest.json"
 RUN_MANIFEST_PREFIX = "6-0-2_RunPackage_"
-OUTPUT_A_IDENTITY = "AI_PRECISION_KEYWORD_OBSERVATIONS"
-OUTPUT_B_IDENTITY = "HIGH_PRECISION_KEYWORD_OBSERVATIONS"
-OUTPUT_C_IDENTITY = "去对标去重 高度精准词"
-OUTPUT_C_KEY = "UNIQUE_HIGH_PRECISION_KEYWORDS"
-OUTPUT_D_IDENTITY = "BENCHMARK_HIGH_PRECISION_KEYWORDS"
-
 SEMANTIC_PROFILE_FIELDS = (
     "Core_Product_Type", "Target_Customer", "Recipient", "Core_Functions",
     "Core_Use_Cases", "Purchase_Occasions", "Relationship_Intent",
@@ -1716,23 +1708,8 @@ def write_high_precision_csv(product_root: str | Path, product_code: str, rows: 
     paths = output_paths(product_root, product_code, context)
     selected = build_high_precision_rows(rows)
     path = paths["high_precision"]
-    assert_new_outputs([path, str(path) + ".meta.json"])
+    assert_new_outputs([path])
     write_csv(path, selected, columns=FULL_FINAL_COLUMNS)
-    metadata = make_artifact_metadata(
-        context, "HIGH_PRECISION_KEYWORDS", run_status="FULL_SUCCESS",
-        schema=FULL_FINAL_COLUMNS, record_count=len(selected),
-        inputs=[{
-            "Input_Skill": "CALLER_PROVIDED_DATA",
-            "Input_Report_Identity": "IN_MEMORY_PRECISION_DECISIONS",
-            "Input_File_Name": None,
-            "Input_Run_Timestamp": None,
-            "Input_Generated_At": None,
-            "Input_Record_Count": len(selected),
-            "Input_Resolution_Method": "CALLER_PROVIDED_IN_MEMORY",
-        }],
-        output_assets=[str(path)],
-    )
-    write_metadata_sidecar(path, metadata)
     return path
 
 
@@ -2092,6 +2069,7 @@ def finalize_ai_judgments(source_rows: Iterable[Mapping[str, Any]], decisions: M
     return {"rows":ordered,"coverage":coverage,"trace":trace,"evidence_context":dict(evidence_context or {})}
 
 def _write_ai_asset_pair(rows, paths, context, *, lineage=None, write_metadata=True, create_folder=True):
+    # 602 package metadata lives in the shared Run Manifest, never in per-CSV sidecars.
     values = list(rows)
     if values and not all("所属产品编号" in row and "对标ASIN" in row for row in values):
         values = [{"所属产品编号":"", "对标ASIN":"", "Id":row.get("Id"), "词":row.get("词",row.get("Keyword","")),
@@ -2107,8 +2085,7 @@ def _write_ai_asset_pair(rows, paths, context, *, lineage=None, write_metadata=T
     keys=("ai","high_precision","deduplicated"); staged={key:Path(str(paths[key])+".tmp") for key in keys}
     staged_benchmarks = {code: Path(str(path) + ".tmp") for code, path in paths.get("benchmarks", {}).items()}
     output_paths_all = [*(paths[key] for key in keys), *paths.get("benchmarks", {}).values()]
-    sidecars = [str(path) + ".meta.json" for path in output_paths_all]
-    assert_new_outputs([*output_paths_all, *sidecars, *staged.values(), *staged_benchmarks.values()])
+    assert_new_outputs([*output_paths_all, *staged.values(), *staged_benchmarks.values()])
     write_csv(staged["ai"], values, columns=OBSERVATION_FINAL_COLUMNS)
     write_csv(staged["high_precision"], high, columns=OBSERVATION_FINAL_COLUMNS)
     write_csv(staged["deduplicated"], unique, columns=DEDUPLICATED_FINAL_COLUMNS)
@@ -2116,19 +2093,6 @@ def _write_ai_asset_pair(rows, paths, context, *, lineage=None, write_metadata=T
         write_csv(temporary, benchmark_rows[code], columns=OBSERVATION_FINAL_COLUMNS)
     for key in keys: os.replace(staged[key], paths[key])
     for code, temporary in staged_benchmarks.items(): os.replace(temporary, paths["benchmarks"][code])
-    if write_metadata:
-        inputs=list(lineage or [{"Input_Skill":"CALLER_PROVIDED_DATA","Input_Report_Identity":"IN_MEMORY_PRECISION_DECISIONS","Input_File_Name":None,"Input_Run_Timestamp":None,"Input_Generated_At":None,"Input_Record_Count":len(values),"Input_Resolution_Method":"CALLER_PROVIDED_IN_MEMORY"}])
-        definitions={"ai":(OUTPUT_A_IDENTITY,values,OBSERVATION_FINAL_COLUMNS),"high_precision":(OUTPUT_B_IDENTITY,high,OBSERVATION_FINAL_COLUMNS),"deduplicated":(OUTPUT_C_IDENTITY,unique,DEDUPLICATED_FINAL_COLUMNS)}
-        assets=[str(path) for path in output_paths_all]
-        for key,(identity,output_rows,schema) in definitions.items():
-            extra = {"Report_Key": OUTPUT_C_KEY} if key == "deduplicated" else None
-            write_metadata_sidecar(paths[key],make_artifact_metadata(context,identity,run_status="FULL_SUCCESS",schema=schema,record_count=len(output_rows),inputs=inputs,output_assets=assets,extra=extra))
-        for code, benchmark_path in paths.get("benchmarks", {}).items():
-            write_metadata_sidecar(benchmark_path, make_artifact_metadata(
-                context, OUTPUT_D_IDENTITY, run_status="FULL_SUCCESS", schema=OBSERVATION_FINAL_COLUMNS,
-                record_count=len(benchmark_rows[code]), inputs=inputs, output_assets=assets,
-                extra={"Benchmark_Product_Code": code, "Report_Key": f"BENCHMARK_HIGH_PRECISION_KEYWORDS:{code}"},
-            ))
     return dict(paths)
 
 
@@ -2157,39 +2121,6 @@ def _write_run_manifest(run_folder: Path, manifest: Mapping[str, Any]) -> Path:
     temporary.write_text(json.dumps(dict(manifest), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, target)
     return target
-
-
-def _write_602_output_metadata(paths: Mapping[str, Path], context: Any, lineage: list[Mapping[str, Any]], rows_by_key: Mapping[str, list[Mapping[str, Any]]]) -> None:
-    definitions = {
-        "ai": (OUTPUT_A_IDENTITY, OBSERVATION_FINAL_COLUMNS),
-        "high_precision": (OUTPUT_B_IDENTITY, OBSERVATION_FINAL_COLUMNS),
-        "deduplicated": (OUTPUT_C_IDENTITY, DEDUPLICATED_FINAL_COLUMNS),
-    }
-    assets = [str(paths[key]) for key in definitions] + [str(path) for path in paths.get("benchmarks", {}).values()]
-    input_method = next(
-        (str(item.get("Input_Resolution_Method")) for item in lineage
-         if item.get("Input_Skill") == SIX_0_1_SKILL_ID and item.get("Input_Resolution_Method")),
-        "LATEST_VALID_601_RUN_PACKAGE",
-    )
-    for key, (identity, schema) in definitions.items():
-        extra = {"Input_Resolution_Method": input_method}
-        if key == "deduplicated":
-            extra["Report_Key"] = OUTPUT_C_KEY
-        metadata = make_artifact_metadata(
-            context, identity, run_status="FULL_SUCCESS", schema=schema,
-            record_count=len(rows_by_key[key]), inputs=lineage, output_assets=assets,
-            extra=extra,
-        )
-        write_metadata_sidecar(paths[key], metadata)
-    for code, path in paths.get("benchmarks", {}).items():
-        rows = rows_by_key["benchmarks"][code]
-        metadata = make_artifact_metadata(
-            context, OUTPUT_D_IDENTITY, run_status="FULL_SUCCESS", schema=OBSERVATION_FINAL_COLUMNS,
-            record_count=len(rows), inputs=lineage, output_assets=assets,
-            extra={"Input_Resolution_Method": input_method, "Benchmark_Product_Code": code,
-                   "Report_Key": f"BENCHMARK_HIGH_PRECISION_KEYWORDS:{code}"},
-        )
-        write_metadata_sidecar(path, metadata)
 
 
 def run_current_602(product_root: str | Path, product_code: str, decisions: Mapping[Any, Mapping[str, Any]] | Iterable[Mapping[str, Any]]) -> dict[str, Any]:
@@ -2297,26 +2228,6 @@ def run_current_602(product_root: str | Path, product_code: str, decisions: Mapp
             return result
         manifest["GeneratedBenchmarkFiles"] = [path.name for path in paths["benchmarks"].values()]
         manifest["Record Counts"]["Benchmark High Precision Observation Count"] = integrity["benchmark_output_observation_count"]
-        lineage = [
-            {"Input_Skill": "CURRENT_PRODUCT_TEXT_EVIDENCE", "Input_Report_Identity": "CURRENT_PRODUCT_TEXT_EVIDENCE",
-             "Input_File_Name": str(evidence.get("text_path") or ""), "Input_Run_Timestamp": None,
-             "Input_File_SHA256": evidence.get("content_sha256"),
-             "Input_File_Size_Bytes": evidence.get("content_size_bytes"),
-             "Input_File_Modified_At_NS": evidence.get("modified_at_ns"),
-             "Input_Generated_At": None, "Input_Record_Count": 1,
-             "Input_Resolution_Method": "CURRENT_PRODUCT_ROOT_FIXED_INPUT"},
-            {"Input_Skill": SIX_0_1_SKILL_ID, "Input_Report_Identity": SIX_0_1_REPORT_IDENTITY,
-             "Input_Report_Name": "所有对标自然排名关键词",
-             "Input_File_Name": str(resolved.get("file") or ""), "Input_Run_ID": resolved.get("run_id"),
-             "Input_Run_Timestamp": resolved.get("run_timestamp"), "Input_Folder": str(input_folder),
-             "Input_Generated_At": resolved.get("generated_at"), "Input_Record_Count": len(input_rows),
-             "Input_Unique_Keyword_Count": len(result["keyword_units"]),
-             "Input_Resolution_Method": resolved.get("input_resolution_method") or "LATEST_VALID_601_RUN_PACKAGE"},
-        ]
-        rows_by_key = {"ai": result["rows"], "high_precision": high_rows, "deduplicated": unique_rows,
-                       "benchmarks": {code: [row for row in high_rows if str(row.get("所属产品编号") or "").strip() == code]
-                                      for code in benchmark_product_codes}}
-        _write_602_output_metadata(paths, context, lineage, rows_by_key)
         manifest["Validation"] = integrity
         manifest["Run Status"] = "VALID"
         _write_run_manifest(run_folder, manifest)
@@ -2337,3 +2248,4 @@ def run_current_602(product_root: str | Path, product_code: str, decisions: Mapp
         "run_manifest": str(run_folder / f"{RUN_MANIFEST_PREFIX}{context.run_timestamp}.json"), "product_text_source": evidence.get("text_path"),
     })
     return result
+

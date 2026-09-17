@@ -5,13 +5,14 @@ metadata:
   short-description: 对标意图市场占领分析
 ---
 
+正式输出遵守共享 [报告目录与归档契约](../references/report-layout-contract.md)：CSV 进入 `data/`，HTML 根目录每个 Report Identity 只保留一个 `最新`，旧 HTML 进入 `历史HTML/`，metadata/manifest 进入 `_system/`；Latest Valid Data 不通过 HTML 文件名选择。
 # HZP Amazon 6-0-6｜对标意图市场占领分析
 
 正式身份：`6-0-6 | Benchmark Intent Market Occupancy Analysis | hzp-amz-6-0-6-benchmark-intent-market-occupancy-analysis`。
 
 ## 职责边界
 
-606 回答每个 Benchmark 在当前产品已建立的 Search Intent 中自然排名覆盖多深、哪些 Intent 有多对标共同证据、哪些主要是单点成功。它衡量 **Organic Search Occupancy**，不代表真实销量、GMV、订单、点击或任何 Sales Market Share。606 只提供 Reality Evidence，不重判精准度、不建/改 Intent Tree、不决定 6-0-5 首攻/核心/扩展、不执行广告或 ERP 写入。
+606 回答每个 Benchmark 在当前产品已建立的 Search Intent 中自然排名覆盖多深、哪些 Intent 有多对标共同证据、哪些主要是单点成功。它衡量 **Organic Search Occupancy**，不代表真实销量、GMV、订单、点击或任何 Sales Market Share。606 只提供 Reality Evidence，不重判精准度、不建/改 Intent Tree、不决定 6-1 首攻/核心/扩展、不执行广告或 ERP 写入。
 
 Keyword Market Fact（Id/词/中文/市场容量/竞争产品数/供需比）按唯一 KwId 只保存一份；Benchmark Observation（KwId/Benchmark Code/ASIN/自然排名）可有 N 份。Benchmark 数量不得放大任一市场事实或 603 Intent 需求分母。
 
@@ -20,10 +21,9 @@ Keyword Market Fact（Id/词/中文/市场容量/竞争产品数/供需比）按
 调用 `6-0-6, Product_Code` 后按 0-1 产品目录规则定位唯一 Product Root，并仅从下列正式目录选择当前产品的有效资产：
 
 1. 602 Benchmark D assets：LATEST VALID 602 Batch 中每个 `6-0-2_{所属产品编号}_高度精准词_{RUN_TIMESTAMP}.csv`，Report Identity `BENCHMARK_HIGH_PRECISION_KEYWORDS`，固定十一列 `所属产品编号,对标ASIN,Id,词,中文,市场容量,竞争产品数,供需比,自然排名,精准度,精准原因`；只接受 `精准度=高度精准` 的唯一词资产。
-2. 603 汇总：`06_SKILL分析报告/6-0-3_精准泛词提取/6-0-3_精准泛词汇总_*.csv`，Identity `PRECISION_BROAD_SUMMARY`，固定九列见 [数据契约](references/data-contract.md)。
-3. 603 映射：同目录 `6-0-3_词对应的精准泛词_*.csv`，Identity `PRECISION_BROAD_MAPPING`，使用正式多对标十一列 Schema。
+2. 603 汇总和映射：从 `06_SKILL分析报告/6-0-3_精准泛词提取/6-0-3_RunPackage_{RUN_TIMESTAMP}.json` 选择最新完整 `VALID` 包，再按该 manifest 的配套文件读取 `6-0-3_精准泛词汇总_{RUN_TIMESTAMP}.csv` 与 `6-0-3_词对应的精准泛词_{RUN_TIMESTAMP}.csv`。两表必须来自同一包。汇总为固定九列；映射使用 603 正式九列 Schema，见 [数据契约](references/data-contract.md)。603 的共享 RunPackage 是权威元数据，不要求逐 CSV `.meta.json`。
 
-602 必须解析最新完整有效的 3+N Batch；Resolver 校验三张公共表、所有预期 D 文件及 metadata 后，按 RUN_TIMESTAMP 回退到最近完整 VALID Batch。606 从同一批次读取全部 D 文件；603 汇总与映射必须来自同一非空 RUN_ID 和 RUN_TIMESTAMP，且是最新有效配套资产。校验 Report Identity、Schema、状态、路径、时间戳、产品身份与记录数。不得按 mtime、文件夹顺序或不同运行拼接。不得回退到旧单对标 603 Schema。缺输入、跨产品或运行不一致、Schema 不符、空数据时 fail closed。
+602 必须解析最新完整有效的 3+N Batch；Resolver 校验三张公共表、所有预期 D 文件及 metadata 后，按 RUN_TIMESTAMP 回退到最近完整 VALID Batch。606 从同一批次读取全部 D 文件。603 按共享 RunPackage 中的产品身份、状态、时间戳、输出路径、文件名、Schema 和记录数校验；若最新 RunPackage 失败或不完整，回退到最近完整 VALID 包。不得按 mtime、散落 CSV 的文件时间、文件夹顺序或不同运行拼接。缺输入、跨产品或运行不一致、Schema 不符、空数据时 fail closed。
 
 `Id` 是跨 ProId 稳定唯一的 KwId；按它将 602 D 表的高精准 Benchmark 观察与 603 Primary Keyword 映射精确 Join。Benchmark Code 与 ASIN 来自同一 602 manifest 的 Benchmark Identities metadata，并须与对应 D 文件及所属产品编号一致。无 ASIN/Benchmark Code、Benchmark 身份冲突、重复 KwId×Benchmark、603 KwId 在 602 D 资产找不到、市场事实冲突、非高度精准、缺少 Primary Intent 映射、树结构非法或搜索量事实不一致时不得 `FULL_SUCCESS`。不按关键词文本、产品名称或 Benchmark 名称模糊 Join。
 
@@ -50,11 +50,3 @@ AI 只能基于程序计算好的指标和 Parent/Child 结构，逐个给单一
 ## 运行流程
 
 先运行 `python scripts/benchmark_intent_occupancy.py inspect --product-root "<Product Root>" --product-code B2`。基于真实已解析输入生成逐 Benchmark×Intent 与逐 Intent 的 AI 判断 JSON（不让 AI 重算数学指标），然后运行 `build ... --decisions <json>`。程序写入前完成所有验证；关键错误不得生成 `FULL_SUCCESS`。成功生成 HTML 后按项目规则调用 0-2 更新索引。禁止直接使用真实写接口。
-
-## 全局正式报告目录与命名规则
-
-本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。若 HTML 由同批 CSV 生成，必须从文件名时间戳相同的 CSV 读取并生成不可变快照；禁止运行时另找“最新 CSV”。未由 CSV 构成输入的 HTML 报告遵循对应 Skill 的原有报告内容逻辑。此规则优先于本文档中旧的目录和文件名示例。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时先按 Context Manifest 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；保留本 Skill 的业务边界和正式 Ground Truth，不重复判断上游已锁定事实。重要 AI Judgment 在输出前执行 Decision Challenge，并由 Reason Trace 生成可解释原因。

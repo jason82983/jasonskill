@@ -9,7 +9,7 @@ metadata:
 
 ## 定位与边界
 
-7-1 负责回答：从今天开始库存还能撑多久、下一批何时真正可售、何时下单、补多少，以及断货和积压风险。6-2 负责发现库存风险，7-2 负责持续库存风险管理；7-1 不替代 7-2，不做其他 Skill 的完整分析。
+7-1 负责回答：从今天开始库存还能撑多久、下一批何时真正可售、何时下单、补多少，以及断货和积压风险。6-5 负责发现库存风险，7-2 负责持续库存风险管理；7-1 不替代 7-2，不做其他 Skill 的完整分析。
 
 - 使用真实库存、销售、在途、供应商、物流、推广和促销证据。
 - 不修改 `01_产品档案.md`、原始库存/供应链数据、历史 HTML 或 `index.html`。
@@ -20,9 +20,9 @@ metadata:
 使用本次确认的 Products Root、Product Root 和 Product Code。先读取：
 
 1. `[Product Root]/01_产品档案.md`；身份缺失或冲突时停止，禁止根据 ASIN、文件名或经验猜身份。
-2. `[Product Root]/06_SKILL分析报告/` 中当前产品最新有效的 6-2 正式报告，优先读取《7-1输入交接包》。
+2. `[Product Root]/06_SKILL分析报告/` 中当前产品最新有效的 6-5 正式报告，优先读取《7-1输入交接包》。
 3. `[Product Root]/05_分析源数据/` 和 `[Product Root]/07_产品资料/` 中真实库存、销售、采购、供应商、生产、运输、入仓、促销和季节资料。
-4. 按需辅助回查最新有效 6-2、6-1、5-4、2-2、2-1，确认推广放量、促销影响、销量变化、页面状态和市场需求；不得重新完整执行这些 Skill。
+4. 按需辅助回查最新有效 6-5、6-2、5-4、2-2、2-1，确认推广放量、促销影响、销量变化、页面状态和市场需求；不得重新完整执行这些 Skill。
 
 必须根据实际字段和内容识别数据，不凭文件名猜语义。搜索范围优先限定当前 Product Root。
 
@@ -30,7 +30,7 @@ metadata:
 
 按 `Product Code + Skill 编号` 选择版本化正式报告：最大 `V` 优先，同 `V` 按文件名 `YYYYMMDD_HHMMSS` 最新。排除 `index`、失败、invalid、incomplete、deprecated、draft、preview、temp、test 和非正式输出；不得使用 filesystem 顺序、modified time、created time、跨产品文件或静默旧版回退。无法确认有效性时标记 `【上游报告有效性无法确认】`。
 
-正式 HTML 必须生成《输入版本追溯》，记录实际读取的 Skill 编号、中文名称、文件名、版本、时间戳、输入类型和用途。6-2 为【核心输入】；6-3/6-1 等按需为【辅助回查】；历史版本为【历史版本对照】。
+正式 HTML 必须生成《输入版本追溯》，记录实际读取的 Skill 编号、中文名称、文件名、版本、时间戳、输入类型和用途。6-5 为【核心输入】；6-3/6-2 等按需为【辅助回查】；历史版本为【历史版本对照】。
 
 ## 核心计算原则
 
@@ -108,11 +108,3 @@ Lead Time 尽量拆为生产前准备、生产、验货/出货、国内运输、
 正式报告写入并确认文件存在、命名正确后，调用 `hzp-amz-0-2-report-index`，原样传递 Product Code、Products Root、Product Root。7-1 不扫描、生成、排序、维护或备用更新 `index.html`；报告成功但索引失败时保留报告并分别报告两种状态。
 
 详细规则见 [references/replenishment-framework.md](references/replenishment-framework.md)，7-2 交接见 [references/handoff-schema.md](references/handoff-schema.md)，HTML 结构见 [templates/report-outline.md](templates/report-outline.md)。
-
-## 全局正式报告目录与命名规则
-
-本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。若 HTML 由同批 CSV 生成，必须从文件名时间戳相同的 CSV 读取并生成不可变快照；禁止运行时另找“最新 CSV”。未由 CSV 构成输入的 HTML 报告遵循对应 Skill 的原有报告内容逻辑。此规则优先于本文档中旧的目录和文件名示例。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

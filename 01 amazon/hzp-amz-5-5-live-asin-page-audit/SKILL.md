@@ -54,7 +54,7 @@ metadata:
 
 ## 连续执行流程
 
-身份确认 → 选择最新 5-1～5-4 → 获取 Live Page Snapshot → 判断真实前台/后台/策划审核 → 页面完整性 → 策略到线上执行矩阵 → Listing 文案一致性 → 视觉执行与主图 → 首屏与购买路径 → Claim/真实性/合规 → Offer → Review/VOC → 竞争现实 → 根因诊断 → P0/P1/P2/P3 优先级 → 跨 Skill 路由 → 反方检查 → 形成 6-1 输入交接包（仅条件满足）→ 生成正式 HTML → 确认落盘 → 调用 0-2。
+身份确认 → 选择最新 5-1～5-4 → 获取 Live Page Snapshot → 判断真实前台/后台/策划审核 → 页面完整性 → 策略到线上执行矩阵 → Listing 文案一致性 → 视觉执行与主图 → 首屏与购买路径 → Claim/真实性/合规 → Offer → Review/VOC → 竞争现实 → 根因诊断 → P0/P1/P2/P3 优先级 → 跨 Skill 路由 → 反方检查 → 形成 6-2 输入交接包（仅条件满足）→ 生成正式 HTML → 确认落盘 → 调用 0-2。
 
 正式 HTML 必须包含《输入版本追溯》，只列本次实际读取的报告和资料，并标明核心输入、辅助回查或历史版本对照。
 
@@ -91,11 +91,11 @@ metadata:
 
 每项清单必须有编号、模块、当前问题、证据、业务影响、修改方向、责任 Skill 和验证方法。允许结论为【建议保持当前页面】；不要为了证明价值强行制造问题。
 
-路由：策略 → 5-1；文案 → 5-2；图片/视频/A+ → 5-3；页面成品 QA → 5-4；产品差异化 → 3-2；产品方案 → 3-3；样品/量产 → 4-1/4-2；广告流量/Target → 6-3；经营异常 → 6-2；市场结构变化 → 2-2。5-5 不直接改页面或广告。
+路由：策略 → 5-1；文案 → 5-2；图片/视频/A+ → 5-3；页面成品 QA → 5-4；产品差异化 → 3-2；产品方案 → 3-3；样品/量产 → 4-1/4-2；广告流量/Target → 6-3；经营异常 → 6-5；市场结构变化 → 2-2。5-5 不直接改页面或广告。
 
 主状态只能使用：HEALTHY、MINOR_OPTIMIZATION、MAJOR_OPTIMIZATION、STRATEGY_MISALIGNMENT、LIVE_PAGE_ANOMALY、INSUFFICIENT_EVIDENCE，并附 HIGH、MEDIUM 或 LOW 证据置信度。
 
-只有页面策略、核心文案/视觉、关键 Claim 与真实产品事实没有阻断性问题，且结论允许上线时，才生成《6-1输入交接包》；不得越权设计广告方案。
+只有页面策略、核心文案/视觉、关键 Claim 与真实产品事实没有阻断性问题，且结论允许上线时，才生成《6-2输入交接包》；不得越权设计广告方案。
 
 ## 正式输出与安全边界
 
@@ -140,11 +140,3 @@ metadata:
 ## MCP Provider Boundary / Canonical Business Model
 
 5-5 仍以 ASIN 为页面审计主轴。Provider 的 Offer、可售、履约和价格字段必须先由 Adapter 归一为 Canonical 语义，再作为 Backend Evidence/SKU Exception 使用；原始 Tool Name、Field Name、JSON 结构不进入页面审计判断。能力缺失标记 `[CAPABILITY_NOT_AVAILABLE]`，不猜测页面事实；未来新增 Provider 只需新增真实适配器，不改变 ASIN-first 审计逻辑。
-
-## 全局正式报告目录与命名规则
-
-本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。若 HTML 由同批 CSV 生成，必须从文件名时间戳相同的 CSV 读取并生成不可变快照；禁止运行时另找“最新 CSV”。未由 CSV 构成输入的 HTML 报告遵循对应 Skill 的原有报告内容逻辑。此规则优先于本文档中旧的目录和文件名示例。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

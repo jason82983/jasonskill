@@ -122,7 +122,7 @@ HTML 至少包含：
 首页第一屏应展示 `HZP Amazon 1-2｜选品初筛`、Candidate/Product 身份、Marketplace、1-1 来源、筛选状态、核心需求/机会、最大硬风险、差异化和消费者可感知性、新品进入、商业空间、供应链、团队、IP/合规、失败成本、最大未知、是否进入 2-1、进入条件和下一步。图表只在真实数据足够时生成（候选价格带、需求信号、新品进入、Review 壁垒、物流对比、风险对比）；不足时写 `[数据不足，未生成该图表]`。
 
 若候选已建立 Product Root，正式报告保存为：
-`[Product Root]/06_SKILL分析报告/1-2_选品初筛/1-2_选品初筛_[YYYYMMDD_HHMMSS].html`。
+`[Product Root]/06_SKILL分析报告/1-2_[产品编号]_选品初筛_V[版本号]_[YYYYMMDD]_[HHMMSS].html`。
 版本取同 Product Code + 1-2 报告最大 V 后递增，不覆盖历史。确认落盘后，只调用 `hzp-amz-0-2-report-index`，原样传递 Product Code、Products Root、Product Root；不得自行生成或维护 `index.html`。索引失败保留正式报告并明确失败原因。
 
 Candidate 尚无 Product Root 时，不伪造 Product Code，不调用 0-2，使用调用方候选目录并标记 `[候选阶段正式归档规则待确认]`。
@@ -130,11 +130,3 @@ Candidate 尚无 Product Root 时，不伪造 Product Code，不调用 0-2，使
 《2-1输入交接包》仅包含 `【优先进入2-1】`、`【进入2-1】`、`【条件式进入2-1】` 候选，记录 Candidate ID（及已建立的 Product Code）、方向、Marketplace、1-1 来源/假设、1-2 状态、需求证据、消费者/场景、供给问题、差异化和可感知性、新品信号、商业空间、物流、退货/售后、供应链、团队、IP、合规、生命周期、失败成本、反向证据、最大未知、必须验证事项和进入理由。不得复制完整报告；下游不得重新假设已确认身份、口径、证据状态和约束。
 
 参见 `references/screening-checklist.md`、`references/input-traceability.md` 和 `templates/report-outline.md`。
-
-## 全局正式报告目录与命名规则
-
-本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。若 HTML 由同批 CSV 生成，必须从文件名时间戳相同的 CSV 读取并生成不可变快照；禁止运行时另找“最新 CSV”。未由 CSV 构成输入的 HTML 报告遵循对应 Skill 的原有报告内容逻辑。此规则优先于本文档中旧的目录和文件名示例。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

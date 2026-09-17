@@ -208,20 +208,6 @@ def test_csv_invalid_id_is_rejected_without_database_identity_guessing():
     assert stats["INVALID_ROW"] == 2
 
 
-def test_multi_benchmark_kwid_schema_is_recognized_but_never_treated_as_pickpwk_id(tmp_path):
-    path = tmp_path / "multi.csv"
-    with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=module.MULTI_BENCHMARK_COLUMNS)
-        writer.writeheader()
-        writer.writerow({"Id": "KW-101", "词": "sister sculpture", "精准度": "高度精准"})
-    try:
-        module.read_input(path)
-    except ValueError as exc:
-        assert str(exc) == "[ERP_KEYWORD_ENTITY_ID_NOT_WRITABLE_AS_PICKPWK_ID]"
-    else:
-        raise AssertionError("cross-ProId KwId must not be treated as PickPwK.Id")
-
-
 def test_preflight_rejects_duplicate_database_id():
     rows = [{"record_id": "13", "keyword": "sister gifts"}]
     records = [{"Id": 13, "Keyword": "sister gifts", "Tags": ""}, {"Id": 13, "Keyword": "sister gifts", "Tags": ""}]

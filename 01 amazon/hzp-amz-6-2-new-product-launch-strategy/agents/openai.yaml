@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 6-2｜新品推广方案"
+  short_description: "设计 Amazon 新品首阶段推广与验证方案"
+  brand_color: "#1D4ED8"
+  default_prompt: "Use $hzp-amz-6-2-new-product-launch-strategy to build an evidence-based first-stage Amazon launch and validation plan for the current product, selecting Pipeline Mode or Direct Launch Mode, collecting only necessary Launch Goal inputs, separating Own ASIN from Benchmark ASIN, presenting the initialization pre-plan for one strategic approval, and preserving the original assumptions for 6-6."
+
+policy:
+  allow_implicit_invocation: true

@@ -2,7 +2,7 @@
 
 ## Live Page Snapshot
 
-每次运行先建立快照：审计时间、Marketplace、Product Code、产品中文名称、Var_Code、Var_Name、最终审计 ASIN、Parent ASIN、Own Child ASIN、`Mapped_SKUs[]`、SKU-level Exception、Title、Item Highlights、Bullets、Description、Main Image、Secondary Images、Image Count、Video、A+、Brand、Price、List Price、Coupon/Promotion、Rating、Review Count、Variation、Availability、Buy Box/Offer、Delivery、Seller/Fulfillment。无法获取写【未获取】。同一 ASIN 多 SKU 仍只生成一份页面审计；SKU 仅用于可靠的 Offer/履约等后端异常下钻。
+每次运行先建立快照：审计时间、Marketplace、Product Code、产品中文名称、Var_Code、Var_Name、最终审计 ASIN、Parent ASIN、Own Child ASIN、`Mapped_SKUs[]`、SKU-level Exception、Title、Item Highlights、Bullets、Description、Main Image、Secondary Images、Image Count、Video、A+、Brand、Price、List Price、Coupon/Promotion、Rating、Review Count、Variation、Availability、Buy Box/Offer、Delivery、Seller/Fulfillment。无法获取写【未获取】。
 
 ## Variant-aware 解析结果
 

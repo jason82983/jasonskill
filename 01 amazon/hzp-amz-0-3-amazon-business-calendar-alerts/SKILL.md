@@ -5,7 +5,7 @@ description: Provide Amazon US business-calendar reminders, product seasonal and
 
 # HZP Amazon 0-3｜Amazon经营日历与预警
 
-这是基础层的【Amazon经营日历 + 产品时间倒排 + 经营预警 + Skill路由中枢】。它回答“什么事情如果今天不提醒，之后可能来不及”，负责发现、提醒、倒排和路由；不替代 2-1/2-2/3-1/6-2/7-1 等专业 Skill 的深入分析或决策。
+这是基础层的【Amazon经营日历 + 产品时间倒排 + 经营预警 + Skill路由中枢】。它回答“什么事情如果今天不提醒，之后可能来不及”，负责发现、提醒、倒排和路由；不替代 2-1/2-2/3-1/6-5/7-1 等专业 Skill 的深入分析或决策。
 
 ## V1范围
 
@@ -27,7 +27,7 @@ description: Provide Amazon US business-calendar reminders, product seasonal and
 
 公式：`Latest Development Start = Target Selling Start - Cold Start Days - FBA Receiving Buffer Days - Shipping Days - Production Days - Development/Sample Days`。
 
-所有参数可配置。默认国际运输 30 天、新品 Cold Start 30 天，均须标 `[系统默认规划参数]`；生产、开发、FBA 缓冲无证据时也只能用可配置默认值并标注。真实产品参数优先于公司默认值。若产品档案缺少季节性字段，标 `[季节性规划数据缺失]`，不自动改写 `01_产品档案.md`。新品 Launch 还要倒排 Listing Ready、Inventory Ready、FBA Available、Advertising Start、Review/Conversion Observation、6-1 Initial Plan、6-2 Operating Diagnosis 和 6-3 Advertising Optimization。
+所有参数可配置。默认国际运输 30 天、新品 Cold Start 30 天，均须标 `[系统默认规划参数]`；生产、开发、FBA 缓冲无证据时也只能用可配置默认值并标注。真实产品参数优先于公司默认值。若产品档案缺少季节性字段，标 `[季节性规划数据缺失]`，不自动改写 `01_产品档案.md`。新品 Launch 还要倒排 Listing Ready、Inventory Ready、FBA Available、Advertising Start、Review/Conversion Observation、6-2 Initial Plan、6-5 Operating Diagnosis 和 6-3 Advertising Optimization。
 
 若剩余时间不足，标 `[计划时间不足]`，列出可验证的压缩或放弃本季方案：现货/已有产品、空运、缩短开发、减少变体、沿用包装、缩短 Cold Start、降低库存目标、放弃本季；这些标 `[经营方案建议]`，不可把不可控时效当成可压缩事实。
 
@@ -39,7 +39,7 @@ description: Provide Amazon US business-calendar reminders, product seasonal and
 
 ## 路由与安全边界
 
-只输出 `[建议调用Skill]` 和理由：产品分析→2-1/2-2；开发→3-1/3-2；样品→4-1；量产前→4-2；页面→5-1/5-2/5-3/5-4；Launch→6-1；广告异常→6-3；经营异常→6-2；补货→7-1；库存风险→7-2。0-3 不复制这些 Skill 的算法和完整结论。
+只输出 `[建议调用Skill]` 和理由：产品分析→2-1/2-2；开发→3-1/3-2；样品→4-1；量产前→4-2；页面→5-1/5-2/5-3/5-4；Launch→6-2；广告异常→6-3；经营异常→6-5；补货→7-1；库存风险→7-2。0-3 不复制这些 Skill 的算法和完整结论。
 
 未来可接 SellerSpace MCP、Amazon、库存、订单、广告、Listing、Review、Coupon、Promotion 和 FBA Shipment，但 V1 默认 READ ONLY。禁止 `apply_change_plan`，禁止修改 Campaign、Bid、Budget、Listing、Inventory、Promotion。需要留存的广告原始快照应保存到 `05_分析源数据\06_广告数据下载\`，而不是预报或日志目录。
 
@@ -62,11 +62,3 @@ description: Provide Amazon US business-calendar reminders, product seasonal and
 - [references/test-cases.md](references/test-cases.md)：V1运行前后的 CASE A-N 行为核对。
 
 0-3 不修改真实产品档案、原始数据、Amazon 账户或历史报告。
-
-## 全局正式报告目录与命名规则
-
-只要本次任务针对一个确定的 Product Root 并生成正式分析报告/结构化分析结果，就保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名为 `{Skill编号}_{报表名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套文件共用时间戳。跨产品通用的知识库、提醒状态和决策登记簿属于持续维护的业务数据，不作为产品分析报告迁入报告目录。历史报告不自动搬迁或删除。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

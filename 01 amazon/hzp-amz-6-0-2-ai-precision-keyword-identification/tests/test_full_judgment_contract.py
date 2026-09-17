@@ -1,14 +1,15 @@
 from pathlib import Path
 import csv
 import importlib.util
-from datetime import datetime
 import sys
 
 ROOT = Path(__file__).parents[1]
 spec = importlib.util.spec_from_file_location("precision", ROOT / "scripts" / "dual_precision_csv.py")
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
-from scripts.stage6_artifact_contract import make_artifact_metadata, new_run_context, write_metadata_sidecar
+_benchmark_spec = importlib.util.spec_from_file_location("benchmark_fixture", ROOT / "tests" / "test_benchmark_raw_input.py")
+_benchmark_fixture = importlib.util.module_from_spec(_benchmark_spec)
+_benchmark_spec.loader.exec_module(_benchmark_fixture)
 
 
 def source_rows():
@@ -20,42 +21,20 @@ def source_rows():
 
 
 def _write_601(root: Path, rows=None):
-    raw_dir = root / "06_SKILL分析报告" / module.BENCHMARK_RAW_OUTPUT_DIR
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    run_dir = raw_dir / "20260915_120000"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    raw = run_dir / "6-0-1_B2_对标关键词母池_20260915_120000.csv"
-    with raw.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=module.BENCHMARK_RAW_COLUMNS)
-        writer.writeheader()
-        writer.writerows([{field: row.get(field) for field in module.BENCHMARK_RAW_COLUMNS} for row in (rows or source_rows())])
-    context = new_run_context("6-0-1", module.SIX_0_1_SKILL_ID, "B2", now=datetime.strptime("20260915_120000", "%Y%m%d_%H%M%S").astimezone())
-    detail = run_dir / "6-0-1_B2_多对标关键词排名明细_20260915_120000.csv"
-    all_observations = run_dir / "所有对标自然排名关键词汇总_20260915_120000.csv"
-    detail_schema = ["Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "对标编码", "对标ASIN", "自然排名"]
-    c_schema = detail_schema + ["ASIN", "产品编号"]
-    asins = ["ASIN-A", "ASIN-B", "ASIN-C"]
-    raw_paths = [run_dir / f"{asin}+关键词自然排名_20260915_120000.csv" for asin in asins]
-    for path, schema in ((detail, detail_schema), (all_observations, c_schema), *[(p, detail_schema) for p in raw_paths]):
-        with path.open("w", encoding="utf-8-sig", newline="") as handle:
-            csv.writer(handle).writerow(schema)
-    assets = [str(detail), str(raw), *map(str, raw_paths), str(all_observations)]
-    extras = {"Benchmark_Count": 3, "Benchmark_Codes": ["BM-A", "BM-B", "BM-C"],
-              "Benchmark_ASINs": asins, "BenchmarkASINs": asins, "BenchmarkRawOrganicFiles": [p.name for p in raw_paths],
-              "BenchmarkRawOrganicFileCount": 3, "BenchmarkOrganicSummaryFile": all_observations.name,
-              "BenchmarkOrganicSummaryRecordCount": 0,
-              "BenchmarkProductCodes": {asin: str(500 + index) for index, asin in enumerate(asins)},
-              "PerBenchmarkObservationCounts": {asin: 0 for asin in asins},
-              "Keyword_Entity_ID_Field": "KwId"}
-    for path, identity, schema, count in ((detail, "BENCHMARK_KEYWORD_DETAIL", detail_schema, 0),
-                                         (raw, module.SIX_0_1_REPORT_IDENTITY, module.BENCHMARK_RAW_COLUMNS, len(rows or source_rows())),
-                                         *[(p, f"BENCHMARK_KEYWORD_RAW_{asin}", detail_schema, 0) for asin,p in zip(asins,raw_paths)],
-                                         (all_observations, "BENCHMARK_KEYWORD_ALL_OBSERVATIONS", c_schema, 0)):
-        write_metadata_sidecar(path, make_artifact_metadata(
-            context, identity, run_status="FULL_SUCCESS", schema=schema, record_count=count,
-            output_assets=assets, extra=extras,
-        ))
-    return raw
+    observations = []
+    for row in rows or source_rows():
+        observations.append({
+            "所属产品编号": "BM-A", "对标ASIN": "ASIN-A", "Id": row["Id"],
+            "词": row["词"], "中文": row["中文"], "市场容量": row["市场容量"],
+            "竞争产品数": row["竞争产品数"], "供需比": row["供需比"],
+            "自然排名": row["最佳自然排名"],
+        })
+    return _benchmark_fixture._write_601(root, observations)
+
+
+def _reader(path):
+    handle = Path(path).open(encoding="utf-8-sig", newline="")
+    return csv.DictReader(handle)
 
 
 def _write_text(root: Path, text="产品是用于姐妹纪念场景的装饰雕塑。"):
@@ -76,6 +55,9 @@ def test_product_text_reader_reads_complete_text():
         assert result["fully_read"] is True
         assert result["source_paths"] == [str(path)]
         assert result["sources"][0]["kind"] == "CURRENT_PRODUCT_TEXT_EVIDENCE"
+        assert result["content_sha256"] == module.hashlib.sha256(result["product_text"].encode("utf-8")).hexdigest()
+        assert result["content_size_bytes"] == len(result["product_text"].encode("utf-8"))
+        assert result["modified_at_ns"] == path.stat().st_mtime_ns
 
 
 def test_product_text_missing_empty_and_read_failed_statuses():
@@ -103,6 +85,21 @@ def test_501_absence_does_not_block_runtime(tmp_path):
     assert result["status"] == "FULL_SUCCESS"
     assert result["data_integrity"]["status"] == "PASS"
     assert result["product_text_source"].endswith("产品识别 - 文本文案.txt")
+    paths = {key: Path(result[f"{key}_output_file"] if key != "ai" else result["output_file"])
+             for key in ("ai", "high_precision", "deduplicated")}
+    assert len({path.parent for path in paths.values()}) == 1
+    stamp = paths["ai"].stem[-15:]
+    assert paths["ai"].parent == tmp_path / "06_SKILL分析报告" / module.OUTPUT_DIR
+    assert all(path.stem.endswith(f"_{stamp}") for path in paths.values())
+    assert paths["ai"].name.startswith("6-0-2_精准判断所有词表_")
+    assert paths["high_precision"].name.startswith("6-0-2_高度精准词表_")
+    assert paths["deduplicated"].name.startswith("6-0-2_去对标去重 高度精准词_")
+    assert set(result["benchmark_output_files"]) == {"BM-A"}
+    assert Path(result["benchmark_output_files"]["BM-A"]).name.startswith("6-0-2_BM-A_高度精准词_")
+    package_files = [*paths.values(), *(Path(path) for path in result["benchmark_output_files"].values())]
+    assert all(not path.with_name(path.name + ".meta.json").exists() for path in package_files)
+    assert Path(result["run_manifest"]).is_file()
+    assert result["input_unique_keyword_count"] == 3
     assert not list((tmp_path / "06_SKILL分析报告").glob("5-0-1_*.html"))
 
 
@@ -148,7 +145,7 @@ def test_full_writer_is_utf8_bom_and_exactly_nine_columns(tmp_path):
     path = module.write_full_ai_csv(tmp_path, "B2", result["rows"])
     assert path.read_bytes().startswith(b"\xef\xbb\xbf")
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        assert tuple(csv.reader(handle).__next__()) == module.FULL_FINAL_COLUMNS
+        assert tuple(csv.reader(handle).__next__()) == module.OBSERVATION_FINAL_COLUMNS
 
 
 def test_competitor_count_and_ratio_are_passed_through_unchanged():
@@ -177,7 +174,7 @@ def test_null_competitor_count_and_ratio_remain_null_and_blank_in_csv(tmp_path):
     assert result["rows"][0]["竞争产品数"] is None
     assert result["rows"][0]["供需比"] is None
     written = module.write_full_ai_csv(tmp_path, "B2", result["rows"])
-    paths = {"ai": written, "high_precision": written.with_name(written.name.replace("AI精准词", "AI高度精准词"))}
+    paths = {"ai": written, "high_precision": written.with_name(written.name.replace("精准判断所有词表", "高度精准词表"))}
     for path in paths.values():
         with path.open("r", encoding="utf-8-sig", newline="") as handle:
             row = next(csv.DictReader(handle))
@@ -237,17 +234,16 @@ def test_data_integrity_check_reports_file_a_and_file_b_field_mismatches():
 def test_run_current_602_does_not_report_full_success_after_readback_mismatch(tmp_path):
     _write_text(tmp_path)
     _write_601(tmp_path)
-    original_writer = module.write_full_ai_csv
+    original_writer = module._write_ai_asset_pair
 
-    def corrupt_high_precision_output(root, product_code, rows, *, run_context=None, write_metadata=True):
-        path = original_writer(root, product_code, rows, run_context=run_context, write_metadata=write_metadata)
-        paths = module.output_paths(root, product_code, run_context)
-        high_rows = module._read_formal_csv(paths["high_precision"])
+    def corrupt_high_precision_output(rows, paths, context, **kwargs):
+        written = original_writer(rows, paths, context, **kwargs)
+        high_rows = module._read_formal_csv(paths["high_precision"], module.OBSERVATION_FINAL_COLUMNS)
         high_rows[0]["竞争产品数"] = "999"
-        module.write_csv(paths["high_precision"], high_rows, columns=module.FULL_FINAL_COLUMNS)
-        return path
+        module.write_csv(paths["high_precision"], high_rows, columns=module.OBSERVATION_FINAL_COLUMNS)
+        return written
 
-    module.write_full_ai_csv = corrupt_high_precision_output
+    module._write_ai_asset_pair = corrupt_high_precision_output
     try:
         result = module.run_current_602(tmp_path, "B2", {
             "1": {"精准度": "高度精准", "精准原因": "具体鞋类购买意图与产品鞋头结构和穿着功能直接匹配"},
@@ -255,27 +251,140 @@ def test_run_current_602_does_not_report_full_success_after_readback_mismatch(tm
             "3": {"精准度": "不精准", "精准原因": "搜索者明确寻找项链，和当前产品鞋类事实发生类别冲突"},
         })
     finally:
-        module.write_full_ai_csv = original_writer
+        module._write_ai_asset_pair = original_writer
     assert result["status"] == "DATA_INTEGRITY_FAILED"
-    assert module.COMPETING_PRODUCTS_PASSTHROUGH_MISMATCH in result["data_integrity"]["error_codes"]
+    assert "HIGH_PRECISION_FILTER_MISMATCH" in result["data_integrity"]["error_codes"]
+    import json
+    manifest_path = Path(result["run_folder"]) / f"{module.RUN_MANIFEST_PREFIX}{result['run_timestamp']}.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["Run Status"] == "FAILED"
 
 
-def test_writer_emits_full_and_high_precision_assets_only(tmp_path):
+def test_low_level_writer_emits_three_shared_assets_for_unscoped_rows(tmp_path):
     result = module.finalize_ai_judgments(source_rows(), {
         "1": {"精准度": "高度精准", "精准原因": "具体鞋类购买意图与产品鞋头结构和穿着功能直接匹配"},
         "2": {"精准度": "弱精准", "精准原因": "仅表达泛礼物意图，未指向当前产品类别或可承接功能"},
         "3": {"精准度": "不精准", "精准原因": "搜索者明确寻找项链，和当前产品鞋类事实发生类别冲突"},
     })
     written = module.write_full_ai_csv(tmp_path, "B2", result["rows"])
-    paths = {"ai": written, "high_precision": written.with_name(written.name.replace("AI精准词", "AI高度精准词"))}
-    assert set(paths) == {"ai", "high_precision"}
-    assert paths["ai"].exists() and paths["high_precision"].exists()
-    with paths["high_precision"].open(encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        assert tuple(reader.fieldnames or ()) == module.FULL_FINAL_COLUMNS
-        high = list(reader)
+    stamp = written.stem[-15:]
+    paths = {
+        "ai": written,
+        "high_precision": written.with_name(f"6-0-2_高度精准词表_{stamp}.csv"),
+        "deduplicated": written.with_name(f"6-0-2_去对标去重 高度精准词_{stamp}.csv"),
+    }
+    assert paths["ai"].parent == tmp_path / "06_SKILL分析报告" / module.OUTPUT_DIR
+    assert all(path.exists() and path.parent == paths["ai"].parent and path.stem.endswith(f"_{stamp}") for path in paths.values())
+    assert tuple(_reader(paths["ai"]).fieldnames or ()) == module.OBSERVATION_FINAL_COLUMNS
+    high_reader = _reader(paths["high_precision"])
+    assert tuple(high_reader.fieldnames or ()) == module.OBSERVATION_FINAL_COLUMNS
+    high = list(high_reader)
     assert [row["精准度"] for row in high] == ["高度精准"]
+    unique_reader = _reader(paths["deduplicated"])
+    assert tuple(unique_reader.fieldnames or ()) == module.DEDUPLICATED_FINAL_COLUMNS
+    unique = list(unique_reader)
+    assert len(unique) == 1 and unique[0]["精准度"] == "高度精准"
+    assert "所属产品编号" not in unique_reader.fieldnames
     assert not (paths["ai"].parent / "6-0-2_B2_手动分类精准词.csv").exists()
+
+
+
+def test_one_keyword_judgment_expands_to_observations_and_deduplicates_market_facts():
+    observations = [
+        {"所属产品编号": "BM-A", "对标ASIN": "ASIN-A", "Id": "KW-1", "词": "sister sculpture",
+         "中文": "姐妹雕塑", "市场容量": "1200", "竞争产品数": "80", "供需比": "15.0000", "自然排名": "3"},
+        {"所属产品编号": "BM-B", "对标ASIN": "ASIN-B", "Id": "KW-1", "词": "sister sculpture",
+         "中文": "姐妹雕塑", "市场容量": "1200", "竞争产品数": "80", "供需比": "15.0000", "自然排名": "18"},
+    ]
+    decision = {"精准度": "高度精准", "精准原因": "该关键词的购买需求与当前产品核心用途和商品类型直接匹配"}
+    result = module.finalize_observation_judgments(observations, {"sister sculpture": decision})
+    assert len(result["rows"]) == len(result["high_precision_rows"]) == 2
+    assert len(result["deduplicated_rows"]) == 1
+    assert {row["精准度"] for row in result["rows"]} == {"高度精准"}
+    assert len({row["精准原因"] for row in result["rows"]}) == 1
+    unique = result["deduplicated_rows"][0]
+    assert unique["市场容量"] == "1200"
+    assert unique["竞争产品数"] == "80" and unique["供需比"] == "15.0000"
+    assert unique["对标覆盖数"] == 2 and unique["最佳自然排名"] == 3.0 and unique["自然排名中位数"] == 10.5
+    assert "所属产品编号" not in unique
+
+
+def test_run_602_uses_observation_batch_once_and_records_input_lineage(tmp_path):
+    import json
+
+    text_path = _write_text(tmp_path)
+    source_file = _benchmark_fixture._write_601(tmp_path, [
+        {"所属产品编号": "BM-A", "对标ASIN": "ASIN-A", "Id": "KW-SISTER", "词": "sister gifts",
+         "中文": "姐妹礼物", "市场容量": "20000", "竞争产品数": "1200", "供需比": "16.6667", "自然排名": "5"},
+        {"所属产品编号": "BM-B", "对标ASIN": "ASIN-B", "Id": "KW-SISTER", "词": "sister gifts",
+         "中文": "姐妹礼物", "市场容量": "20000", "竞争产品数": "1200", "供需比": "16.6667", "自然排名": "18"},
+    ])
+    result = module.run_current_602(tmp_path, "B2", {
+        "sister gifts": {"精准度": "高度精准", "精准原因": "搜索者正在寻找姐妹礼物且当前产品与该核心购买对象和场景直接匹配"},
+    })
+
+    output_a = list(_reader(result["output_file"]))
+    output_b = list(_reader(result["high_precision_output_file"]))
+    output_c = list(_reader(result["deduplicated_output_file"]))
+    assert result["input_file"] == str(source_file)
+    assert result["input_record_count"] == 2 and result["input_unique_keyword_count"] == 1
+    assert len(result["keyword_units"]) == len(result["trace"]) == 1
+    assert len(output_a) == len(output_b) == 2
+    assert {row["所属产品编号"] for row in output_a} == {"BM-A", "BM-B"}
+    assert {row["所属产品编号"] for row in output_b} == {"BM-A", "BM-B"}
+    assert {row["精准度"] for row in output_a + output_b} == {"高度精准"}
+    assert len(output_c) == 1
+    assert output_c[0]["市场容量"] == "20000"
+    assert output_c[0]["对标覆盖数"] == "2"
+    assert output_c[0]["最佳自然排名"] == "5.0"
+    assert output_c[0]["自然排名中位数"] == "11.5"
+    assert "所属产品编号" not in output_c[0]
+
+    manifest_path = Path(result["run_manifest"])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["Input Report Identity"] == "BENCHMARK_KEYWORD_ALL_OBSERVATIONS"
+    assert manifest["Input Report Name"] == "所有对标自然排名关键词"
+    assert manifest["Input RUN_TIMESTAMP"] == "20260915_120000"
+    assert manifest["Input Observation Count"] == 2
+    assert manifest["Input Unique Keyword Count"] == 1
+    assert manifest["Expected Benchmark Count"] == 2
+    assert len(manifest["Output Files"]) == len(manifest["GeneratedBenchmarkFiles"]) + 3 == 5
+    assert sum(manifest["PerBenchmarkHighPrecisionRecordCount"].values()) == len(output_b)
+    assert all(Path(path).exists() for path in result["benchmark_output_files"].values())
+    for path in result["benchmark_output_files"].values():
+        assert Path(path).stem.endswith(f"_{result['run_timestamp']}")
+        assert len(list(_reader(path))) == 1
+    assert manifest["Product Text Input"] == str(text_path)
+    assert manifest["Product Text Input Version"]["SHA256"] == module.hashlib.sha256(text_path.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+    assert manifest["Run Status"] == "VALID"
+
+
+def test_duplicate_keyword_judgment_decisions_must_agree():
+    observations = [
+        {"所属产品编号": "BM-A", "对标ASIN": "ASIN-A", "Id": "KW-1", "词": "sister sculpture", "自然排名": "3"},
+        {"所属产品编号": "BM-B", "对标ASIN": "ASIN-B", "Id": "KW-1", "词": "sister sculpture", "自然排名": "18"},
+    ]
+    try:
+        module.finalize_observation_judgments(observations, {
+            "KW-1": {"精准度": "高度精准", "精准原因": "该关键词购买意图与当前产品用途和商品类型直接匹配"},
+            "sister sculpture": {"精准度": "精准", "精准原因": "该关键词与产品有相关性但未充分对齐核心购买用途"},
+        })
+    except ValueError as exc:
+        assert str(exc) == "KEYWORD_JUDGMENT_INCONSISTENT"
+    else:
+        raise AssertionError("all observations of one canonical keyword must share one judgment")
+
+
+def test_duplicate_canonical_keyword_within_one_benchmark_is_blocked():
+    try:
+        module._validate_benchmark_observation_uniqueness([
+            {"所属产品编号": "BM-A", "词": "sister gifts"},
+            {"所属产品编号": "BM-A", "词": "Sister   Gifts"},
+        ])
+    except ValueError as exc:
+        assert str(exc) == "DUPLICATE_KEYWORD_WITHIN_BENCHMARK"
+    else:
+        raise AssertionError("duplicate Benchmark keyword observations must fail")
 
 
 def test_precision_level_is_direct_and_numeric_is_rejected():
@@ -339,3 +448,4 @@ if __name__ == "__main__":
         test_null_competitor_count_and_ratio_remain_null_and_blank_in_csv(Path(directory))
         test_run_current_602_does_not_report_full_success_after_readback_mismatch(Path(directory))
     print("6-0-2 full judgment tests: PASS")
+

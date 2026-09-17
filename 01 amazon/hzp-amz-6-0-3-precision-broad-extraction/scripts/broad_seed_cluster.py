@@ -48,7 +48,8 @@ DEDUPLICATED_NAME = "6-0-2_去对标去重 高度精准词.csv"
 AI_PRECISION_NAME = "6-0-2_精准判断所有词表.csv"
 BENCHMARK_HIGH_PRECISION_NAME = "6-0-2_{product_code}_高度精准词.csv"
 INPUT_RUN_DIR = "6-0-2_AI精准关键词识别"
-INPUT_602_MANIFEST_PREFIX = "6-0-2_RunPackage_"
+INPUT_602_MANIFEST_PREFIX = "run_manifest_"
+LEGACY_INPUT_602_MANIFEST_PREFIX = "6-0-2_RunPackage_"
 RUN_MANIFEST_NAME = "run_manifest.json"
 RUN_MANIFEST_PREFIX = "6-0-3_RunPackage_"
 SKILL_ID = "hzp-amz-6-0-3-precision-broad-extraction"
@@ -285,10 +286,11 @@ def resolve_latest_valid_602_run_package(product_root: str | Path, product_code:
     if not directory.is_dir():
         return {"status": MISSING_INPUT, "invalid_runs": []}
     candidates: list[tuple[str, Path, Path]] = []
-    for manifest in directory.glob(f"{INPUT_602_MANIFEST_PREFIX}*.json"):
-        match = re.fullmatch(rf"{re.escape(INPUT_602_MANIFEST_PREFIX)}(\d{{8}}_\d{{6}})\.json", manifest.name)
-        if match:
-            candidates.append((match.group(1), directory, manifest))
+    for prefix in (INPUT_602_MANIFEST_PREFIX, LEGACY_INPUT_602_MANIFEST_PREFIX):
+        for manifest in directory.glob(f"{prefix}*.json"):
+            match = re.fullmatch(rf"{re.escape(prefix)}(\d{{8}}_\d{{6}})\.json", manifest.name)
+            if match:
+                candidates.append((match.group(1), directory, manifest))
     for legacy in directory.iterdir():
         if legacy.is_dir() and RUN_TIMESTAMP_RE.fullmatch(legacy.name):
             candidates.append((legacy.name, legacy, legacy / RUN_MANIFEST_NAME))

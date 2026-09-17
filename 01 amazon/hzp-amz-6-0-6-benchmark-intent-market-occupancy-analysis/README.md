@@ -2,7 +2,7 @@
 
 Skill ID：`hzp-amz-6-0-6-benchmark-intent-market-occupancy-analysis`
 
-606 将 601 的 Benchmark×Keyword 自然排名观察映射到 603 当前产品 Intent Tree，计算 Individual Organic Occupancy 与 Benchmark Consensus。它不代表销量/GMV份额，不决定 6-0-5 怎么打，也不写广告或 ERP。
+606 从 LATEST VALID 602 Batch 读取全部 `6-0-2_{所属产品编号}_高度精准词_{RUN_TIMESTAMP}.csv` D 资产，并从最新完整有效的 `6-0-3_RunPackage_{RUN_TIMESTAMP}.json` 读取同一 Run 的两张 603 表。602 Batch 必须包含 3 张公共表和每个预期对标一张 D 表；失败或不完整的新批次会跳过并回退最近完整 VALID Batch。603 通过共享 RunPackage 校验，失败或不完整的新包也会回退。606 不再直接读取 601 报表。它计算 Individual Organic Occupancy 与 Benchmark Consensus，不代表销量/GMV份额，不决定 6-1 怎么打，也不写广告或 ERP。
 
 先检查输入：
 

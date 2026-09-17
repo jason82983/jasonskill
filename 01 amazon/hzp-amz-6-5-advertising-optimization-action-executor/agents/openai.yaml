@@ -1,0 +1,4 @@
+interface:
+  display_name: "HZP Amazon 6-5｜广告优化动作执行"
+  short_description: "执行已批准的广告优化动作并完成回读审计"
+  default_prompt: "运行6-5：只消费已批准的6-4决策包，先准备并核对精确差异，再按授权执行、回读和记录；不得重新决策。"

@@ -48,7 +48,7 @@ def test_skill_contract():
 
 def test_report_contract():
     assert "5-5_[产品编号]_线上ASIN页面审计与优化_V[版本]_[YYYYMMDD]_[HHMMSS].html" in SKILL
-    assert "6-1输入交接包" in SKILL
+    assert "6-2输入交接包" in SKILL
     assert "P0" in SKILL and "P1" in SKILL and "P2" in SKILL and "P3" in SKILL
 
 def test_mock_cases_a_to_o():

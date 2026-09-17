@@ -73,3 +73,7 @@ See [decision-data-contract.md](references/decision-data-contract.md) for exact 
 ## Shared AI Brain
 
 本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时先按 Context Manifest 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；保留本 Skill 的业务边界和正式 Ground Truth，不重复判断上游已锁定事实。重要 AI Judgment 在输出前执行 Decision Challenge，并由 Reason Trace 生成可解释原因。
+
+## 报告目录与归档
+
+正式报告资产遵守共享 [报告目录与归档契约](../references/report-layout-contract.md)。新生成的机器数据进入本 Skill 的 `data/`，人类 HTML 按 Report Identity 在根目录只保留一个 `最新`，旧 HTML 进入 `历史HTML/`，系统元数据、Manifest、Registry 和日志进入 `_system/`。持续运行 Skill 的现有机器 Run Package Contract 保持不变；HTML 最新入口与机器 Latest Valid Data 分开解析。

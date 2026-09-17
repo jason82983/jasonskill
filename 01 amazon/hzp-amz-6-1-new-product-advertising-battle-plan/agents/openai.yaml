@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 6-1｜新品广告作战规划"
+  short_description: "规划新品精准意图市场、关键词生命周期与广告控制架构"
+  brand_color: "#1D4ED8"
+  default_prompt: "Use $hzp-amz-6-1-new-product-advertising-battle-plan to plan the current Amazon product's precise Intent battlefield from one complete latest valid 6-0-3 Run Package, lifecycle-plan every mapped keyword Id, derive the PHASE_1 execution list from that lifecycle, and write one validated A/C/B/D plus static HTML package. D must contain every concrete Campaign, Ad Group and Target creation parameter; do not leave 6-2 to guess. Do not create or modify ads."
+
+policy:
+  allow_implicit_invocation: true

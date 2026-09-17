@@ -16,7 +16,7 @@ description: 发现 Amazon 经营链路中真正需要上级方向、资本、�
 4. 只升级战略方向、资本分配、重大风险接受、资源/优先级、重大产品决定、时间临界、跨系统冲突、继续/停止事项。普通 Bid、Keyword、图片文案、否词和已有 SOP 可解决事项不问老板。
 5. 先按 Decision Topic 和已有 `decision_id` 去重。未回答事项更新证据与紧迫度；已回答事项只有 Material New Evidence 才 `REOPENED` 并说明原因。
 6. 每个问题生成 Question、Why Now、Facts、What Changed Since Last Brief、A/B/C/D 选项、AI Recommendation、Reason、Expected Upside、Main Downside、Cost/Capital Impact、Deadline、If No Decision、Affected Product/Project、Affected Skills、Evidence Confidence。主周报默认 ≤5 项，所有 P0 必须显示，其余进入 Secondary Queue。
-7. 生成中文《HZP Amazon 上级决策周报》HTML。成功写入后才推进 checkpoint；失败不得推进。老板回答原意写入 Decision Register，并路由给 6-1/6-3、3-2/3-3、5 阶段或 7-1/7-2，0-5 不越权执行。
+7. 生成中文《HZP Amazon 上级决策周报》HTML。成功写入后才推进 checkpoint；失败不得推进。老板回答原意写入 Decision Register，并路由给 6-2/6-3、3-2/3-3、5 阶段或 7-1/7-2，0-5 不越权执行。
 
 ## Decision Inbox｜日常决策候选收件箱
 
@@ -39,10 +39,3 @@ Candidate 至少保存：`candidate_id`、`created_at`、`source_type`、`source
 
 详见 references/decision-schema.md、references/integration-routing.md、references/test-cases.md、references/candidate-inbox.md 和 templates/weekly-brief-outline.md。
 
-## 全局正式报告目录与命名规则
-
-只要本次任务针对一个确定的 Product Root 并生成正式分析报告/结构化分析结果，就保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名为 `{Skill编号}_{报表名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套文件共用时间戳。跨产品通用的知识库、提醒状态和决策登记簿属于持续维护的业务数据，不作为产品分析报告迁入报告目录。历史报告不自动搬迁或删除。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

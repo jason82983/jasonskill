@@ -42,7 +42,7 @@
 17. Final Modification List
 18. Skill Routing
 19. 反方检查
-20. 6-1输入交接包（仅条件满足）
+20. 6-2输入交接包（仅条件满足）
 21. 数据与证据局限
 22. 名词术语解释
 
@@ -53,7 +53,7 @@ LEVEL 2 可以保留英文技术字段、证据标签、状态码和根因枚举
 - 中文优先，使用 UTF-8；Amazon 常用术语（ASIN、SKU、Title、Bullet、A+、Coupon、Buy Box 等）可保留。
 - 首页不显示 `LIVE_PAGE_ANOMALY`、`STRATEGY_MISALIGNMENT`、`OFFER_NOT_VERIFIED`、`ROOT_CAUSE`、`PASS/PARTIAL/GAP` 等机器状态码作为主标题；这些仅放 LEVEL 2。
 - 视觉采用清晰的卡片、留白、圆角和对比色；不使用综合评分、雷达图、AI 信心分或没有业务意义的仪表盘。
-- 正式报告仍须保留既有身份解析、证据规则、根因逻辑、最新版输入追溯、6-1 交接条件和输出命名规则。
+- 正式报告仍须保留既有身份解析、证据规则、根因逻辑、最新版输入追溯、6-2 交接条件和输出命名规则。
 
 ## 主状态
 

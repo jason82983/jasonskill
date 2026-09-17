@@ -13,18 +13,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 from uuid import uuid4
-import sys
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-from scripts.stage6_artifact_contract import (  # noqa: E402
-    assert_new_outputs,
-    make_artifact_metadata,
-    new_run_context,
-    resolve_latest_valid_report,
-    write_metadata_sidecar,
-)
 
 CONFIG_PATH = Path(r"E:\【所有产品目录专用】\00_公共资料\03_系统配置\erp-pickpwk-write-access.json")
 INPUT_DIR = "6-0-2_精准关键词识别"
@@ -32,9 +20,6 @@ INPUT_NAME = "6-0-2_{product_code}_AI精准词.csv"
 LOG_DIR = Path("06_SKILL分析报告") / "6-0-4_AI精准词同步ERP" / "执行日志"
 FINAL_COLUMNS = ("自动编号", "关键词", "搜索量", "中文名称", "精准理由", "精准度")
 FULL_COLUMNS = ("Id", "词", "中文", "市场容量", "自然排名", "精准度", "精准原因")
-MULTI_BENCHMARK_COLUMNS = ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "对标覆盖数", "最佳自然排名", "自然排名中位数", "精准度", "精准原因")
-INPUT_SKILL_ID = "hzp-amz-6-0-2-ai-precision-keyword-identification"
-INPUT_REPORT_IDENTITY = "AI_PRECISION_KEYWORDS"
 PRECISION_TAG = "|1精准|"
 
 WRITE_BLOCKED = "WRITE_BLOCKED"
@@ -103,40 +88,6 @@ def input_path(product_root: str | Path, product_code: str) -> Path:
     return Path(product_root) / "06_SKILL分析报告" / INPUT_DIR / INPUT_NAME.format(product_code=product_code)
 
 
-def resolve_input_file(product_root: str | Path, product_code: str) -> dict[str, Any]:
-    directory = Path(product_root) / "06_SKILL分析报告" / INPUT_DIR
-    stem = INPUT_NAME.format(product_code=product_code)[:-4]
-    candidates = list(directory.glob(stem + "*.csv"))
-    candidates = [path for path in candidates if path.name == stem + ".csv" or re.fullmatch(re.escape(stem) + r"_\d{8}_\d{6}\.csv", path.name)]
-
-    def current_input_contract(path, _rows, _metadata):
-        try:
-            with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
-                headers = tuple(csv.reader(handle).__next__())
-            if headers == MULTI_BENCHMARK_COLUMNS:
-                # This is a valid current 6-0-2 asset, but Id is KwId rather
-                # than the PickPwK.Id row key this writer is allowed to use.
-                return None
-        except (OSError, UnicodeError, csv.Error, StopIteration):
-            return "INPUT_CONTRACT_INVALID"
-        try:
-            read_input(path)
-        except (OSError, UnicodeError, csv.Error, ValueError) as exc:
-            return str(exc).strip("[]") or "INPUT_CONTRACT_INVALID"
-        return None
-
-    resolved = resolve_latest_valid_report(
-        product_root, INPUT_SKILL_ID, INPUT_REPORT_IDENTITY, candidates,
-        product_code=product_code,
-        validator=current_input_contract,
-    )
-    if resolved.get("status") != "LATEST_VALID_REPORT_RESOLVED":
-        reasons = [item.get("reason") for item in resolved.get("skipped_candidates", []) if item.get("reason")]
-        detail = reasons[0] if reasons else resolved.get("status")
-        raise FileNotFoundError(f"[6-0-2_AI_PRECISION_KEYWORD_INPUT_MISSING]: {detail}")
-    return resolved
-
-
 def read_input(path: str | Path) -> list[dict[str, str]]:
     target = Path(path)
     if not target.exists():
@@ -149,8 +100,6 @@ def read_input(path: str | Path) -> list[dict[str, str]]:
             # explicit ERP-sync selection flag. Never invent a score cutoff;
             # block writes until a separately approved selection contract exists.
             raise ValueError("[PRECISION_THRESHOLD_UNRESOLVED]")
-        if headers == MULTI_BENCHMARK_COLUMNS:
-            raise ValueError("[ERP_KEYWORD_ENTITY_ID_NOT_WRITABLE_AS_PICKPWK_ID]")
         if headers != FINAL_COLUMNS:
             raise ValueError("[6-0-2_AI_PRECISION_KEYWORD_INPUT_INVALID]")
         return list(reader)
@@ -344,29 +293,14 @@ class RestrictedWriter:
         return self.sync_record(record_id, expected_keyword)
 
 
-def log_result(product_root: str | Path, product_code: str, run_id: str, results: Iterable[Mapping[str, Any]], *, input_lineage: Iterable[Mapping[str, Any]] = (), run_context=None) -> Path:
-    values = list(results)
-    context = run_context or new_run_context("6-0-4", "hzp-amz-6-0-4-ai-precision-keyword-erp-sync", product_code)
+def log_result(product_root: str | Path, product_code: str, run_id: str, results: Iterable[Mapping[str, Any]]) -> Path:
     target_dir = Path(product_root) / LOG_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
-    target = target_dir / f"{run_id}_{context.run_timestamp}.md"
-    assert_new_outputs([target, str(target) + ".meta.json"])
-    lines = [f"# 6-0-4 AI精准词同步ERP｜{product_code}", "", f"Run_ID：{run_id}", f"RUN_TIMESTAMP：{context.run_timestamp}", f"Generated_At：{context.generated_at}", ""]
-    if input_lineage:
-        lines.extend(["## 本次使用数据", ""])
-        for item in input_lineage:
-            lines.append(f"- {item.get('Input_Skill')}｜{item.get('Input_Report_Identity')}｜{item.get('Input_File_Name')}｜{item.get('Input_Generated_At')}｜{item.get('Input_Resolution_Method')}")
-        lines.append("")
-    for result in values:
+    target = target_dir / f"{run_id}.md"
+    lines = [f"# 6-0-4 AI精准词同步ERP｜{product_code}", "", f"Run_ID：{run_id}", f"Timestamp：{datetime.now(timezone.utc).replace(microsecond=0).isoformat()}", ""]
+    for result in results:
         lines.extend([f"- Record ID：{result.get('record_id')}", f"- Keyword：{result.get('keyword')}", f"- Action：{result.get('action')}", f"- Result：{result.get('result')}", f"- Error Code：{result.get('error_code') or ''}", ""])
     target.write_text("\n".join(lines), encoding="utf-8")
-    success = all(str(item.get("result") or "").upper() in {SUCCESS, NO_CHANGE, SKIPPED} for item in values)
-    metadata = make_artifact_metadata(
-        context, "ERP_PRECISION_KEYWORD_SYNC_LOG", run_status="FULL_SUCCESS" if success else "PARTIAL_SUCCESS",
-        record_count=len(values), inputs=list(input_lineage), output_assets=[str(target)],
-        extra={"Execution_ID": run_id, "RUN_ID": run_id},
-    )
-    write_metadata_sidecar(target, metadata)
     return target
 
 

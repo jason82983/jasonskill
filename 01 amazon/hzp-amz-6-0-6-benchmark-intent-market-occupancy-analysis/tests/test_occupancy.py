@@ -23,9 +23,9 @@ def fixture_data(codes=("A", "B", "C")):
         {"精准泛词": "sister birthday gifts", "中文": "姐妹生日礼物", "层级": "L2", "父精准泛词": "sister gifts", "直接搜索量": "22000", "汇总搜索量": "22000", "平均竞品数": "400", "意图机会比": "55", "直接对应词数": "2"},
     ]
     mapping = [
-        {"Id": "kw1", "词": "sister gifts", "中文": "姐妹礼物", "市场容量": "2000", "竞争产品数": "500", "供需比": "4", "对标覆盖数": str(len(codes)), "最佳自然排名": "3", "自然排名中位数": "18", "精准泛词": "sister gifts", "精准泛词中文": "姐妹礼物"},
-        {"Id": "kw2", "词": "sister birthday gifts", "中文": "姐妹生日礼物", "市场容量": "20000", "竞争产品数": "400", "供需比": "50", "对标覆盖数": str(len(codes)), "最佳自然排名": "3", "自然排名中位数": "18", "精准泛词": "sister birthday gifts", "精准泛词中文": "姐妹生日礼物"},
-        {"Id": "kw3", "词": "birthday gifts for sister", "中文": "送姐妹生日礼物", "市场容量": "2000", "竞争产品数": "600", "供需比": "3.3333", "对标覆盖数": str(len(codes)), "最佳自然排名": "100", "自然排名中位数": "100", "精准泛词": "sister birthday gifts", "精准泛词中文": "姐妹生日礼物"},
+        {"Id": "kw1", "词": "sister gifts", "中文": "姐妹礼物", "市场容量": "2000", "竞争产品数": "500", "供需比": "4", "自然排名": "3", "精准泛词": "sister gifts", "精准泛词中文": "姐妹礼物"},
+        {"Id": "kw2", "词": "sister birthday gifts", "中文": "姐妹生日礼物", "市场容量": "20000", "竞争产品数": "400", "供需比": "50", "自然排名": "3", "精准泛词": "sister birthday gifts", "精准泛词中文": "姐妹生日礼物"},
+        {"Id": "kw3", "词": "birthday gifts for sister", "中文": "送姐妹生日礼物", "市场容量": "2000", "竞争产品数": "600", "供需比": "3.3333", "自然排名": "100", "精准泛词": "sister birthday gifts", "精准泛词中文": "姐妹生日礼物"},
     ]
     rank_sets = {"A": {"kw1": "12", "kw2": "3", "kw3": "100"},
                  "B": {"kw1": "22", "kw2": "18", "kw3": "90"},
@@ -153,70 +153,137 @@ def test_html_disclaims_market_share_and_has_all_eleven_modules():
     assert "蓝海、低竞争或容易进入结论" in page
 
 
-def test_latest_valid_601_and_same_run_603_bundle(tmp_path):
-    root = tmp_path
-    d601 = root / "06_SKILL分析报告" / mod.INPUT_DIR_601
-    d603 = root / "06_SKILL分析报告" / mod.INPUT_DIR_603
-    d601.mkdir(parents=True)
-    d603.mkdir(parents=True)
-    details, summary, mapping, _ = fixture_data(("A",))
-    disk_details = [{**{key: row.get(key, "") for key in mod.DETAIL_COLUMNS}, "对标编号": "500"} for row in details]
-    ctx601 = new_run_context("6-0-1", "hzp-amz-6-0-1-benchmark-organic-keyword-extraction", "P1", now=datetime.fromisoformat("2026-09-15T10:00:00+08:00"))
-    older601 = new_run_context("6-0-1", "hzp-amz-6-0-1-benchmark-organic-keyword-extraction", "P1", now=datetime.fromisoformat("2026-09-14T10:00:00+08:00"))
-    ctx603 = new_run_context("6-0-3", "hzp-amz-6-0-3-precision-broad-extraction", "P1", now=datetime.fromisoformat("2026-09-15T11:00:00+08:00"))
-    p601 = d601 / ctx601.run_timestamp / f"6-0-1_P1_多对标关键词排名明细_{ctx601.run_timestamp}.csv"
-    p601.parent.mkdir(parents=True, exist_ok=True)
-    pool601 = d601 / ctx601.run_timestamp / f"6-0-1_P1_对标关键词母池_{ctx601.run_timestamp}.csv"
-    c601 = d601 / ctx601.run_timestamp / f"所有对标自然排名关键词汇总_{ctx601.run_timestamp}.csv"
-    write_csv(p601, disk_details, mod.DETAIL_COLUMNS)
-    pool_rows = [{"Id": "K1", "词": "term", "中文": "词", "市场容量": 1000, "竞争产品数": 20, "供需比": "50.0000", "对标覆盖数": 1, "最佳自然排名": 5, "自然排名中位数": 5}]
-    pool_schema = ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "对标覆盖数", "最佳自然排名", "自然排名中位数")
-    c_rows = [{**{key: value for key, value in row.items() if key != "对标编码"}, "ASIN": row["对标ASIN"], "产品编号": "500"} for row in disk_details]
-    c_schema = tuple(column for column in mod.DETAIL_COLUMNS if column != "对标编码") + ("ASIN", "产品编号")
-    raw_path = p601.parent / f"ASIN-A+关键词自然排名_{ctx601.run_timestamp}.csv"
-    write_csv(raw_path, disk_details, mod.DETAIL_COLUMNS)
-    write_csv(pool601, pool_rows, pool_schema)
-    write_csv(c601, c_rows, c_schema)
-    outputs601 = [str(p601), str(pool601), str(raw_path), str(c601)]
-    extras601 = {"Benchmark_Count": 1, "Benchmark_Codes": ["A"], "Benchmark_ASINs": ["ASIN-A"],
-                 "BenchmarkASINs": ["ASIN-A"], "BenchmarkRawOrganicFiles": [raw_path.name], "BenchmarkRawOrganicFileCount": 1,
-                 "BenchmarkOrganicSummaryFile": c601.name, "BenchmarkOrganicSummaryRecordCount": len(c_rows),
-                 "BenchmarkProductCodes": {"ASIN-A": "500"}, "PerBenchmarkObservationCounts": {"ASIN-A": len(details)}}
-    for path, identity, schema, rows in ((p601, "BENCHMARK_KEYWORD_DETAIL", mod.DETAIL_COLUMNS, details),
-                                        (pool601, "BENCHMARK_KEYWORD_POOL", pool_schema, pool_rows),
-                                        (raw_path, "BENCHMARK_KEYWORD_RAW_ASIN-A", mod.DETAIL_COLUMNS, details),
-                                        (c601, "BENCHMARK_KEYWORD_ALL_OBSERVATIONS", c_schema, c_rows)):
-        write_metadata_sidecar(path, make_artifact_metadata(ctx601, identity, run_status="FULL_SUCCESS", schema=schema, record_count=len(rows), output_assets=outputs601, extra=extras601))
-    old601 = d601 / older601.run_timestamp / f"6-0-1_P1_多对标关键词排名明细_{older601.run_timestamp}.csv"
-    old601.parent.mkdir(parents=True, exist_ok=True)
-    write_csv(old601, disk_details, mod.DETAIL_COLUMNS)
-    write_metadata_sidecar(old601, make_artifact_metadata(
-        older601, "BENCHMARK_KEYWORD_DETAIL", run_status="FULL_SUCCESS",
-        schema=mod.DETAIL_COLUMNS, record_count=len(details),
-        extra={"Benchmark_Count": 1, "Benchmark_Codes": ["A"], "Benchmark_ASINs": ["ASIN-A"]},
-    ))
-    for key, name, rows, schema, identity in (("summary", "精准泛词汇总", summary, mod.SUMMARY_COLUMNS, "PRECISION_BROAD_SUMMARY"), ("mapping", "词对应的精准泛词", mapping, mod.MAPPING_COLUMNS, "PRECISION_BROAD_MAPPING")):
-        path = d603 / f"6-0-3_P1_{name}_{ctx603.run_timestamp}.csv"
-        write_csv(path, rows, schema)
-        write_metadata_sidecar(path, make_artifact_metadata(ctx603, identity, run_status="FULL_SUCCESS", schema=schema, record_count=len(rows)))
-    loaded = mod.resolve_inputs(root, "P1")
-    assert loaded["detail"].get("run_id") == ctx601.run_id
-    assert {row["对标编码"] for row in loaded["detail_rows"]} == {"A"}
-    assert loaded["summary"].get("run_id") == loaded["mapping"].get("run_id") == ctx603.run_id
-
-
 def write_csv(path, rows, schema):
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=schema)
         writer.writeheader()
         writer.writerows(rows)
 
 
+def make_602_package(root, stamp, details, mapping, *, status="VALID"):
+    folder = root / "06_SKILL分析报告" / "6-0-2_AI精准关键词识别"
+    folder.mkdir(parents=True, exist_ok=True)
+    codes = ["500"]
+    identities = {"500": {"对标编码": "A", "对标ASIN": "ASIN-A"}}
+    observations = [{
+        "所属产品编号": "500", "对标ASIN": "ASIN-A", "Id": row["Id"], "词": row["词"],
+        "中文": row["中文"], "市场容量": row["市场容量"], "竞争产品数": row["竞争产品数"],
+        "供需比": row["供需比"], "自然排名": row["自然排名"], "精准度": "高度精准",
+        "精准原因": "符合当前产品购买意图",
+    } for row in details]
+    unique_rows = [{
+        **{key: row[key] for key in ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比")},
+        "对标覆盖数": "1", "最佳自然排名": row["自然排名"], "自然排名中位数": row["自然排名"],
+        "精准度": "高度精准", "精准原因": "符合当前产品购买意图",
+    } for row in mapping]
+    names = {
+        "ai": f"6-0-2_精准判断所有词表_{stamp}.csv",
+        "high_precision": f"6-0-2_高度精准词表_{stamp}.csv",
+        "deduplicated": f"6-0-2_去对标去重 高度精准词_{stamp}.csv",
+    }
+    paths = {key: folder / name for key, name in names.items()}
+    paths["benchmarks"] = {"500": folder / f"6-0-2_500_高度精准词_{stamp}.csv"}
+    all_paths = [paths[key] for key in ("ai", "high_precision", "deduplicated")] + list(paths["benchmarks"].values())
+    write_csv(paths["ai"], observations, mod.BENCHMARK_HIGH_PRECISION_COLUMNS)
+    write_csv(paths["high_precision"], observations, mod.BENCHMARK_HIGH_PRECISION_COLUMNS)
+    write_csv(paths["deduplicated"], unique_rows,
+              ("Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "对标覆盖数", "最佳自然排名", "自然排名中位数", "精准度", "精准原因"))
+    write_csv(paths["benchmarks"]["500"], observations, mod.BENCHMARK_HIGH_PRECISION_COLUMNS)
+    counts = {"Input Observation Count": len(observations), "Input Unique Keyword Count": len(unique_rows),
+              "AI Record Count": len(observations), "High Precision Record Count": len(observations),
+              "Unique High Precision Keyword Count": len(unique_rows), "Benchmark Count": 1,
+              "Benchmark File Count": 1, "Benchmark High Precision Observation Count": len(observations)}
+    manifest = {
+        "SkillId": "hzp-amz-6-0-2-ai-precision-keyword-identification", "Current Product": "P1",
+        "RUN_ID": f"602-{stamp}", "RUN_TIMESTAMP": stamp, "GeneratedAt": "2026-09-16T12:00:00+08:00",
+        "Input Source": "test", "Input Skill": "601", "Input Run ID": "601-run",
+        "Input RUN_TIMESTAMP": "20260916_100000", "Input Folder": str(root / "601"),
+        "Input File": str(root / "601" / "observations.csv"), "Product Text Input": str(root / "product.txt"),
+        "Input Record Count": len(observations), "Input Unique Keyword Count": len(unique_rows),
+        "Output Folder": str(folder), "Output Files": [path.name for path in all_paths],
+        "Benchmark Count": 1, "Expected Benchmark Count": 1, "Benchmark Product Codes": codes,
+        "Benchmark Identities": identities, "PerBenchmarkInputObservationCount": {"500": len(observations)},
+        "PerBenchmarkHighPrecisionRecordCount": {"500": len(observations)},
+        "Expected Benchmark Files": [paths["benchmarks"]["500"].name],
+        "GeneratedBenchmarkFiles": [paths["benchmarks"]["500"].name], "Record Counts": counts,
+        "Output Record Counts": {"AI Precision Observation Count": len(observations),
+            "High Precision Observation Count": len(observations),
+            "Unique High Precision Keyword Count": len(unique_rows)},
+        "Run Status": status,
+    }
+    (folder / f"run_manifest_{stamp}.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    definitions = [
+        (paths["ai"], "AI_PRECISION_KEYWORD_OBSERVATIONS", observations, list(mod.BENCHMARK_HIGH_PRECISION_COLUMNS), {}),
+        (paths["high_precision"], "HIGH_PRECISION_KEYWORD_OBSERVATIONS", observations, list(mod.BENCHMARK_HIGH_PRECISION_COLUMNS), {}),
+        (paths["deduplicated"], "去对标去重 高度精准词", unique_rows,
+         ["Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "对标覆盖数", "最佳自然排名", "自然排名中位数", "精准度", "精准原因"],
+         {"Report_Key": "UNIQUE_HIGH_PRECISION_KEYWORDS"}),
+        (paths["benchmarks"]["500"], "BENCHMARK_HIGH_PRECISION_KEYWORDS", observations, list(mod.BENCHMARK_HIGH_PRECISION_COLUMNS), {"Benchmark_Product_Code": "500"}),
+    ]
+    for asset, identity, rows, schema, extra in definitions:
+        metadata = {"Report_Identity": identity, "Skill_ID": "hzp-amz-6-0-2-ai-precision-keyword-identification",
+                    "Product_Code": "P1", "RUN_ID": f"602-{stamp}", "RUN_TIMESTAMP": stamp,
+                    "Run_Status": "FULL_SUCCESS", "Schema": schema, "Record_Count": len(rows),
+                    "Output_Assets": [str(path) for path in all_paths], **extra}
+        write_metadata_sidecar(asset, metadata)
+    return {"manifest": manifest, "paths": paths}
+
+
+def write_603_run_package(root, stamp, summary, mapping, *, status="VALID", include_mapping=True):
+    folder = root / "06_SKILL分析报告" / mod.INPUT_DIR_603
+    folder.mkdir(parents=True, exist_ok=True)
+    summary_name = f"6-0-3_精准泛词汇总_{stamp}.csv"
+    mapping_name = f"6-0-3_词对应的精准泛词_{stamp}.csv"
+    write_csv(folder / summary_name, summary, mod.SUMMARY_COLUMNS)
+    if include_mapping:
+        write_csv(folder / mapping_name, mapping, mod.MAPPING_COLUMNS)
+    manifest = {
+        "SkillId": "hzp-amz-6-0-3-precision-broad-extraction", "Current Product": "P1",
+        "RUN_ID": stamp, "RUN_TIMESTAMP": stamp, "GeneratedAt": "2026-09-15T11:00:00+08:00",
+        "Input Skill": "hzp-amz-6-0-2-ai-precision-keyword-identification",
+        "Input Run ID": "602-run", "Input RUN_TIMESTAMP": "20260915_100000",
+        "Input Folder": str(root / "06_SKILL分析报告" / "6-0-2_AI精准关键词识别"),
+        "Input File": str(root / "06_SKILL分析报告" / "6-0-2_AI精准关键词识别" / "6-0-2_去对标去重 高度精准词_20260915_100000.csv"),
+        "Input Record Count": len(mapping), "Input Unique Keyword Count": len(mapping),
+        "Output Folder": str(folder), "Output Files": [summary_name, mapping_name],
+        "Output Record Counts": {"Intent Count": len(summary), "Keyword Count": len(mapping)},
+        "Run Status": status,
+    }
+    (folder / f"6-0-3_RunPackage_{stamp}.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    return manifest
+
+
+def test_latest_valid_602_and_same_run_603_bundle(tmp_path):
+    root = tmp_path
+    details, summary, mapping, _ = fixture_data(("A",))
+    old = make_602_package(root, "20260915_100000", details, mapping)
+    make_602_package(root, "20260916_120000", details, mapping, status="FAILED")
+    manifest603 = write_603_run_package(root, "20260915_110000", summary, mapping)
+    write_603_run_package(root, "20260916_120000", summary, mapping, status="FAILED")
+    loaded = mod.resolve_inputs(root, "P1")
+    assert loaded["benchmark"].get("run_id") == old["manifest"]["RUN_ID"]
+    assert loaded["benchmark"].get("run_timestamp") == "20260915_100000"
+    assert set(loaded["detail_rows"][0]) == set(mod.DETAIL_COLUMNS)
+    assert {row["对标编码"] for row in loaded["detail_rows"]} == {"A"}
+    assert loaded["summary"].get("run_id") == loaded["mapping"].get("run_id") == manifest603["RUN_ID"]
+    assert loaded["summary"].get("run_timestamp") == loaded["mapping"].get("run_timestamp") == "20260915_110000"
+    assert loaded["summary"].get("input_resolution_method") == "LATEST_INVALID_FALLBACK_USED"
+
+
+def test_603_package_resolver_uses_shared_manifest_and_falls_back_from_incomplete_run(tmp_path):
+    _, summary, mapping, _ = fixture_data(("A",))
+    write_603_run_package(tmp_path, "20260915_110000", summary, mapping)
+    write_603_run_package(tmp_path, "20260916_120000", summary, mapping, include_mapping=False)
+    package = mod._resolve_latest_valid_603_run_package(tmp_path, "P1")
+    assert package["run_timestamp"] == "20260915_110000"
+    assert package["input_resolution_method"] == "LATEST_INVALID_FALLBACK_USED"
+    assert Path(package["files"]["summary"]).parent == Path(package["files"]["mapping"]).parent
 def test_timestamped_outputs_share_run_time_and_never_overwrite(tmp_path, monkeypatch):
     details, summary, mapping, decisions = fixture_data(("A",))
     inputs = {"detail_rows": details, "summary_rows": summary, "mapping_rows": mapping,
               "benchmark_identities": {"A": "ASIN-A"},
-              "detail": {"file": "detail.csv", "metadata": {"Skill_ID": "6-0-1", "Report_Identity": "BENCHMARK_KEYWORD_DETAIL"}, "record_count": len(details), "run_id": "r1", "run_timestamp": "t1"},
+              "detail": {"file": "detail.csv", "metadata": {"Skill_ID": "hzp-amz-6-0-2-ai-precision-keyword-identification", "Report_Identity": "BENCHMARK_HIGH_PRECISION_KEYWORDS"}, "record_count": len(details), "run_id": "r2", "run_timestamp": "t2"},
               "summary": {"file": "summary.csv", "metadata": {"Skill_ID": "6-0-3", "Report_Identity": "PRECISION_BROAD_SUMMARY"}, "record_count": len(summary), "run_id": "r3", "run_timestamp": "t3"},
               "mapping": {"file": "mapping.csv", "metadata": {"Skill_ID": "6-0-3", "Report_Identity": "PRECISION_BROAD_MAPPING"}, "record_count": len(mapping), "run_id": "r3", "run_timestamp": "t3"}}
     fixed = datetime.fromisoformat("2026-09-16T12:34:56+08:00")

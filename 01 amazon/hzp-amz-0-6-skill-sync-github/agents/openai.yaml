@@ -1,0 +1,8 @@
+interface:
+  display_name: "HZP Amazon 0-6｜技能同步到 GitHub"
+  short_description: "同步 .codex 中 hzp-amz 技能到 JasonSkill 并推送 GitHub"
+  brand_color: "#2563EB"
+  default_prompt: "Use $hzp-amz-0-6-skill-sync-github to synchronize all hzp-amz skills from .codex to JasonSkill and, only when explicitly requested, commit and push to GitHub."
+
+policy:
+  allow_implicit_invocation: true

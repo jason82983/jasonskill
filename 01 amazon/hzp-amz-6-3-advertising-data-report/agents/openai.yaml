@@ -1,0 +1,4 @@
+interface:
+  display_name: "HZP Amazon 6-3｜广告运行事实数据报告"
+  short_description: "只读采集广告运行事实并生成可追溯Run Package"
+  default_prompt: "运行6-3广告运行事实数据报告：只读采集并生成带时间戳的事实包，不做广告决策，不执行任何写操作。"

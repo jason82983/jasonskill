@@ -73,3 +73,7 @@ Read [execution-contract.md](references/execution-contract.md) for action mappin
 ## Shared AI Brain
 
 本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。
+
+## 报告目录与归档
+
+正式报告资产遵守共享 [报告目录与归档契约](../references/report-layout-contract.md)。新生成的机器数据进入本 Skill 的 `data/`，人类 HTML 按 Report Identity 在根目录只保留一个 `最新`，旧 HTML 进入 `历史HTML/`，系统元数据、Manifest、Registry 和日志进入 `_system/`。持续运行 Skill 的现有机器 Run Package Contract 保持不变；HTML 最新入口与机器 Latest Valid Data 分开解析。

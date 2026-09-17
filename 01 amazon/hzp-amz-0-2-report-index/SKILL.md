@@ -35,7 +35,7 @@ description: Scan a product project's formal Amazon Skill HTML reports and rebui
 [技能编号]_[产品编号]_[技能中文名称]_V[版本号]_[YYYYMMDD]_[HHMMSS].html
 ```
 
-例如 `2-2_N24_细分市场分析_V3_20260928_192222.html`。解析 Skill 编号、产品编号、Skill 中文名称、版本、日期和时间。兼容旧格式；无法完整解析时仍索引文件名、所属 Skill 目录和打开链接，并标记 `历史报告`。 6-2/6-3换号迁移期间，标题或元数据与当前职责不一致的历史文件另标记“历史语义”，保留可访问性但不优先于当前语义版本。
+例如 `2-2_N24_细分市场分析_V3_20260928_192222.html`。解析 Skill 编号、产品编号、Skill 中文名称、版本、日期和时间。兼容旧格式；无法完整解析时仍索引文件名、所属 Skill 目录和打开链接，并标记 `历史报告`。 6-5/6-3换号迁移期间，标题或元数据与当前职责不一致的历史文件另标记“历史语义”，保留可访问性但不优先于当前语义版本。
 
 先按 Skill 编号自然排序（`2-1`、`2-2`、`3-1`）；同一 Skill 优先按版本号降序，再按文件名日期时间降序，最后以文件时间为后备。每个 Skill 分组第一份显示轻量 `[最新]` 标签并提供“打开最新报告”。
 
@@ -80,16 +80,3 @@ Products Root：E:\【产品总目录】
 ## 完成检查
 
 确认 Product Root 身份、索引路径、实际扫描范围、报告总数、Skill 分组、版本/时间排序、最新标记、旧格式标记和相对链接。不要修改正式报告、原始数据或其他目录。
-
-
-## 全局报告目录例外
-
-`index.html` 是 0-2 唯一允许覆盖的总索引入口，不属于正式分析报告，继续位于 `06_SKILL分析报告/index.html`；被索引的报告按各自 Skill 子目录和前缀规则保存。
-
-## 全局正式报告目录与命名规则
-
-本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。若 HTML 由同批 CSV 生成，必须从文件名时间戳相同的 CSV 读取并生成不可变快照；禁止运行时另找“最新 CSV”。未由 CSV 构成输入的 HTML 报告遵循对应 Skill 的原有报告内容逻辑。此规则优先于本文档中旧的目录和文件名示例。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

@@ -198,12 +198,14 @@ def test_runtime_requeries_live_erp_and_writes_timestamped_manifest(tmp_path, mo
     outputs = [path for path in output_dir.rglob("*.csv") if path != stale]
     assert len(outputs) == 4
     assert all(re.search(r"_\d{8}_\d{6}$", output.stem) for output in outputs)
-    assert all(output.parent == output_dir for output in outputs)
-    assert all(output.name.startswith("6-0-1_") for output in outputs)
+    assert {output.parent for output in outputs} == {output_dir}
+    timestamps = {output.stem[-15:] for output in outputs}
+    assert len(timestamps) == 1
+    assert all(re.search(r"_\d{8}_\d{6}$", output.stem) for output in outputs)
     detail = next(path for path in outputs if "排名明细" in path.name)
     pool = next(path for path in outputs if "母池" in path.name)
-    raw = next(path for path in outputs if "6-0-1_ASIN-A_关键词自然排名" in path.name)
-    all_observations = next(path for path in outputs if "6-0-1_所有对标自然排名关键词" in path.name)
+    raw = next(path for path in outputs if "ASIN-A+关键词自然排名" in path.name)
+    all_observations = next(path for path in outputs if "所有对标自然排名关键词汇总" in path.name)
     with detail.open(encoding="utf-8-sig", newline="") as handle:
         assert next(csv.DictReader(handle))["Id"] == "KW-99"
     with pool.open(encoding="utf-8-sig", newline="") as handle:

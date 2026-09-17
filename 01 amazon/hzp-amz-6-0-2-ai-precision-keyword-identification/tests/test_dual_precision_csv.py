@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 from tempfile import TemporaryDirectory
 import csv
 import importlib.util
@@ -235,29 +235,38 @@ def test_complete_query_is_called_once_and_csv_has_bom(tmp_path):
     paths = module.write_dual_csvs(tmp_path, "B2", dual["manual_rows"], dual["ai_blind_rows"])
     assert paths["ai"].name.startswith("6-0-2_精准判断所有词表_") and paths["ai"].suffix == ".csv"
     assert paths["high_precision"].name.startswith("6-0-2_高度精准词表_") and paths["high_precision"].suffix == ".csv"
-    assert paths["ai"].read_bytes().startswith(b"\xef\xbb\xbf")
-    assert paths["high_precision"].read_bytes().startswith(b"\xef\xbb\xbf")
-    assert paths["ai"].with_name(paths["ai"].name + ".meta.json").is_file()
-    assert paths["high_precision"].with_name(paths["high_precision"].name + ".meta.json").is_file()
+    assert paths["deduplicated"].name.startswith("6-0-2_去对标去重 高度精准词_") and paths["deduplicated"].suffix == ".csv"
+    fixed = [paths[key] for key in ("ai", "high_precision", "deduplicated")]
+    assert len({path.parent for path in fixed}) == 1
+    assert len({path.stem.rsplit("_", 1)[-1] for path in fixed}) == 1
+    for path in fixed:
+        assert path.read_bytes().startswith(b"\xef\xbb\xbf")
+        assert not path.with_name(path.name + ".meta.json").exists()
 
 
 def test_empty_result_keeps_only_final_header(tmp_path):
     paths = module.write_dual_csvs(tmp_path, "B2", [], [])
-    header = ",".join(module.FULL_FINAL_COLUMNS)
-    assert paths["ai"].read_text(encoding="utf-8-sig").splitlines() == [header]
-    assert paths["high_precision"].read_text(encoding="utf-8-sig").splitlines() == [header]
+    observation_header = ",".join(module.OBSERVATION_FINAL_COLUMNS)
+    deduplicated_header = ",".join(module.DEDUPLICATED_FINAL_COLUMNS)
+    assert paths["ai"].read_text(encoding="utf-8-sig").splitlines() == [observation_header]
+    assert paths["high_precision"].read_text(encoding="utf-8-sig").splitlines() == [observation_header]
+    assert paths["deduplicated"].read_text(encoding="utf-8-sig").splitlines() == [deduplicated_header]
 
 
 def test_output_paths_exclude_formal_index_root():
     paths = module.output_paths(r"E:\\Products\\B2", "B2")
     assert "manual" not in paths
     assert "06_SKILL分析报告" in str(paths["ai"])
+    assert "6-0-2_AI精准关键词识别" in str(paths["ai"])
     assert paths["ai"].name.startswith("6-0-2_精准判断所有词表_") and paths["ai"].suffix == ".csv"
     assert paths["high_precision"].name.startswith("6-0-2_高度精准词表_") and paths["high_precision"].suffix == ".csv"
-    assert paths["ai"].name.rsplit("_", 1)[-1].split(".")[0] == paths["high_precision"].name.rsplit("_", 1)[-1].split(".")[0]
+    assert paths["deduplicated"].name.startswith("6-0-2_去对标去重 高度精准词_") and paths["deduplicated"].suffix == ".csv"
+    fixed = [paths[key] for key in ("ai", "high_precision", "deduplicated")]
+    assert len({path.parent for path in fixed}) == 1
+    assert len({path.stem.rsplit("_", 1)[-1] for path in fixed}) == 1
 
 
-def test_final_assets_write_full_and_high_precision_only(tmp_path):
+def test_low_level_writer_writes_three_shared_assets_for_unscoped_rows(tmp_path):
     rows = [
         {"Id": "1", "词": "high term", "中文": "高", "市场容量": "500", "竞争产品数": "50", "供需比": "10.0000", "对标覆盖数": "2", "最佳自然排名": "1", "自然排名中位数": "2", "精准度": "高度精准", "精准原因": "具体商品意图与产品事实高度匹配"},
         {"Id": "2", "词": "regular term", "中文": "普", "市场容量": "400", "竞争产品数": "40", "供需比": "10.0000", "对标覆盖数": "1", "最佳自然排名": "2", "自然排名中位数": "2", "精准度": "精准", "精准原因": "主要购买意图匹配但存在扩散"},
@@ -265,11 +274,19 @@ def test_final_assets_write_full_and_high_precision_only(tmp_path):
         {"Id": "4", "词": "wrong term", "中文": "错", "市场容量": "200", "竞争产品数": "20", "供需比": "10.0000", "对标覆盖数": "1", "最佳自然排名": "4", "自然排名中位数": "4", "精准度": "不精准", "精准原因": "商品类型冲突"},
     ]
     ai_path = module.write_full_ai_csv(tmp_path, "B2", rows, write_metadata=False)
-    high_precision_path = ai_path.with_name(ai_path.name.replace("_AI精准词_", "_AI高度精准词_"))
-    assert _read_csv(ai_path) == rows
-    assert [row["词"] for row in _read_csv(high_precision_path)] == ["high term"]
-    assert tuple(_read_csv(high_precision_path)[0]) == module.FULL_FINAL_COLUMNS
-
+    stamp = ai_path.stem[-15:]
+    assert ai_path.parent == tmp_path / "06_SKILL分析报告" / module.OUTPUT_DIR
+    high_precision_path = ai_path.with_name(ai_path.name.replace("精准判断所有词表", "高度精准词表"))
+    deduplicated_path = ai_path.with_name(ai_path.name.replace("精准判断所有词表", "去对标去重 高度精准词"))
+    assert ai_path.stem.endswith(f"_{stamp}")
+    assert high_precision_path.is_file() and deduplicated_path.is_file()
+    assert tuple(_read_csv(ai_path)[0]) == module.OBSERVATION_FINAL_COLUMNS
+    high = _read_csv(high_precision_path)
+    assert [row["词"] for row in high] == ["high term"]
+    unique = _read_csv(deduplicated_path)
+    assert tuple(unique[0]) == module.DEDUPLICATED_FINAL_COLUMNS
+    assert [row["词"] for row in unique] == ["high term"]
+    assert "所属产品编号" not in unique[0]
 
 def test_final_ai_rows_sort_search_volume_descending_with_missing_last_and_stable_ties():
     rows = []

@@ -300,7 +300,7 @@ This is the raw-evidence location for original advertising files downloaded or e
 
 If a cleaned or aggregated intermediate file is necessary, label it explicitly as `派生数据` / `Derived Data` and keep its relationship to the original source. A live MCP query that does not create a file does not need to be exported solely for archiving. When an export is intentionally saved, its default destination is `[Product Root]/05_分析源数据/06_广告数据下载/`. Preserve historical snapshots and do not mechanically create duplicate daily exports.
 
-For later stage-6 Skills, the unified source boundary is: SellerSpace MCP live read-only data and files in this raw-data directory are both evidence sources; AI diagnoses, recommendations, human decisions, execution records, and 1/3/7-day validation belong in `06_SKILL分析报告/广告表现汇报优化日志/`. If both evidence sources cover the same window but disagree, preserve both and report `【广告数据源冲突】` with source A, source B, window, metric name and definition, difference, possible cause, and suggested verification; do not silently select one. Raw advertising files are not formal Skill reports and are not candidates for the 0-2 report index. This is a directory/interface rule; it does not change the business logic of 6-1, 6-2, or 6-3.
+For later stage-6 Skills, the unified source boundary is: SellerSpace MCP live read-only data and files in this raw-data directory are both evidence sources; AI diagnoses, recommendations, human decisions, execution records, and 1/3/7-day validation belong in `06_SKILL分析报告/广告表现汇报优化日志/`. If both evidence sources cover the same window but disagree, preserve both and report `【广告数据源冲突】` with source A, source B, window, metric name and definition, difference, possible cause, and suggested verification; do not silently select one. Raw advertising files are not formal Skill reports and are not candidates for the 0-2 report index. This is a directory/interface rule; it does not change the business logic of 6-2, 6-5, or 6-3.
 
 ### Role recording examples
 
@@ -479,11 +479,3 @@ For `MIGRATE`, return:
 5. confirmation that no original evidence file was deleted or overwritten.
 
 Use precise paths and distinguish facts from classification judgments. Do not report a guessed business fact as if it came from the file structure.
-
-## 全局正式报告目录与命名规则
-
-本 Skill 面向确定 Product Root 生成正式报告或结构化分析报告时，统一保存到 `06_SKILL分析报告/{Skill编号}_{Skill中文正式名称}/`，文件名使用 `{Skill编号}_{报告名称}_{YYYYMMDD_HHMMSS}.{ext}`；同一运行的配套正式资产共用时间戳。6-0-1、6-0-2、6-0-3、6-0-5、6-0-6 的报告资产直接放固定 Skill 目录，不建时间戳子目录；6-2、6-3、6-4 可按每次运行建立 `YYYYMMDD_HHMMSS/` 子目录，子目录中的文件仍须带 Skill 编号前缀和时间戳。读取最新报告或运行包时按文件名/包内时间及有效性校验，不按文件修改时间选择。若 HTML 由同批 CSV 生成，必须从文件名时间戳相同的 CSV 读取并生成不可变快照；禁止运行时另找“最新 CSV”。未由 CSV 构成输入的 HTML 报告遵循对应 Skill 的原有报告内容逻辑。此规则优先于本文档中旧的目录和文件名示例。历史报告不自动迁移或删除。跨产品公共知识、提醒状态、决策登记簿和运行日志等持续业务数据按各自数据契约保存，不作为 Product Root 正式分析报告迁移。
-
-## Shared AI Brain
-
-本 Skill 遵守仓库共享 AI Brain：`../references/ai-brain/README.md`。运行时按 `context-manifest.md` 声明 GLOBAL、DOMAIN、UPSTREAM、HISTORY、FORBIDDEN；本 Skill 的业务 Contract、正式 Ground Truth 和职责边界优先于泛化推理。AI Judgment 必须区分 Evidence 类型，重要判断先执行 Decision Challenge，再由 Reason Trace 生成原因；程序确定的数学、Join、去重、筛选、聚合、Schema、Identity、Timestamp、Latest 和 Read-back 不交给 AI 计算。

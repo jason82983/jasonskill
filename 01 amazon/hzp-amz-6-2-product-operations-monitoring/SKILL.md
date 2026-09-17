@@ -198,3 +198,6 @@ Provider 能力必须显式标记 `SUPPORTED`、`NOT_SUPPORTED` 或 `SEMANTICS_U
 
 6-2 只识别 ASIN 经营层面的关键词异常或机会（例如 Search Term 覆盖变化、核心词自然排名信号、广告/自然词转化差异），不再复制 ERP 精准词筛选、精准泛词生成、Search Intent 聚类或 Rankability 算法。精准词问题输出 `Route → 6-0-2`；精准泛词问题输出 `Route → 6-0-3`，并读取对应最新有效资产。
 
+## 报告目录与归档
+
+正式报告资产遵守共享 [报告目录与归档契约](../references/report-layout-contract.md)。新生成的机器数据进入本 Skill 的 `data/`，人类 HTML 按 Report Identity 在根目录只保留一个 `最新`，旧 HTML 进入 `历史HTML/`，系统元数据、Manifest、Registry 和日志进入 `_system/`。持续运行 Skill 的现有机器 Run Package Contract 保持不变；HTML 最新入口与机器 Latest Valid Data 分开解析。

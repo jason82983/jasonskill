@@ -1,4 +1,9 @@
-# 6-0-4
+# HZP Amazon 6-0-4｜AI精准词同步ERP
 
-The current 6-0-2 unified asset uses eleven columns and `Id=KwId` (stable Keyword Entity), not the writable `PickPwK.Id` row key. 6-0-4 detects it and blocks with `ERP_KEYWORD_ENTITY_ID_NOT_WRITABLE_AS_PICKPWK_ID`; it must not guess or select a Benchmark row. The legacy seven-column full-judgment asset remains blocked by `PRECISION_THRESHOLD_UNRESOLVED`; historical six-column input remains compatible. Real ERP writes require the restricted JSON capability, preflight, transaction, and read-back.
-6-0-4 resolves the latest-valid 6-0-2 `AI_PRECISION_KEYWORDS` asset inside the current Product Root using the shared Stage 6 resolver, then applies the existing schema and fail-closed selection checks unchanged. Per-run operational MD logs append the current run timestamp and have lineage sidecars; they are excluded from the formal 0-2 index. See `../references/stage6-artifact-contract.md`.
+Machine Name：`hzp-amz-6-0-4-ai-precision-keyword-erp-sync`
+
+6-0-4 只消费 6-0-2 的 AI 精准词六列 CSV，并通过 `erp-pickpwk-write-access.json` 声明的受限能力追加 `PickPwK.Tags` 的完整 `|1精准|`。自动编号是 PickPwK 真实记录 ID，可来自当前产品或明确绑定的 Benchmark；6-0-4 按 ID + Keyword 双校验执行，不因 Record ProId 与当前分析产品不同而阻止。它不重新判断精准词，不读取 6-0-3，不直接连接任意 SQL。
+
+正式命令：`6-0-4，Product_Code`；预检命令：`6-0-4，Product_Code，预检`。缺少输入、配置、凭据、目标身份或回读条件时必须 fail closed。日志位于 `06_SKILL分析报告/6-0-4_AI精准词同步ERP/执行日志/`，不进入 0-2 正式报告索引。
+
+当前配置确认的身份映射为：`PickPwKView.Id → PickPwK.Id`，目标字段为 `Tags`。该映射来自系统配置和人工确认；本 Skill 不修改配置、不修改 `IsExact`，不删除精准标签。

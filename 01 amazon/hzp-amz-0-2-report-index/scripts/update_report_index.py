@@ -13,15 +13,18 @@ from pathlib import Path
 SKILL_LABELS = {
     "2-1": "2-1｜产品分析",
     "2-2": "2-2｜细分市场分析",
-    "6-1": "6-1｜新品推广方案",
-    "6-2": "6-2｜产品经营监控与诊断",
-    "6-3": "6-3｜广告诊断优化",
+    "6-1": "6-1｜新品广告作战规划",
+    "6-2": "6-2｜新品推广方案",
+    "6-3": "6-3｜广告运行事实数据报告",
+    "6-4": "6-4｜广告经营决策",
+    "6-5": "6-5｜广告优化动作执行",
+    "6-6": "6-6｜产品经营监控与诊断",
 }
 
 OPERATIONAL_LOG_DIR = "广告表现汇报优化日志"
 
 # Stage 6 semantic labels are keyed by the new report type; historical files remain discoverable as history.
-FORMAL_STAGE6_TYPES = {"6-2": "产品经营监控与诊断", "6-3": "广告诊断优化"}
+FORMAL_STAGE6_TYPES = {"6-1": "新品广告作战规划", "6-3": "广告运行事实数据报告", "6-4": "广告经营决策", "6-6": "产品经营监控与诊断"}
 
 
 def read_first_field(path: Path, labels: tuple[str, ...]) -> str:
@@ -65,11 +68,11 @@ def parse_report(path: Path, report_root: Path) -> dict | None:
         return None
     stem = path.stem
     match = re.match(r"^(?P<skill>\d+-\d+)[-_](?P<product>[^_]+)(?:_(?P<title>.+))?$", stem)
-    parent_match = re.match(r"^(?P<skill>\d+-\d+)(?:[_-].*)?$", path.parent.name)
+    parent_match = re.match(r"^(?P<skill>\d+-\d+(?:-\d+)?)(?:[_-].*)?$", path.parent.name)
     if not match and not parent_match:
         return None
 
-    skill = match.group("skill") if match else parent_match.group("skill")
+    skill = parent_match.group("skill") if parent_match else match.group("skill")
     product = match.group("product") if match else ""
     title = (match.group("title") or "") if match else ""
     version_match = re.search(r"_V(?P<version>\d+)(?:_|$)", stem, re.IGNORECASE)
@@ -99,10 +102,20 @@ def parse_report(path: Path, report_root: Path) -> dict | None:
         re.sub(r"<[^>]+>", " ", value)
         for value in re.findall(r"<(?:title|h1)[^>]*>(.*?)</(?:title|h1)>", header_text, re.IGNORECASE | re.DOTALL)
     )
-    if skill == "6-2":
-        semantic_legacy = "广告诊断优化" in semantic_probe and "产品经营监控" not in semantic_probe
+    if skill == "6-4":
+        semantic_legacy = "广告诊断优化" in semantic_probe and "广告经营决策" not in semantic_probe
+    elif skill == "6-6":
+        semantic_legacy = "产品经营监控" not in semantic_probe and "产品运营监控" not in semantic_probe
+    elif skill == "6-1":
+        # Before the numbering migration, 6-1 was the launch skill. Keep those
+        # files discoverable as historical evidence without letting them outrank
+        # the new 6-1 advertising battle-plan reports.
+        semantic_legacy = "新品推广方案" in semantic_probe and "广告作战规划" not in semantic_probe
+    elif skill == "6-2":
+        # Before the numbering migration, 6-2 was the monitoring skill.
+        semantic_legacy = ("产品运营监控" in semantic_probe or "产品经营监控" in semantic_probe) and "新品推广方案" not in semantic_probe
     elif skill == "6-3":
-        semantic_legacy = ("产品运营监控" in semantic_probe or "产品经营监控" in semantic_probe) and "广告诊断优化" not in semantic_probe
+        semantic_legacy = "广告运行事实" not in semantic_probe and "广告数据" not in semantic_probe
     else:
         semantic_legacy = False
     return {
@@ -145,8 +158,10 @@ def build_html(product_code: str, product_name: str, reports: list[dict], genera
     cards: list[str] = []
     for skill, group in ordered_groups:
         group = sort_reports(group)
-        label = SKILL_LABELS.get(skill, f"{skill}｜{group[0]['title'] or '分析报告'}")
         latest = group[0]
+        label = SKILL_LABELS.get(skill, f"{skill}｜{latest['title'] or '分析报告'}")
+        if latest.get("semantic_legacy"):
+            label += "（当前文件为历史编号）"
         latest_link = "./" + latest["path"]
         rows: list[str] = []
         for index, item in enumerate(group):

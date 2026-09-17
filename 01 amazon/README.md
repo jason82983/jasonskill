@@ -14,6 +14,10 @@
 
 Stage 6 正式报告的最新有效输入选择、运行时间戳、不覆盖与输入血缘，统一遵守 [共享资产契约](references/stage6-artifact-contract.md)。
 
+所有正式报告型 `hzp-amz-*` Skill 的目录分层、HTML 最新/历史归档、机器数据与
+系统资产位置，统一遵守 [报告目录与归档契约](references/report-layout-contract.md)，
+并复用 `scripts/hzp_amz_report_contract.py`，不在各 Skill 建立平行 Writer/Resolver。
+
 ## 公共产品身份接口
 
 `00_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx` 是 Amazon 产品与 SellerSpace 店铺身份映射主表。需要读取店铺真实数据的 Skill 先按 `Product Code` 读取这张表，再用 `SellerSpace_Store + Marketplace + ASIN + SKU` 做只读二次验证。统一规则见 [Amazon产品身份解析规则](<Amazon产品身份解析规则.md>)。映射表由人工维护，Skills 只读，不自动修改其中的数据。

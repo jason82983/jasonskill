@@ -6,7 +6,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from scripts.hzp_amz_report_contract import (  # noqa: E402
     build_report_filename, resolve_skill_report_dir, validate_hzp_amz_report_batch,
-    validate_hzp_amz_report_path,
+    validate_hzp_amz_report_path, report_data_dir, report_history_html_dir,
+    report_system_dir, display_timestamp, build_latest_html_filename,
+    publish_latest_html,
 )
 
 SKILLS = ROOT
@@ -68,3 +70,39 @@ def test_603_writer_paths_are_flat_and_skill_prefixed(tmp_path):
     assert len({path.parent for path in paths.values()}) == 1
     assert paths["summary"].parent == tmp_path.resolve() / "06_SKILL分析报告" / "6-0-3_精准泛词提取"
     assert module.create_run_folder(tmp_path, STAMP) == paths["summary"].parent
+
+
+def test_layered_report_layout_and_latest_history_rotation(tmp_path):
+    s = skill("5-0-1")
+    root = resolve_skill_report_dir(tmp_path, s)
+    assert report_data_dir(tmp_path, s) == root / "data"
+    assert report_history_html_dir(tmp_path, s) == root / "历史HTML"
+    assert report_system_dir(tmp_path, s, "metadata") == root / "_system" / "metadata"
+    assert display_timestamp(STAMP) == "2026-09-16_221500"
+    assert build_latest_html_filename(s, "产品线上信息获取", STAMP).endswith("_最新_2026-09-16_221500.html")
+
+    first = root / ".first.html.tmp"
+    first.write_text("first", encoding="utf-8")
+    published = publish_latest_html(first, tmp_path, s, "产品线上信息获取", STAMP)
+    assert published.is_file() and "_最新_" in published.name
+
+    second_stamp = "20260917_091111"
+    second = root / ".second.html.tmp"
+    second.write_text("second", encoding="utf-8")
+    published2 = publish_latest_html(second, tmp_path, s, "产品线上信息获取", second_stamp)
+    assert published2.is_file() and published2.read_text(encoding="utf-8") == "second"
+    history = list((root / "历史HTML").glob("*.html"))
+    assert len(history) == 1 and "_最新_" not in history[0].name
+    assert history[0].read_text(encoding="utf-8") == "first"
+
+
+def test_latest_html_duplicate_and_history_collision_fail_closed(tmp_path):
+    s = skill("5-0-1")
+    root = resolve_skill_report_dir(tmp_path, s)
+    (root / build_latest_html_filename(s, "产品线上信息获取", STAMP)).write_text("a", encoding="utf-8")
+    (root / build_latest_html_filename(s, "产品线上信息获取", "20260917_000000")).write_text("b", encoding="utf-8")
+    candidate = root / ".candidate.html.tmp"
+    candidate.write_text("c", encoding="utf-8")
+    import pytest
+    with pytest.raises(ValueError, match="HZP_HTML_LATEST_DUPLICATE"):
+        publish_latest_html(candidate, tmp_path, s, "产品线上信息获取", "20260917_010000")
