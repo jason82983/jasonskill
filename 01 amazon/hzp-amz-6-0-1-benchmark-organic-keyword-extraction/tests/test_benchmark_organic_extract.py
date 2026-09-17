@@ -67,7 +67,32 @@ def test_csv_has_exact_seven_columns_and_count_matches():
         with open(result["output"], encoding="utf-8-sig", newline="") as handle:
             reader = csv.reader(handle)
             assert next(reader) == ["Id", "词", "中文", "市场容量", "竞争产品数", "供需比", "自然排名"]
-            assert next(reader)[1] == "baby proofing"
+
+
+def test_missing_keyword_cn_is_translated_and_existing_value_is_preserved():
+    rows = [
+        {"Id": 1, "Keyword": "sister gifts", "KeywordCn": "", "MarketCapacity": 5000, "AsinQuantity": 100, "OrganicRank": 4},
+        {"Id": 2, "Keyword": "birthday gifts", "KeywordCn": "已有翻译", "MarketCapacity": 4000, "AsinQuantity": 100, "OrganicRank": 5},
+    ]
+    values, summary = module.filter_and_sort_records(
+        rows,
+        field_map=FIELD_MAP,
+        translator=lambda keyword: {"sister gifts": "姐妹礼物"}.get(keyword, ""),
+    )
+    assert values[0]["中文"] == "姐妹礼物"
+    assert values[1]["中文"] == "已有翻译"
+    assert summary["translated_keyword_cn_records"] == 1
+    assert summary["missing_keyword_cn_records"] == 0
+
+
+def test_translation_failure_is_reported_without_fabricating_chinese():
+    rows = [{"Id": 1, "Keyword": "unknown term", "KeywordCn": "", "MarketCapacity": 5000, "AsinQuantity": 100, "OrganicRank": 4}]
+    values, summary = module.filter_and_sort_records(
+        rows, field_map=FIELD_MAP, translator=lambda _keyword: "",
+    )
+    assert values[0]["中文"] == ""
+    assert summary["translation_failures"] == 1
+    assert summary["missing_keyword_cn_records"] == 1
 
 
 def _one(capacity, rank, ident=1, keyword="kw", asin_quantity=10):

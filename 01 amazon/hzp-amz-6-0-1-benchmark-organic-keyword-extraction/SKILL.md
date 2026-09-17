@@ -19,6 +19,8 @@ Formal identity: 6-0-1 | Benchmark Organic Keyword Extraction | `hzp-amz-6-0-1-b
 
 Keyword Market Fact 一词一份：`Keyword`、`KeywordCn`、`SearchVolume30`、`AsinQuantity`；供需比由代码计算 `SearchVolume30 / AsinQuantity`，四位小数。Benchmark Observation 按一个 Keyword Entity × 一个 Benchmark Code 记录真实 `RankOra`。字段语义及冲突策略见 [field contract](references/field-contract.md)。
 
+`中文`字段优先使用 ERP `KeywordCn`。对符合筛选条件但 `KeywordCn` 为空的关键词，运行时必须调用已配置的英文→简体中文翻译提供方补齐，并在写出前复核每条合格记录均有非空中文；已有 `KeywordCn` 不得覆盖。翻译只补充展示字段，不参与筛选、排序、Keyword Entity、市场事实、排名或任何语义判断。翻译提供方不可用、翻译失败或仍有空值时返回 `KEYWORD_CN_TRANSLATION_INCOMPLETE`，该 Run 不得标记 `FULL_SUCCESS`，不得用英文原词、关键词字面拆解或臆测中文替代翻译。
+
 继续使用既有合法筛选：`RankOra >= 1` 且 `SearchVolume30 > 100`。保留所有合格 Keyword；不做 AI 精准度判断、关键词语义去重、聚类、推广或写操作。相同 `KwId` 的市场容量/竞争产品数冲突时报告 `KEYWORD_MARKET_FACT_CONFLICT`，不得任选或静默覆盖。
 
 ## 正式输出
@@ -29,6 +31,8 @@ Keyword Market Fact 一词一份：`Keyword`、`KeywordCn`、`SearchVolume30`、
 2. `6-0-1_对标关键词母池_YYYYMMDD_HHMMSS.csv`，固定九列：`Id,词,中文,市场容量,竞争产品数,供需比,对标覆盖数,最佳自然排名,自然排名中位数`。一行一个唯一 Keyword Entity，是 6-0-2 唯一正式关键词输入。
 3. 每个有效对标 ASIN 单独生成 `6-0-1_{ASIN}_关键词自然排名_YYYYMMDD_HHMMSS.csv`，固定沿用 A 表九列 schema。`对标编号`与该 ASIN 对应的 ERP 编号一致。
 4. `6-0-1_所有对标自然排名关键词_YYYYMMDD_HHMMSS.csv`，不包含`对标编码`列，保留`对标编号`，并追加 `ASIN,产品编号`。内容是 N 张 ASIN 原始表的 UNION ALL；不按词或 Id 去重。`产品编号`为该 ASIN 在 `01_产品档案.md` 对应 Benchmark 配置中的 ERP 数字编号（`benchmark_erp_pro_id`）；缺失时返回 `BENCHMARK_PRODUCT_CODE_MISSING`。
+
+本 Skill 的全部带时间戳 CSV（多对标明细、关键词母池、每个 ASIN 原始表、所有对标自然排名关键词）除保留在本次 Run 的规范资产目录外，还必须以同一文件名复制到 `06_SKILL分析报告/6-0-1_对标自然排名关键词提取/` 外层，作为人工查看的历史与最新可见文件；每个副本同时复制对应 `.meta.json`。外层副本不改变规范 Run Package 的身份、覆盖校验或历史保留规则，禁止覆盖同名历史文件。
 
 覆盖数、最佳排名 MIN 和排名中位数 MEDIAN 均由程序计算。一个词在 N 个 Benchmark 出现，市场容量与竞争产品数仍各保留一份，不乘 N。明细中的全部唯一 `Id` 必须在母池恰好出现一次；冲突或覆盖校验失败不得标记 `FULL_SUCCESS`。
 

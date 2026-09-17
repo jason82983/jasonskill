@@ -16,6 +16,8 @@ PickPwKView 不提供 ASIN 字段。ASIN 和 Benchmark Code 只作为配置身�
 
 关键词市场事实为 `KwId` 唯一的一份：`Id,词,中文,市场容量,竞争产品数,供需比`。固定来源为 `Keyword`, `KeywordCn`, `SearchVolume30`, `AsinQuantity`；供需比只由程序计算 `SearchVolume30 / AsinQuantity`，保留四位小数。竞争产品数 NULL 不补 0，分母小于等于 0 时比例留空。
 
+`中文`优先保留 ERP `KeywordCn`；若合格行的 `KeywordCn` 为空，运行时通过受控英文→简体中文翻译提供方补齐，并对输出逐行复核。已有中文不得被覆盖；翻译失败或仍为空返回 `KEYWORD_CN_TRANSLATION_INCOMPLETE`，运行不得宣称成功。翻译仅是展示字段补全，不改变任何筛选、实体归并、市场事实或排名计算。
+
 Benchmark Observation 是一对 `(KwId, Benchmark_Code)` 的真实 `RankOra`。自然排名字段语义已确认。只保留自然排名可解析且 >=1、市场容量可解析且 >100 的行。
 
 ## 正式输出

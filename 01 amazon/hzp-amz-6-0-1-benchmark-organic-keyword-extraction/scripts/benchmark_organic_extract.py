@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import statistics
 import sys
+import shutil
 from typing import Any, Iterable, Mapping
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +48,7 @@ KEYWORD_ENTITY_ID_CONFLICT = "KEYWORD_ENTITY_ID_CONFLICT"
 KEYWORD_MARKET_FACT_CONFLICT = "KEYWORD_MARKET_FACT_CONFLICT"
 BENCHMARK_OBSERVATION_CONFLICT = "BENCHMARK_OBSERVATION_CONFLICT"
 BENCHMARK_PRODUCT_CODE_MISSING = "BENCHMARK_PRODUCT_CODE_MISSING"
+KEYWORD_CN_TRANSLATION_INCOMPLETE = "KEYWORD_CN_TRANSLATION_INCOMPLETE"
 
 # The user confirmed that KwId is stable and unique for the same keyword
 # across ProIds. `Id` remains the PickPwKView observation-row identity.
@@ -62,6 +64,44 @@ CONFIRMED_FIELD_MAP = {
     "asin_quantity": "AsinQuantity",
     "organic_rank": "RankOra",
 }
+
+
+def build_keyword_translator() -> Any:
+    """Build the runtime English→Simplified Chinese translator.
+
+    Translation is presentation enrichment only; it never changes filtering,
+    ranking, joins, or market facts.  If the optional provider is unavailable,
+    the caller keeps the source value empty and reports the missing count.
+    """
+    try:
+        from deep_translator import GoogleTranslator  # type: ignore
+        provider = GoogleTranslator(source="en", target="zh-CN")
+    except Exception:
+        return None
+    cache: dict[str, str] = {}
+
+    def translate(keyword: Any) -> str:
+        text = str(keyword or "").strip()
+        if not text:
+            return ""
+        if text not in cache:
+            try:
+                cache[text] = str(provider.translate(text) or "").strip()
+            except Exception:
+                cache[text] = ""
+        return cache[text]
+    return translate
+
+
+def ensure_keyword_chinese(keyword: Any, keyword_cn: Any, translator: Any = None) -> tuple[str, str]:
+    """Return ``(Chinese, status)`` without overwriting a confirmed source value."""
+    existing = str(keyword_cn or "").strip()
+    if existing:
+        return existing, "SOURCE"
+    if translator is None:
+        return "", "MISSING"
+    translated = str(translator(keyword) or "").strip()
+    return (translated, "TRANSLATED" if translated else "TRANSLATION_FAILED")
 
 
 def parse_number(value: Any) -> float | None:
@@ -97,6 +137,7 @@ def filter_and_sort_records(
     rows: Iterable[Mapping[str, Any]],
     *,
     field_map: Mapping[str, str],
+    translator: Any = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Filter every source row and return all matches in deterministic order.
 
@@ -113,6 +154,9 @@ def filter_and_sort_records(
     invalid_capacity = 0
     invalid_rank = 0
     zero_asin_quantity_ids: list[str] = []
+    translated_keyword_cn_records = 0
+    missing_keyword_cn_records = 0
+    translation_failures = 0
     for row in source:
         capacity = parse_number(row.get(field_map["capacity"]))
         rank = parse_number(row.get(field_map["organic_rank"]))
@@ -125,10 +169,20 @@ def filter_and_sort_records(
         asin_quantity = row.get(field_map["asin_quantity"])
         if _decimal_value(asin_quantity) == 0:
             zero_asin_quantity_ids.append(str(row.get(field_map["id"])))
+        keyword_cn, translation_status = ensure_keyword_chinese(
+            row.get(field_map["keyword"]), row.get(field_map["keyword_cn"]), translator,
+        )
+        if translation_status == "TRANSLATED":
+            translated_keyword_cn_records += 1
+        elif translation_status == "MISSING":
+            missing_keyword_cn_records += 1
+        elif translation_status == "TRANSLATION_FAILED":
+            missing_keyword_cn_records += 1
+            translation_failures += 1
         matched.append({
             "Id": row.get(field_map["id"]),
             "词": row.get(field_map["keyword"]),
-            "中文": row.get(field_map["keyword_cn"]),
+            "中文": keyword_cn,
             "市场容量": row.get(field_map["capacity"]),
             "竞争产品数": asin_quantity,
             "供需比": _supply_demand_ratio(row.get(field_map["capacity"]), asin_quantity),
@@ -154,6 +208,9 @@ def filter_and_sort_records(
         },
         "asin_quantity_zero_records": len(zero_asin_quantity_ids),
         "asin_quantity_zero_ids": zero_asin_quantity_ids,
+        "translated_keyword_cn_records": translated_keyword_cn_records,
+        "missing_keyword_cn_records": missing_keyword_cn_records,
+        "translation_failures": translation_failures,
         "warnings": ([{"code": "ASIN_QUANTITY_ZERO", "record_ids": zero_asin_quantity_ids}]
                      if zero_asin_quantity_ids else []),
     }
@@ -185,8 +242,9 @@ def extract_rows(
     output_path: str | Path,
     *,
     field_map: Mapping[str, str],
+    translator: Any = None,
 ) -> dict[str, Any]:
-    values, summary = filter_and_sort_records(rows, field_map=field_map)
+    values, summary = filter_and_sort_records(rows, field_map=field_map, translator=translator)
     if summary.get("status") == SCHEMA_MAPPING_UNRESOLVED:
         return summary | {"csv_records": 0, "output": None}
     path = write_csv(output_path, values)
@@ -210,6 +268,7 @@ def build_multi_benchmark_assets(
     *,
     keyword_entity_id_field: str | None,
     benchmark_product_codes: Mapping[str, Any] | None = None,
+    translator: Any = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, list[dict[str, Any]]], list[dict[str, Any]], dict[str, Any]]:
     """Split one Keyword Market Fact from its Benchmark Rank Observations.
 
@@ -241,6 +300,9 @@ def build_multi_benchmark_assets(
         rank = parse_number(raw.get("RankOra"))
         capacity = raw.get("SearchVolume30")
         competitors = raw.get("AsinQuantity")
+        keyword_cn, _translation_status = ensure_keyword_chinese(
+            keyword, raw.get("KeywordCn"), translator,
+        )
         if not benchmark_code:
             return [], [], {}, [], {"status": BENCHMARK_IDENTITY_CONFLICT, "conflicts": [{"row_id": raw.get("Id")}]}
         if not benchmark_asin or not keyword or rank is None or rank < 1:
@@ -250,7 +312,7 @@ def build_multi_benchmark_assets(
         market_fact = {
             "Id": entity_id,
             "词": keyword,
-            "中文": raw.get("KeywordCn"),
+            "中文": keyword_cn,
             "市场容量": capacity,
             "竞争产品数": competitors,
             "供需比": _supply_demand_ratio(capacity, competitors),
@@ -272,8 +334,8 @@ def build_multi_benchmark_assets(
                     "right": {"市场容量": capacity, "竞争产品数": competitors},
                 })
                 continue
-            if not fact.get("中文") and raw.get("KeywordCn"):
-                fact["中文"] = raw.get("KeywordCn")
+            if not fact.get("中文") and keyword_cn:
+                fact["中文"] = keyword_cn
 
         observation_key = (entity_id, benchmark_code)
         previous = observations.get(observation_key)
@@ -287,7 +349,7 @@ def build_multi_benchmark_assets(
             # duplicate/conflicting rows inside this extraction run.
             "Id": entity_id,
             "词": keyword,
-            "中文": raw.get("KeywordCn"),
+            "中文": keyword_cn,
             "市场容量": capacity,
             "竞争产品数": competitors,
             "供需比": _supply_demand_ratio(capacity, competitors),
@@ -585,6 +647,7 @@ def main() -> int:
     try:
         from scripts.erp_keyword_adapter import ERPKeywordAdapter  # type: ignore
         adapter = ERPKeywordAdapter(config_dir)
+        keyword_translator = build_keyword_translator()
         observation_rows: list[dict[str, Any]] = []
         query_summaries: list[dict[str, Any]] = []
         for benchmark in benchmarks:
@@ -608,7 +671,9 @@ def main() -> int:
                 print({"status": DATA_DUPLICATION_WARNING, "benchmark_code": benchmark["benchmark_code"], "reason": "PickPwKView.Id is not unique in fetched rows"})
                 return 2
             source_rows = [row.get("raw_fields", row) for row in fetched]
-            filtered, filter_summary = filter_and_sort_records(source_rows, field_map=field_map)
+            filtered, filter_summary = filter_and_sort_records(
+                source_rows, field_map=field_map, translator=keyword_translator,
+            )
             if filter_summary.get("status") == SCHEMA_MAPPING_UNRESOLVED:
                 print(filter_summary)
                 return 2
@@ -633,9 +698,16 @@ def main() -> int:
         observation_rows,
         keyword_entity_id_field=field_map["keyword_entity_id"],
         benchmark_product_codes=benchmark_product_codes,
+        translator=keyword_translator,
     )
     if aggregation.get("status") != "OK":
         print(aggregation)
+        return 2
+    missing_keyword_cn = [row.get("Id") for row in detail_rows if not str(row.get("中文") or "").strip()]
+    if missing_keyword_cn:
+        print({"status": KEYWORD_CN_TRANSLATION_INCOMPLETE,
+               "missing_record_ids": missing_keyword_cn,
+               "message": "Eligible keyword rows must have KeywordCn or a verified automatic Chinese translation."})
         return 2
     product_root = Path(identity["product_archive"]).parent
     context = new_run_context("6-0-1", "hzp-amz-6-0-1-benchmark-organic-keyword-extraction", identity["product_code"])
@@ -720,6 +792,19 @@ def main() -> int:
             extra=common_extra,
         )
         write_metadata_sidecar(path, metadata)
+    # Keep every timestamped CSV directly visible at the Skill report root so
+    # people can inspect historical runs without opening the canonical data
+    # layer. The canonical Run Package remains in its normal output directory.
+    visible_dir = product_root / "06_SKILL分析报告" / "6-0-1_对标自然排名关键词提取"
+    visible_dir.mkdir(parents=True, exist_ok=True)
+    visible_outputs: list[str] = []
+    for source_path in all_asset_paths:
+        visible_path = visible_dir / source_path.name
+        if visible_path.exists():
+            raise FileExistsError(f"VISIBLE_OUTPUT_ALREADY_EXISTS: {visible_path.name}")
+        shutil.copyfile(source_path, visible_path)
+        shutil.copyfile(Path(str(source_path) + ".meta.json"), Path(str(visible_path) + ".meta.json"))
+        visible_outputs.append(str(visible_path))
     summary = {
         "status": "FULL_SUCCESS" if coverage_pass else "INCOMPLETE",
         "product_code": identity["product_code"],
@@ -734,6 +819,7 @@ def main() -> int:
         "pool_output": str(pool_path),
         "benchmark_raw_organic_files": [str(raw_paths[asin]) for asin in benchmark_asins],
         "benchmark_organic_summary_output": str(organic_summary_path),
+        "visible_outputs": visible_outputs,
         "benchmark_organic_summary_record_count": len(summary_rows),
         "per_benchmark_observation_counts": per_benchmark_counts,
         "run_id": context.run_id,
