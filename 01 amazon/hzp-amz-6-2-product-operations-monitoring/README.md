@@ -1,3 +1,4 @@
+> 当前执行契约（优先于下方历史正文）：6-2 仅是广告运行事实 DATA ONLY 层。只接收产品档案校验后的 campaign_scope，只统计 CampaignName 以 CampaignPrefix 开头的广告；输出四类 CSV、同批次 HTML、sidecar 和 RunPackage 到 6-2 标准 Run 目录。只做字段映射、确定性指标计算、完整性校验和证据交接，不做经营诊断、根因解释、预算/竞价/否定词建议、关键词精准度判断、Intent 重建或任何写入；这些由 6-3 负责。产品档案是 ProductCode/CampaignTag/CampaignPrefix 唯一来源。历史正文与当前契约冲突时，以本段和 ad_facts_package.py 为准。
 # HZP Amazon 6-2｜产品经营监控与诊断
 
 ## 30 秒运行
@@ -63,3 +64,4 @@ Skill 会自动定位 Product Root、读取实际字段和数据窗口，生成�
 ## 关键词专项路由（6-0-2）
 
 6-2 只识别 ASIN 经营层面的关键词异常或机会（例如 Search Term 覆盖变化、核心词自然排名信号、广告/自然词转化差异），不再复制 ERP 精准词筛选、精准泛词生成、Search Intent 聚类或 Rankability 算法。精准词问题输出 `Route → 6-0-2`；精准泛词问题输出 `Route → 6-0-3｜精准泛词提取`（`hzp-amz-6-0-3-precision-broad-extraction`），并读取对应最新有效资产。
+

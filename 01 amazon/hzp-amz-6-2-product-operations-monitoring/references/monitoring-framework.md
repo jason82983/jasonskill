@@ -1,3 +1,5 @@
+> 旧版参考：本文件描述的产品总经营监控范围不属于当前 6-2 执行契约；当前 6-2 以 SKILL.md 和 ad_facts_package.py 的广告事实包为准。
+
 # 6-2 经营监控框架
 
 进入 SellerSpace 查询前，统一读取 Amazon 行业共享文件 `Amazon产品身份解析规则.md`，从 Products Root 的 `00_公共资料/01_Amazon平台资料/Amazon产品店铺映射表.xlsx` 解析唯一 ACTIVE 的 Store + Marketplace + ASIN，并将多行变体 SKU 归并为 `Mapped_SKUs[]` 后只读二次验证。身份异常按共享规则处理；本文件不复制身份解析逻辑。
@@ -92,3 +94,4 @@ ERP 关键词是独立的 SQL 证据通道：从 `01_产品档案.md` 读取 ERP
 ### Mock 用例
 
 周期与图表实现至少覆盖 SKILL.md 中 CASE A-T：默认 7 天、3/14/30 天、自然周、自定义日期、环比/同比/双对比、排除或标记今天、缺失日、组成/时间序列/周期对比图表、ACoS 下降语义、CVR 百分点、短周期谨慎结论和不足数据不造假。
+
