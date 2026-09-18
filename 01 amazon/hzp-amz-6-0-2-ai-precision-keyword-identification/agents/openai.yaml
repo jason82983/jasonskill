@@ -1,15 +1,8 @@
 interface:
   display_name: "HZP Amazon 6-0-2｜AI精准关键词识别"
-  short_description: "按唯一Keyword调用Precision Brain并输出可追溯的A/B/C/D/E五类资产"
+  short_description: "完整判断601对标关键词精准度并输出603/606正式资产"
   brand_color: "#2563EB"
-  default_prompt: "Use $hzp-amz-6-0-2-ai-precision-keyword-identification for the supplied ProductCode and complete the full goal: judge every Unique Canonical Keyword from the latest valid 6-0-1 observations with the real four-level Precision Brain, reconstruct each Searcher Intent, distinguish CORE FIT from CAN SERVE, check every Hard Modifier and Decision Challenge, backfill all observations, derive A/B/C/D/E, validate coverage/schema/lineage/Golden/readback, and publish only a complete valid run. The current Codex/Agent is the only Precision AI Judge; never wait for or request a second AI, agent_judge callback, precision_brain_client, CLI, API, Gateway, or Local Judge. Python may prepare, validate, save, derive, and checkpoint only; it has no precision authority. Batch size, looping, and checkpoint/resume are internal implementation details: read 01_公共资料/03_系统配置/602_AI批次大小.txt only as PreferredBatchSize, never treat one batch as task completion, and continue until the business goal is complete. If the goal cannot be completed, report INCOMPLETE/PROGRESS or AI_PRECISION_JUDGMENT_UNAVAILABLE; never fabricate judgments or silently use local fallback. Preserve ProductProfileId and BrainVersion, use the shared precision-filter configuration at 01_公共资料/03_系统配置/生成精准词库的要求.txt (normalize 已精准 to 精准), and never query or write ERP/Amazon."
+  default_prompt: "Use $hzp-amz-6-0-2-ai-precision-keyword-identification for the supplied ProductCode and complete the entire business task in this invocation. Read the three formal business inputs, build one validated runtime Product Profile, apply the Precision Brain V2 Hard Conflict Gate and Current Product Answer Role before grading every canonical unique keyword, continue internal batches until PendingJudgmentCount is zero, and publish the four complete sequence-numbered output classes only after full reconciliation. Never ask the caller to invoke the Skill again for another batch. The current Agent is the only precision judge; deterministic code must never judge precision."
 
 policy:
   allow_implicit_invocation: true
-
-
-
-
-
-
-

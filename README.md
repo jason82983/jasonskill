@@ -31,6 +31,7 @@
 | `hzp-amz-5-3-image-video-planning` | Amazon | 规划 Amazon 图片、A+ 与视频并守住产品真实性 |
 | `hzp-amz-5-4-page-audit-optimization` | Amazon | 审核页面策略、文案、视觉和真实成品并输出修改优先级 |
 | hzp-amz-5-5-live-asin-page-audit | Amazon | 审计真实线上 ASIN 页面与 5-1～5-4 策略执行并路由优化 |
+| `hzp-amz-6-0-2-ai-precision-keyword-identification` | Amazon | 对全部对标关键词执行 Precision Brain V2 判断并输出完整精准度资产 |
 | `hzp-amz-6-1-new-product-advertising-battle-plan` | Amazon | 设计新品首阶段流量、广告测试、预算协同与验证规则 |
 | `hzp-amz-6-3-advertising-data-report` | Amazon | 产品经营监控、根因诊断与跨 Skill 路由 |
 | `hzp-amz-6-4-advertising-decision` | Amazon | 广告诊断、优化与获批变更执行 |
